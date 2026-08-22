@@ -55,6 +55,20 @@ export async function detectDefaultPaths(): Promise<DetectedPaths> {
   return result;
 }
 
+/** Best-effort read of the logged-in account's preset folder name from BambuStudio.conf. Never throws. */
+export async function readPresetFolder(userDataDir: string): Promise<string | undefined> {
+  const confPath = join(userDataDir, "BambuStudio.conf");
+  if (!existsSync(confPath)) return undefined;
+  try {
+    const raw: unknown = JSON.parse(await readFile(confPath, "utf8"));
+    const presetFolder = (raw as { app?: { preset_folder?: unknown } })?.app?.preset_folder;
+    if (typeof presetFolder === "string" && presetFolder.length > 0) return presetFolder;
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function validateConfigPaths(cfg: ServerConfig): Promise<string[]> {
   const problems: string[] = [];
   if (!existsSync(join(cfg.installDir, "resources", "profiles"))) {

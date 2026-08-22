@@ -89,12 +89,23 @@ values:
 
 There is no zero-config operation: until `config.json` exists,
 `resolve_*`/`write_*` calls fail with an error directing the caller to
-`init_config`. `userId` cannot be guessed and must always be given
-explicitly; `installDir`/`userDataDir` may be omitted from the
-`init_config` call, in which case best-effort per-OS auto-detection fills
-them (on Windows, via the registry uninstall entry, since the install
-drive varies). Vendor is always an explicit argument on every tool call,
-keeping tools stateless.
+`init_config`. All three of `installDir`, `userDataDir`, and `userId` may
+be omitted from the `init_config` call:
+
+- `installDir`/`userDataDir` are filled by best-effort per-OS
+  auto-detection (on Windows, via the registry uninstall entry, since the
+  install drive varies).
+- `userId` is filled by reading `app.preset_folder` from
+  `<userDataDir>\BambuStudio.conf` — the logged-in account's preset
+  folder name. Detection runs only after `installDir`/`userDataDir` are
+  resolved, since the conf path depends on `userDataDir`. If `userId` is
+  omitted and the conf file is missing, unparseable, or has no
+  `app.preset_folder`, the call fails with an error naming the conf path
+  it tried and directing the caller to pass `userId` explicitly.
+
+Any of the three may still be given explicitly as an override (e.g. to
+target the `default` folder instead of a cloud-account id). Vendor is
+always an explicit argument on every tool call, keeping tools stateless.
 
 ## Tools
 
@@ -192,19 +203,24 @@ succeeds.
 
 **Input**
 ```json
-{ "installDir": "string (optional)", "userDataDir": "string (optional)", "userId": "string" }
+{ "installDir": "string (optional)", "userDataDir": "string (optional)", "userId": "string (optional)" }
 ```
-Omitted `installDir`/`userDataDir` are filled by per-OS auto-detection;
-if detection cannot supply a missing value, the call fails naming it.
+Omitted `installDir`/`userDataDir` are filled by per-OS auto-detection.
+Omitted `userId` is filled by reading `app.preset_folder` from
+`<userDataDir>\BambuStudio.conf`. If detection cannot supply a missing
+value, the call fails naming it (for `userId`, naming the conf path it
+tried).
 
 **Output**
 ```json
 { "installDir": "string", "userDataDir": "string", "userId": "string", "persistedTo": "string" }
 ```
 
-**Errors**: `installDir` does not contain `resources/profiles`;
-`userDataDir` does not contain `user/<userId>`. All problems are reported
-together; nothing is persisted on failure.
+**Errors**: `installDir`/`userDataDir` undetectable or invalid;
+`userDataDir` does not contain `user/<userId>`; `userId` omitted and
+`<userDataDir>\BambuStudio.conf` is missing, unparseable, or has no
+`app.preset_folder`. All problems are reported together; nothing is
+persisted on failure.
 
 On success, both the in-memory config for the running server and
 `config.json` in the project folder are updated immediately — no restart

@@ -36,9 +36,9 @@ export class SchemaValidationError extends Error {
 export class ConfigMissingError extends Error {
   constructor() {
     super(
-      "config.json does not exist yet. Call the init_config tool with your userId " +
-        "(the user/<id> directory in the Bambu Studio user-data folder); installDir " +
-        "and userDataDir are auto-detected if omitted."
+      "config.json does not exist yet. Call the init_config tool — a plain call with no arguments usually " +
+        "suffices, since installDir, userDataDir, and userId (from BambuStudio.conf's app.preset_folder) " +
+        "are all auto-detected. Arguments exist as overrides, e.g. to target a specific userId."
     );
     this.name = "ConfigMissingError";
   }

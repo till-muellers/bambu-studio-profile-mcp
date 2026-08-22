@@ -6,7 +6,7 @@ An MCP (Model Context Protocol) server for managing 3D printing slicer profiles,
 
 - `resolve_process_profile` / `resolve_filament_profile` — resolve a profile's fully-merged active settings by walking its `inherits` chain across the configured user preset store and system profiles.
 - `write_process_profile` / `write_filament_profile` — create a profile file in a caller-chosen output directory from a base profile plus schema-validated key-value overrides. Bambu Studio's own directories are never written; importing profiles into Bambu Studio is a planned later feature.
-- `init_config` — set and persist `installDir`/`userDataDir`/`userId`. Required once; paths are auto-detected when omitted, `userId` never is.
+- `init_config` — set and persist `installDir`/`userDataDir`/`userId`. Required once; all three are auto-detected when omitted (`userId` from `BambuStudio.conf`'s `app.preset_folder`).
 
 ## Setup (Windows)
 
@@ -21,7 +21,7 @@ Register with Claude Code:
 claude mcp add printing-profiles -- node <checkout>\dist\index.js
 ```
 
-Then call the `init_config` tool once with your `userId` — the `user\<id>` folder name under `%APPDATA%\BambuStudio\user` (a numeric cloud-account id, or `default` when not logged in). Configuration persists in `config.json` (gitignored, machine-specific).
+Then call `init_config` once; with Bambu Studio installed and logged in, no arguments are needed (paths and `userId` are auto-detected). Pass `userId` explicitly to target a different account folder, such as `default` when not logged in. Configuration persists in `config.json` (gitignored, machine-specific).
 
 ## Regenerating the option schemas
 

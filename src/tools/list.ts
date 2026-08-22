@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { join } from "node:path";
 import { z } from "zod";
-import { listFilamentIds, listProfiles, listVendors, type ProfileListing } from "../profile-store.js";
+import { listFilaments, listProfiles, listVendors, type ProfileListing } from "../profile-store.js";
 import type { ProfileKind, SchemaOption } from "../types.js";
 import { loadSchema } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
@@ -25,7 +25,9 @@ export async function handleListProfiles(
   return { kind: args.kind, profiles };
 }
 
-export async function handleListVendors(deps: ToolDeps): Promise<{ vendors: string[] }> {
+export async function handleListVendors(
+  deps: ToolDeps
+): Promise<{ vendors: { id: string; name: string }[] }> {
   const cfg = await deps.config.require();
   const vendors = await listVendors(cfg);
   return { vendors };
@@ -50,10 +52,12 @@ export async function handleListParameters(
   return { kind: args.kind, parameters };
 }
 
-export async function handleListFilamentIds(deps: ToolDeps): Promise<{ filamentIds: string[] }> {
+export async function handleListFilaments(
+  deps: ToolDeps
+): Promise<{ filaments: { id: string; name: string }[] }> {
   const cfg = await deps.config.require();
-  const filamentIds = await listFilamentIds(cfg);
-  return { filamentIds };
+  const filaments = await listFilaments(cfg);
+  return { filaments };
 }
 
 function registerListProfiles(server: McpServer, deps: ToolDeps): void {
@@ -98,9 +102,9 @@ function registerListVendors(server: McpServer, deps: ToolDeps): void {
     {
       title: "List vendors",
       description:
-        "List the vendor folders under resources/profiles. Use this to discover valid vendor arguments " +
-        "for the resolve/write/list_profiles tools.\n\n" +
-        "Returns: { vendors: string[] } (sorted)\n\n" +
+        "List the vendor folders under resources/profiles with their display names. Use this to discover " +
+        "valid vendor arguments (the id) for the resolve/write/list_profiles tools.\n\n" +
+        "Returns: { vendors: [{ id, name }] } (sorted by id)\n\n" +
         "Errors: config missing (fix via init_config).",
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
@@ -153,23 +157,23 @@ function registerListParameters(server: McpServer, deps: ToolDeps): void {
   );
 }
 
-function registerListFilamentIds(server: McpServer, deps: ToolDeps): void {
+function registerListFilaments(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
-    "list_filament_ids",
+    "list_filaments",
     {
-      title: "List filament IDs",
+      title: "List filaments",
       description:
-        "List the distinct filament_id values found across all filament profiles (the configured user " +
-        "store plus every vendor's system filament directory). Only profiles that carry a filament_id " +
-        "contribute an entry.\n\n" +
-        "Returns: { filamentIds: string[] } (sorted, deduplicated)\n\n" +
+        "List the distinct filament ids with their display names across all filament profiles (the " +
+        "configured user store plus every vendor's system filament directory). Only profiles that carry a " +
+        "filament_id contribute an entry.\n\n" +
+        "Returns: { filaments: [{ id, name }] } (sorted by id, deduplicated)\n\n" +
         "Errors: config missing (fix via init_config).",
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async () => {
       try {
-        const result = await handleListFilamentIds(deps);
+        const result = await handleListFilaments(deps);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
           structuredContent: result as unknown as Record<string, unknown>,
@@ -185,5 +189,5 @@ export function registerListTools(server: McpServer, deps: ToolDeps): void {
   registerListProfiles(server, deps);
   registerListVendors(server, deps);
   registerListParameters(server, deps);
-  registerListFilamentIds(server, deps);
+  registerListFilaments(server, deps);
 }

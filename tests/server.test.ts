@@ -62,7 +62,7 @@ describe("printing-profile-mcp server", () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "init_config",
-      "list_filament_ids",
+      "list_filaments",
       "list_parameters",
       "list_profiles",
       "list_vendors",
@@ -88,7 +88,12 @@ describe("printing-profile-mcp server", () => {
     const client = await connectedClient();
     const result = await client.callTool({ name: "list_vendors", arguments: {} });
     expect(result.isError).toBeFalsy();
-    expect(result.structuredContent).toEqual({ vendors: ["BBL"] });
+    expect(result.structuredContent).toEqual({
+      vendors: [
+        { id: "BBL", name: "Bambulab" },
+        { id: "OTHERCO", name: "OTHERCO" },
+      ],
+    });
   });
 
   it("serves list_parameters end-to-end over the protocol", async () => {

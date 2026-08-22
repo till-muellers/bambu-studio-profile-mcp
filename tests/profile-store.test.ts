@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { VendorNotFoundError } from "../src/errors.js";
-import { FsProfileStore, listFilamentIds, listProfiles, listVendors, writeProfileFile } from "../src/profile-store.js";
+import { FsProfileStore, listFilaments, listProfiles, listVendors, writeProfileFile } from "../src/profile-store.js";
 import type { ServerConfig } from "../src/types.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -102,25 +102,34 @@ describe("listProfiles", () => {
 });
 
 describe("listVendors", () => {
-  it("returns sorted vendor names, no counts", async () => {
+  it("returns sorted vendor ids with display names from <vendor>.json", async () => {
     const result = await listVendors(cfg());
-    expect(result).toEqual(["BBL"]);
+    expect(result).toEqual([
+      { id: "BBL", name: "Bambulab" },
+      { id: "OTHERCO", name: "OTHERCO" },
+    ]);
   });
 });
 
-describe("listFilamentIds", () => {
-  it("collects distinct, sorted filament_id values across the user store and every vendor", async () => {
-    const result = await listFilamentIds(cfg());
-    expect(result).toEqual(["GFA00", "GFB99"]);
+describe("listFilaments", () => {
+  it("collects distinct, sorted filament ids with display names across the user store and every vendor", async () => {
+    const result = await listFilaments(cfg());
+    expect(result).toEqual([
+      { id: "GFA00", name: "fdm_filament_common" },
+      { id: "GFB99", name: "Generic PLA" },
+      { id: "GFC00", name: "Other PLA" },
+    ]);
   });
 
   it("never throws for a missing installDir", async () => {
-    const result = await listFilamentIds({
+    const result = await listFilaments({
       installDir: join(FIXTURES, "does-not-exist"),
       userDataDir: join(FIXTURES, "userdata"),
       userId: "1234567890",
     });
-    expect(result).toContain("GFA00");
+    // Only the user store is reachable; GFA00's root carrier (fdm_filament_common) lives under
+    // installDir, so the shortest surviving user-side carrier ("My Custom Filament") wins.
+    expect(result).toContainEqual({ id: "GFA00", name: "My Custom Filament" });
   });
 });
 

@@ -11,11 +11,34 @@ import { registerResolveTools } from "./tools/resolve.js";
 import { registerWriteTools } from "./tools/write.js";
 
 export function buildServer(deps: ToolDeps): McpServer {
-  const server = new McpServer({ name: "printing-profile-mcp", version: "0.1.0" });
+  const server = new McpServer(
+    { name: "printing-profile-mcp", version: "0.1.0" },
+    { capabilities: { logging: {} } }
+  );
   registerResolveTools(server, deps);
   registerWriteTools(server, deps);
   registerInitConfigTool(server, deps);
   return server;
+}
+
+/**
+ * Best-effort: if config.json hasn't been created yet, log to stderr and send an MCP logging
+ * notification telling the client to call init_config. Never throws — a notification failure
+ * (e.g. no connected transport) must not crash the server.
+ */
+export async function warnIfUnconfigured(server: McpServer, deps: ToolDeps): Promise<void> {
+  const cfg = await deps.config.load();
+  if (cfg) return;
+  console.error("printing-profile-mcp: config.json not found — call the init_config tool to get started.");
+  try {
+    await server.server.sendLoggingMessage({
+      level: "warning",
+      logger: "printing-profile-mcp",
+      data: "printing-profile-mcp is not configured yet. Call the init_config tool to get started.",
+    });
+  } catch {
+    // Best-effort only — no connected client, or the client hasn't negotiated logging.
+  }
 }
 
 async function main(): Promise<void> {
@@ -30,6 +53,7 @@ async function main(): Promise<void> {
   const server = buildServer(deps);
   await server.connect(new StdioServerTransport());
   console.error("printing-profile-mcp running on stdio");
+  await warnIfUnconfigured(server, deps);
 }
 
 // Only start the transport when executed directly, not when imported by tests.

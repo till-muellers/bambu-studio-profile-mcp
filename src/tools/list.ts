@@ -160,7 +160,8 @@ function registerListFilamentIds(server: McpServer, deps: ToolDeps): void {
       title: "List filament IDs",
       description:
         "List the distinct filament_id values found across all filament profiles (the configured user " +
-        "store plus every vendor's system filament directory). Profiles without a filament_id are skipped.\n\n" +
+        "store plus every vendor's system filament directory). Only profiles that carry a filament_id " +
+        "contribute an entry.\n\n" +
         "Returns: { filamentIds: string[] } (sorted, deduplicated)\n\n" +
         "Errors: config missing (fix via init_config).",
       inputSchema: {},

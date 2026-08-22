@@ -51,9 +51,31 @@ function extractDefaultRaw(body: string): string | undefined {
 }
 
 /**
+ * Decodes the C++ backslash escapes that appear in string literals we care about: `\n`, `\t`,
+ * `\r`, `\"`, `\\`. Unrecognized escapes keep their trailing character as-is (matches the prior,
+ * uniform-unescape behavior for anything not in that set).
+ */
+function decodeCppEscapes(text: string): string {
+  return text.replace(/\\(.)/g, (_match, ch: string) => {
+    switch (ch) {
+      case "n":
+        return "\n";
+      case "t":
+        return "\t";
+      case "r":
+        return "\r";
+      default:
+        return ch; // covers \" -> ", \\ -> \, and any other escape -> its literal character
+    }
+  });
+}
+
+/**
  * Extracts `def-><field> = L(...)` where the L(...) argument is one or more adjacent quoted
  * string literals (C++ string-literal concatenation, optionally spanning multiple lines), e.g.
- * `def->tooltip = L("part a " "part b")`. Concatenates the literals' unescaped contents. Returns
+ * `def->tooltip = L("part a " "part b")`. C++ adjacent string literals concatenate with NO
+ * implicit separator, so the literals' decoded contents are joined directly (any word-boundary
+ * spacing must already be present inside the literals themselves, as it is in the source). Returns
  * `undefined` when the field is absent from `body`.
  */
 function extractLField(body: string, field: "label" | "tooltip"): string | undefined {
@@ -64,7 +86,7 @@ function extractLField(body: string, field: "label" | "tooltip"): string | undef
   if (!match) return undefined;
   const literals = match[1].match(/"(?:[^"\\]|\\.)*"/g);
   if (!literals) return undefined;
-  return literals.map((lit) => lit.slice(1, -1).replace(/\\(.)/g, "$1")).join("");
+  return literals.map((lit) => decodeCppEscapes(lit.slice(1, -1))).join("");
 }
 
 function parseScalar(text: string): unknown {

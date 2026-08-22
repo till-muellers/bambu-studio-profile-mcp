@@ -91,6 +91,17 @@ describe("parsePrintConfig (smoke test)", () => {
     );
   });
 
+  it("decodes C++ \\n escapes to real newlines, and joins adjacent literals with no separator (faithful to C++ concatenation)", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.enable_support.description).toBe(
+      "This is particularly helpful in the below scenarios:\n" +
+        "1. To avoid changes in shine when printing glossy filaments\n" +
+        "2. To avoid printing at speeds which cause VFAs on the external walls"
+    );
+  });
+
   it("omits label/description for options that declare neither", async () => {
     const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
     const options = parsePrintConfig(source);

@@ -122,7 +122,7 @@ async function collectFilamentIds(dir: string): Promise<string[]> {
 /**
  * Collects the distinct `filament_id` values across the configured user filament store and every
  * vendor's system filament directory. Missing/unknown directories contribute nothing rather than
- * throwing; profiles without a `filament_id` are skipped.
+ * throwing; only profiles that carry a `filament_id` contribute an entry.
  */
 export async function listFilamentIds(cfg: ServerConfig): Promise<string[]> {
   const userDir = join(cfg.userDataDir, "user", cfg.userId, "filament");

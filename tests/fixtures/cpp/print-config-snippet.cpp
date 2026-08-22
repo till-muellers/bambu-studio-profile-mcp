@@ -17,6 +17,9 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("enable_support", coBool);
     def->label = L("Enable support");
+    def->tooltip = L("This is particularly helpful in the below scenarios:\n"
+                     "1. To avoid changes in shine when printing glossy filaments\n"
+                     "2. To avoid printing at speeds which cause VFAs on the external walls");
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("wall_generator", coEnum);

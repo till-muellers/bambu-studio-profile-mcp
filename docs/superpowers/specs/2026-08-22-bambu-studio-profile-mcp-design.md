@@ -272,6 +272,7 @@ the key, label, and description.
   ]
 }
 ```
+`parameters` is ordered as the keys appear in `schema/<kind>.schema.json`.
 
 **Errors**: paths not configured (fix via `init_config`).
 
@@ -279,7 +280,7 @@ the key, label, and description.
 
 List the distinct `filament_id` values found across all filament profiles:
 the configured user filament store plus every vendor's system filament
-directory. Profiles without a `filament_id` are skipped.
+directory. Only profiles that carry a `filament_id` contribute an entry.
 
 **Input**: none.
 

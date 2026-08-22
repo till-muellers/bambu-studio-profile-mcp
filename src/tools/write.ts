@@ -65,8 +65,13 @@ const writeInputShape = {
   kvps: z
     .record(z.unknown())
     .describe(
-      "Only the keys to override; validated against the schema. Scalar options take bare values " +
-        "(e.g. \"0.2\"), per-extruder options take string arrays (e.g. [\"200\",\"500\",\"500\"])"
+      "A JSON OBJECT mapping option key -> value (NOT an array of pairs) — only the keys to override, " +
+        "validated against schema/<kind>.schema.json. Scalar options take a single primitive value, " +
+        "string preferred to match Bambu's own serialization (e.g. \"0.2\", \"100%\", \"true\"); bare " +
+        "numbers/booleans are also accepted. Vector (per-extruder) options take an array of one or more " +
+        "strings (e.g. [\"200\",\"500\",\"500\"]). Example: " +
+        "{\"layer_height\": \"0.16\", \"outer_wall_speed\": [\"150\",\"400\",\"400\"]}. " +
+        "'name' and 'inherits' are reserved (set via the name/baseProfile arguments) and rejected if present."
     ),
   outputDir: z.string().min(1).describe("Directory the profile file is written to; created if missing"),
 };
@@ -81,7 +86,14 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
         `directories — importing into Bambu Studio is a separate, later step). The file inherits from ` +
         `baseProfile and contains ONLY the kvps overrides. Every kvps key and value is validated ` +
         `against schema/${kind}.schema.json before anything is written; all violations are reported together.\n\n` +
-        `Args:\n  - vendor (string), name (string), baseProfile (string), kvps (object), outputDir (string)\n\n` +
+        `Args:\n  - vendor (string), name (string), baseProfile (string), outputDir (string)\n` +
+        `  - kvps (object): a JSON OBJECT mapping option key -> value (NOT an array of pairs). Scalar ` +
+        `options take a single primitive, string preferred to match Bambu's own serialization ` +
+        `(e.g. "0.2", "100%", "true"); bare numbers/booleans are also accepted. Vector (per-extruder) ` +
+        `options take an array of one or more strings (e.g. ["200","500","500"]). Example: ` +
+        `{"layer_height": "0.16", "outer_wall_speed": ["150","400","400"]}. Keys must exist in ` +
+        `schema/${kind}.schema.json; 'name' and 'inherits' are reserved (set via the name/baseProfile ` +
+        `arguments) and rejected if present. All violations are reported together.\n\n` +
         `Returns: { vendor, name, kind, created, path, inherits, overrides }\n\n` +
         `Errors: baseProfile not found or unresolvable; schema violations listed per key; ` +
         `config missing (fix via init_config).`,

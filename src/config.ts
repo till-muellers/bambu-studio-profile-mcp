@@ -55,12 +55,21 @@ export async function detectDefaultPaths(): Promise<DetectedPaths> {
   return result;
 }
 
-/** Best-effort read of the logged-in account's preset folder name from BambuStudio.conf. Never throws. */
+/**
+ * Best-effort read of the logged-in account's preset folder name from BambuStudio.conf. Never throws.
+ * The real file is JSON followed by a non-JSON trailer line (a "# MD5 checksum ..." comment), so the
+ * content is trimmed to the outermost {...} span before parsing; a leading BOM is stripped as well.
+ */
 export async function readPresetFolder(userDataDir: string): Promise<string | undefined> {
   const confPath = join(userDataDir, "BambuStudio.conf");
   if (!existsSync(confPath)) return undefined;
   try {
-    const raw: unknown = JSON.parse(await readFile(confPath, "utf8"));
+    let text = await readFile(confPath, "utf8");
+    if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1 || end < start) return undefined;
+    const raw: unknown = JSON.parse(text.slice(start, end + 1));
     const presetFolder = (raw as { app?: { preset_folder?: unknown } })?.app?.preset_folder;
     if (typeof presetFolder === "string" && presetFolder.length > 0) return presetFolder;
     return undefined;

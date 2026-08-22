@@ -13,6 +13,7 @@ const schema: ProfileSchema = {
   sparse_infill_density: { type: "percent", vector: false, min: 0, max: 100, default: 15 },
   outer_wall_speed: { type: "float", vector: true, min: 0, default: 200 },
   notes: { type: "string", vector: false, default: "" },
+  filament_flow_ratio: { type: "float", vector: true, nullable: true, default: 0.98 },
 };
 
 describe("loadSchema", () => {
@@ -87,5 +88,24 @@ describe("validateKvps", () => {
 
   it("checks range bounds inclusively", () => {
     expect(validateKvps(schema, { layer_height: "1.0", wall_loops: 0 })).toEqual([]);
+  });
+
+  it("accepts \"nil\" as an element on a nullable vector option", () => {
+    expect(validateKvps(schema, { filament_flow_ratio: ["nil"] })).toEqual([]);
+  });
+
+  it("accepts a mixed array of real values and \"nil\" on a nullable vector option", () => {
+    expect(validateKvps(schema, { filament_flow_ratio: ["0.5", "nil"] })).toEqual([]);
+  });
+
+  it("accepts an all-\"nil\" array on a nullable vector option", () => {
+    expect(validateKvps(schema, { filament_flow_ratio: ["nil", "nil", "nil"] })).toEqual([]);
+  });
+
+  it("rejects \"nil\" on a non-nullable vector option with the normal type-mismatch reason", () => {
+    const violations = validateKvps(schema, { outer_wall_speed: ["200", "nil"] });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toContain("element 1");
+    expect(violations[0].reason).toContain("expected a float");
   });
 });

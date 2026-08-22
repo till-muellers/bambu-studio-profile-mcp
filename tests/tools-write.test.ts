@@ -155,4 +155,16 @@ describe("handleWrite", () => {
     expect(ok.created).toBe(true);
     expect(await readdir(outDir)).toEqual(["Hot PLA.json"]);
   });
+
+  it("accepts \"nil\" elements on a nullable filament vector option", async () => {
+    const ok = await handleWrite(deps(), "filament", {
+      vendor: "BBL",
+      name: "Partial Override PLA",
+      baseProfile: "Generic PLA @BBL X1C",
+      kvps: { filament_retraction_length: ["0.8", "nil"] },
+      outputDir: outDir,
+    });
+    expect(ok.kind).toBe("filament");
+    expect(ok.created).toBe(true);
+  });
 });

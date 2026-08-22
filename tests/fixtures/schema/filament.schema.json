@@ -8,5 +8,6 @@
     "label": "Nozzle temperature",
     "description": "Nozzle temperature for layers except the initial one. Value 0 means the filament does not support to print on this nozzle"
   },
-  "filament_type": { "type": "enum", "vector": true, "enum": ["PLA", "PETG", "ABS", "TPU"], "default": "PLA" }
+  "filament_type": { "type": "enum", "vector": true, "enum": ["PLA", "PETG", "ABS", "TPU"], "default": "PLA" },
+  "filament_retraction_length": { "type": "float", "vector": true, "nullable": true, "default": 0.8 }
 }

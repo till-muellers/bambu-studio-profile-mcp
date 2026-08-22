@@ -76,4 +76,10 @@ void PrintConfigDef::init_fff_params()
     def = this->add("filament_vendor", coStrings);
     def->label = L("Vendor");
     def->set_default_value(new ConfigOptionStrings{ L("(Undefined)") });
+
+    def = this->add("filament_retraction_length", coFloats);
+    def->label = L("Retraction length");
+    def->tooltip = L("Retraction length before travel");
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionFloatsNullable { 0.8 });
 }

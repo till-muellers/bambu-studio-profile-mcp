@@ -109,6 +109,25 @@ describe("parsePrintConfig (smoke test)", () => {
     expect(options.wall_generator.label).toBeUndefined();
     expect(options.wall_generator.description).toBeUndefined();
   });
+
+  it("marks an option nullable when its block sets def->nullable = true", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.filament_retraction_length).toMatchObject({
+      type: "float",
+      vector: true,
+      nullable: true,
+    });
+  });
+
+  it("omits the nullable field for options that don't declare def->nullable = true", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.layer_height.nullable).toBeUndefined();
+    expect(options.outer_wall_speed.nullable).toBeUndefined();
+  });
 });
 
 describe("parseOptionList", () => {

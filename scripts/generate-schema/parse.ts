@@ -140,6 +140,7 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     if (label !== undefined) option.label = label;
     const description = extractLField(body, "tooltip");
     if (description !== undefined) option.description = description;
+    if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     if (min) option.min = Number(min[1]);
     const max = body.match(/def->max\s*=\s*(-?[\d.]+)/);

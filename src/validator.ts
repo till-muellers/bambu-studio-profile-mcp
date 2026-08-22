@@ -27,6 +27,7 @@ function parseNumeric(option: SchemaOption, value: unknown): number | undefined 
 
 /** Validates one scalar value (or one vector element). Returns the failure reason or null. */
 function checkScalar(option: SchemaOption, value: unknown): string | null {
+  if (option.nullable === true && value === "nil") return null;
   switch (option.type) {
     case "string":
       return typeof value === "string" ? null : `expected a string, got ${JSON.stringify(value)}`;

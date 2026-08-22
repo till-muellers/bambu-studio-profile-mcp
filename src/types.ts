@@ -46,6 +46,8 @@ export interface SchemaOption {
   default?: unknown;
   label?: string;
   description?: string;
+  /** True when Bambu Studio marks this option nullable (def->nullable = true); "nil" is then a legal element/value. */
+  nullable?: boolean;
 }
 
 export type ProfileSchema = Record<string, SchemaOption>;

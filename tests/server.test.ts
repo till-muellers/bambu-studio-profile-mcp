@@ -57,7 +57,7 @@ async function connectedClientAndServer(
 }
 
 describe("printing-profile-mcp server", () => {
-  it("exposes exactly the nine tools", async () => {
+  it("exposes exactly the seven tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -66,10 +66,8 @@ describe("printing-profile-mcp server", () => {
       "list_parameters",
       "list_profiles",
       "list_vendors",
-      "resolve_filament_profile",
-      "resolve_process_profile",
-      "write_filament_profile",
-      "write_process_profile",
+      "resolve_profile",
+      "write_profile",
     ]);
   });
 
@@ -106,11 +104,11 @@ describe("printing-profile-mcp server", () => {
     });
   });
 
-  it("serves resolve_process_profile end-to-end over the protocol", async () => {
+  it("serves resolve_profile end-to-end over the protocol", async () => {
     const client = await connectedClient();
     const result = await client.callTool({
-      name: "resolve_process_profile",
-      arguments: { vendor: "BBL", name: "0.20mm Standard @BBL X1C" },
+      name: "resolve_profile",
+      arguments: { kind: "process", vendor: "BBL", name: "0.20mm Standard @BBL X1C" },
     });
     expect(result.isError).toBeFalsy();
     expect(result.structuredContent).toMatchObject({
@@ -122,8 +120,8 @@ describe("printing-profile-mcp server", () => {
   it("returns an isError result (not a protocol error) for a missing profile", async () => {
     const client = await connectedClient();
     const result = await client.callTool({
-      name: "resolve_process_profile",
-      arguments: { vendor: "BBL", name: "ghost" },
+      name: "resolve_profile",
+      arguments: { kind: "process", vendor: "BBL", name: "ghost" },
     });
     expect(result.isError).toBe(true);
   });
@@ -131,8 +129,8 @@ describe("printing-profile-mcp server", () => {
   it("still serves tool calls (as isError) when unconfigured", async () => {
     const client = await connectedClient(unconfiguredFixtureDeps());
     const result = await client.callTool({
-      name: "resolve_process_profile",
-      arguments: { vendor: "BBL", name: "0.20mm Standard @BBL X1C" },
+      name: "resolve_profile",
+      arguments: { kind: "process", vendor: "BBL", name: "0.20mm Standard @BBL X1C" },
     });
     expect(result.isError).toBe(true);
   });

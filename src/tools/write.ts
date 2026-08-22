@@ -59,6 +59,7 @@ export async function handleWrite(
 }
 
 const writeInputShape = {
+  kind: z.enum(["process", "filament"]).describe("Which profile store the new profile belongs to"),
   vendor: z.string().min(1).describe("Vendor folder under resources/profiles, e.g. 'BBL'"),
   name: z.string().min(1).describe("Name of the profile to create; also the output filename (<name>.json)"),
   baseProfile: z.string().min(1).describe("Existing profile this profile will inherit from"),
@@ -74,28 +75,34 @@ const writeInputShape = {
   outputDir: z.string().min(1).describe("Directory the profile file is written to; created if missing"),
 };
 
-function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
+export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
-    `write_${kind}_profile`,
+    "write_profile",
     {
-      title: `Write ${kind} profile`,
+      title: "Write profile",
       description:
-        `Create or update a Bambu Studio ${kind} profile file in outputDir (NOT in the Bambu Studio ` +
-        `directories — importing into Bambu Studio is a separate, later step). The file inherits from ` +
-        `baseProfile and contains ONLY the kvps overrides. Every kvps key and value is validated ` +
-        `against schema/${kind}.schema.json before anything is written; all violations are reported together.\n\n` +
-        `Args:\n  - vendor (string), name (string), baseProfile (string), outputDir (string)\n` +
-        `  - kvps (object): option key -> value, per schema/${kind}.schema.json. Scalar options take a ` +
-        `single string like "0.2" or "100%"; vector (per-extruder) options take a string array like ` +
-        `["200","500","500"]. Example: {"layer_height": "0.16", "outer_wall_speed": ["150","400","400"]}. ` +
-        `'name'/'inherits' are reserved, set via the name/baseProfile arguments instead.\n\n` +
-        `Returns: { vendor, name, kind, created, path, inherits, overrides }\n\n` +
-        `Errors: baseProfile not found or unresolvable; schema violations listed per key; ` +
-        `config missing (fix via init_config).`,
+        "Create or update a Bambu Studio process or filament profile file in outputDir (NOT in the " +
+        "Bambu Studio directories — importing into Bambu Studio is a separate, later step). The file " +
+        "inherits from baseProfile and contains ONLY the kvps overrides. Every kvps key and value is " +
+        "validated against schema/<kind>.schema.json before anything is written; all violations are " +
+        "reported together.\n\n" +
+        "Args:\n  - kind (\"process\" | \"filament\"): which profile store the new profile belongs to\n" +
+        "  - vendor (string), name (string), baseProfile (string), outputDir (string)\n" +
+        "  - kvps (object): option key -> value, per schema/<kind>.schema.json. Scalar options take a " +
+        "single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array like " +
+        "[\"200\",\"500\",\"500\"]. Example: {\"layer_height\": \"0.16\", \"outer_wall_speed\": " +
+        "[\"150\",\"400\",\"400\"]}. 'name'/'inherits' are reserved, set via the name/baseProfile " +
+        "arguments instead.\n\n" +
+        "Returns: { vendor, name, kind, created, path, inherits, overrides }\n\n" +
+        "Errors: baseProfile not found or unresolvable; schema violations listed per key; config " +
+        "missing (fix via init_config).\n\n" +
+        "Find baseProfile values with list_profiles or resolve_profile, and valid kvps keys with " +
+        "list_parameters.",
       inputSchema: writeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async (args: {
+      kind: ProfileKind;
       vendor: string;
       name: string;
       baseProfile: string;
@@ -103,7 +110,7 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
       outputDir: string;
     }) => {
       try {
-        const result = await handleWrite(deps, kind, args);
+        const result = await handleWrite(deps, args.kind, args);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
           structuredContent: result as unknown as Record<string, unknown>,
@@ -113,9 +120,4 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
       }
     }
   );
-}
-
-export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
-  register(server, deps, "process");
-  register(server, deps, "filament");
 }

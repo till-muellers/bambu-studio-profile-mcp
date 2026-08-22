@@ -111,13 +111,13 @@ always an explicit argument on every tool call, keeping tools stateless.
 
 ## Tools
 
-### `resolve_process_profile`
+### `resolve_profile`
 
-Resolve a process (print) profile's fully-merged active settings.
+Resolve a process or filament profile's fully-merged active settings.
 
 **Input**
 ```json
-{ "vendor": "string", "name": "string" }
+{ "kind": "process | filament", "vendor": "string", "name": "string" }
 ```
 
 **Output**
@@ -125,7 +125,7 @@ Resolve a process (print) profile's fully-merged active settings.
 {
   "vendor": "string",
   "name": "string",
-  "kind": "process",
+  "kind": "process | filament",
   "chain": ["string", "..."],
   "settings": { "<key>": "<value>", "...": "..." }
 }
@@ -139,20 +139,17 @@ chain in order; values pass through with their on-disk serialization
 unresolvable `inherits` chain; paths not configured (fix via
 `init_config`).
 
-### `resolve_filament_profile`
+### `write_profile`
 
-Same contract as `resolve_process_profile`, with `"kind": "filament"`,
-resolved against filament profiles instead of process profiles.
-
-### `write_process_profile`
-
-Create or update a process profile file in a caller-chosen directory.
-Same tool handles both: if `<outputDir>/<name>.json` already exists, it is
-overwritten; otherwise it is created. `outputDir` is created if missing.
+Create or update a process or filament profile file in a caller-chosen
+directory. Same tool handles both: if `<outputDir>/<name>.json` already
+exists, it is overwritten; otherwise it is created. `outputDir` is created
+if missing.
 
 **Input**
 ```json
 {
+  "kind": "process | filament",
   "vendor": "string",
   "name": "string",
   "baseProfile": "string",
@@ -161,12 +158,12 @@ overwritten; otherwise it is created. `outputDir` is created if missing.
 }
 ```
 `baseProfile` is the profile `name` inherits from (must resolve
-successfully via the same lookup as `resolve_process_profile`). `kvps` are
+successfully via the same lookup as `resolve_profile`). `kvps` are
 the only keys written besides `name` and `inherits` — no full snapshot.
 The written file body is exactly `{ "name": ..., "inherits": ...,
 ...kvps }`, pretty-printed.
 
-Every key in `kvps` is validated against `schema/process.schema.json`
+Every key in `kvps` is validated against `schema/<kind>.schema.json`
 before anything is written: the key must exist in the schema, and its
 value must match the declared type/enum/range. Scalar options reject
 arrays; vector options require an array and validate each element. All
@@ -178,7 +175,7 @@ found. Nothing is written if any check fails.
 {
   "vendor": "string",
   "name": "string",
-  "kind": "process",
+  "kind": "process | filament",
   "created": true,
   "path": "string",
   "inherits": "string",
@@ -192,11 +189,6 @@ overwritten. `path` is `<outputDir>/<name>.json`.
 validation (key unknown, wrong type/shape, out of range/enum) — reported
 as a list of `{ key, reason }`, not just the first failure; paths not
 configured (fix via `init_config`).
-
-### `write_filament_profile`
-
-Same contract as `write_process_profile`, with `"kind": "filament"`,
-validated against `schema/filament.schema.json`.
 
 ### `list_profiles`
 

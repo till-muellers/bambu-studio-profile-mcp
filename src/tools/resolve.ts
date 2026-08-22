@@ -15,30 +15,35 @@ export async function handleResolve(
 }
 
 const resolveInputShape = {
+  kind: z.enum(["process", "filament"]).describe("Which profile store to resolve from"),
   vendor: z.string().min(1).describe("Vendor folder under resources/profiles, e.g. 'BBL'"),
   name: z.string().min(1).describe("Profile name (the 'name' field inside the profile JSON)"),
 };
 
-function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
+export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
-    `resolve_${kind}_profile`,
+    "resolve_profile",
     {
-      title: `Resolve ${kind} profile`,
+      title: "Resolve profile",
       description:
-        `Resolve a Bambu Studio ${kind} profile's fully-merged active settings by walking its ` +
-        `'inherits' chain across the configured user preset store and the system profiles of the given vendor.\n\n` +
-        `Args:\n  - vendor (string): vendor folder under resources/profiles, e.g. 'BBL'\n` +
-        `  - name (string): profile name as shown in the profile JSON 'name' field\n\n` +
-        `Returns: { vendor, name, kind, chain: string[] (root-first), settings: object (flat merged key->value map; ` +
-        `scalars are bare strings, per-extruder options are string arrays) }\n\n` +
-        `Errors: vendor not found; profile not found; circular or unresolvable inherits chain; ` +
-        `config missing (fix via init_config).`,
+        "Resolve a Bambu Studio process or filament profile's fully-merged active settings. Walks the " +
+        "profile's 'inherits' chain across the configured user preset store and the system profiles of " +
+        "the given vendor, merging settings root-first so a more specific profile's values override " +
+        "its ancestors'.\n\n" +
+        "Args:\n  - kind (\"process\" | \"filament\"): which profile store to resolve from\n" +
+        "  - vendor (string): vendor folder under resources/profiles, e.g. 'BBL'\n" +
+        "  - name (string): profile name as shown in the profile JSON 'name' field\n\n" +
+        "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object (flat merged " +
+        "key->value map; scalars are bare strings, per-extruder options are string arrays) }\n\n" +
+        "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
+        "missing (fix via init_config).\n\n" +
+        "Find valid vendor and name values with list_vendors and list_profiles.",
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { vendor: string; name: string }) => {
+    async (args: { kind: ProfileKind; vendor: string; name: string }) => {
       try {
-        const result = await handleResolve(deps, kind, args);
+        const result = await handleResolve(deps, args.kind, args);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }],
           structuredContent: result as unknown as Record<string, unknown>,
@@ -48,9 +53,4 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
       }
     }
   );
-}
-
-export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
-  register(server, deps, "process");
-  register(server, deps, "filament");
 }

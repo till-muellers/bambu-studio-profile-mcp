@@ -51,7 +51,10 @@ function extractDefaultRaw(body: string): string | undefined {
 }
 
 function parseScalar(text: string): unknown {
-  const trimmed = text.trim();
+  let trimmed = text.trim();
+  // Unwrap the C++ localization macro, e.g. `L("(Undefined)")` -> `"(Undefined)"`.
+  const localized = trimmed.match(/^L\(\s*("[^"]*")\s*\)$/);
+  if (localized) trimmed = localized[1];
   if (trimmed === "true" || trimmed === "false") return trimmed === "true";
   if (/^-?[\d.]+$/.test(trimmed)) return Number(trimmed);
   return trimmed.replace(/^"|"$/g, "");

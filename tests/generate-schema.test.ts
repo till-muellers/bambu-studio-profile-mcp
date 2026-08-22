@@ -54,6 +54,13 @@ describe("parsePrintConfig (smoke test)", () => {
       enum: ["concentric", "zig-zag"],
     });
   });
+
+  it("unwraps an L(\"...\") localization macro in a string default to its inner text", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.filament_vendor).toMatchObject({ type: "string", default: "(Undefined)" });
+  });
 });
 
 describe("parseOptionList", () => {

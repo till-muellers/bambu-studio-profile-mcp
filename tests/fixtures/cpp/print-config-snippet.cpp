@@ -64,4 +64,8 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.emplace_back("auto_brim");
     def->enum_values.emplace_back("no_brim");
     def->set_default_value(new ConfigOptionEnum<BrimType>(btAutoBrim));
+
+    def = this->add("filament_vendor", coStrings);
+    def->label = L("Vendor");
+    def->set_default_value(new ConfigOptionStrings{ L("(Undefined)") });
 }

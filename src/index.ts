@@ -9,6 +9,7 @@ import { type ToolDeps } from "./tools/deps.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
 import { registerListTools } from "./tools/list.js";
 import { registerResolveTools } from "./tools/resolve.js";
+import { registerUpdateTool } from "./tools/update.js";
 import { registerWriteTools } from "./tools/write.js";
 
 export function buildServer(deps: ToolDeps): McpServer {
@@ -18,6 +19,7 @@ export function buildServer(deps: ToolDeps): McpServer {
   );
   registerResolveTools(server, deps);
   registerWriteTools(server, deps);
+  registerUpdateTool(server, deps);
   registerInitConfigTool(server, deps);
   registerListTools(server, deps);
   return server;

@@ -92,9 +92,10 @@ export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
       description:
         "Create a Bambu Studio process or filament profile file: writes <outputDir>/<name>.json, " +
         "inheriting from baseProfile and containing only the kvps overrides. Overwrites the file when it " +
-        "already exists; Bambu Studio's own directories stay untouched. Every kvps key and value is " +
-        "validated against the option schema before anything is written; all violations are reported " +
-        "together.\n\n" +
+        "already exists; Bambu Studio's own directories stay untouched. Overwriting REPLACES the previous " +
+        "content wholesale — kvps is always the complete override set; use update_profile to change an " +
+        "existing file incrementally. Every kvps key and value is validated against the option schema " +
+        "before anything is written; all violations are reported together.\n\n" +
         "Returns: { vendor, name, kind, created (false when an existing file was overwritten), path, " +
         "inherits, overrides }\n\n" +
         "Errors: baseProfile not found or unresolvable; schema violations listed per key; config " +

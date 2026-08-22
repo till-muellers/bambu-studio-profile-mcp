@@ -1,12 +1,15 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { ConfigManager } from "../src/config.js";
 import { buildServer, warnIfUnconfigured } from "../src/index.js";
 import { FsProfileStore } from "../src/profile-store.js";
 import type { ToolDeps } from "../src/tools/deps.js";
+import { handleWrite } from "../src/tools/write.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -57,7 +60,7 @@ async function connectedClientAndServer(
 }
 
 describe("printing-profile-mcp server", () => {
-  it("exposes exactly the seven tools", async () => {
+  it("exposes exactly the eight tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -67,6 +70,7 @@ describe("printing-profile-mcp server", () => {
       "list_profiles",
       "list_vendors",
       "resolve_profile",
+      "update_profile",
       "write_profile",
     ]);
   });
@@ -120,6 +124,49 @@ describe("printing-profile-mcp server", () => {
       kind: "process",
       chain: ["fdm_process_common", "0.20mm Standard @BBL X1C"],
     });
+  });
+
+  it("serves update_profile end-to-end over the protocol", async () => {
+    const outDir = join(await mkdtemp(join(tmpdir(), "ppm-server-update-")), "out");
+    try {
+      await handleWrite(fixtureDeps(), "process", {
+        vendor: "BBL",
+        name: "Server Update Test",
+        baseProfile: "fdm_process_common",
+        kvps: { layer_height: "0.2", wall_loops: "2" },
+        outputDir: outDir,
+      });
+
+      const client = await connectedClient();
+      const result = await client.callTool({
+        name: "update_profile",
+        arguments: {
+          kind: "process",
+          name: "Server Update Test",
+          outputDir: outDir,
+          set: { layer_height: "0.16" },
+          remove: ["wall_loops"],
+        },
+      });
+
+      expect(result.isError).toBeFalsy();
+      expect(result.structuredContent).toMatchObject({
+        name: "Server Update Test",
+        kind: "process",
+        set: ["layer_height"],
+        removed: ["wall_loops"],
+        overrides: { layer_height: "0.16" },
+      });
+
+      const onDisk = JSON.parse(await readFile(join(outDir, "Server Update Test.json"), "utf8"));
+      expect(onDisk).toEqual({
+        name: "Server Update Test",
+        inherits: "fdm_process_common",
+        layer_height: "0.16",
+      });
+    } finally {
+      await rm(join(outDir, ".."), { recursive: true, force: true });
+    }
   });
 
   it("returns an isError result (not a protocol error) for a missing profile", async () => {

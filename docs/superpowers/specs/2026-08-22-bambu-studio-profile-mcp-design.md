@@ -177,7 +177,9 @@ if missing.
 successfully via the same lookup as `resolve_profile`). `kvps` are
 the only keys written besides `name` and `inherits` — no full snapshot.
 The written file body is exactly `{ "name": ..., "inherits": ...,
-...kvps }`, pretty-printed.
+...kvps }`, pretty-printed. Overwriting REPLACES the previous content
+wholesale — `kvps` is always the complete override set; use
+`update_profile` to change an existing file incrementally.
 
 Every key in `kvps` is validated against `schema/<kind>.schema.json`
 before anything is written: the key must exist in the schema, and its
@@ -205,6 +207,51 @@ overwritten. `path` is `<outputDir>/<name>.json`.
 validation (key unknown, wrong type/shape, out of range/enum) — reported
 as a list of `{ key, reason }`, not just the first failure; paths not
 configured (fix via `init_config`).
+
+### `update_profile`
+
+Incrementally edit a profile file previously created by `write_profile`:
+upsert `set` keys and delete `remove` keys in one atomic, validated step.
+Keys not mentioned stay unchanged; the file's `name` and `inherits` stay
+as they are.
+
+**Input**
+```json
+{
+  "kind": "process | filament",
+  "name": "string",
+  "outputDir": "string",
+  "set": { "<key>": "<value>", "...": "..." },
+  "remove": ["string", "..."]
+}
+```
+At least one of `set` (non-empty) / `remove` (non-empty) must be given.
+`set` values follow the same rules as `write_profile`'s `kvps` (scalar
+strings, full-length vector arrays, `"nil"` on nullable options).
+
+Every violation is collected together before anything is written:
+`name`/`inherits` appearing in `set` or `remove` (reserved, managed via
+`write_profile`'s `name`/`baseProfile` arguments); `set` entries failing
+schema validation; `remove` entries not present as a key in the file.
+
+**Output**
+```json
+{
+  "name": "string",
+  "kind": "process | filament",
+  "path": "string",
+  "set": ["string", "..."],
+  "removed": ["string", "..."],
+  "overrides": { "<key>": "<value>", "...": "..." }
+}
+```
+`set`/`removed` are the applied key lists; `overrides` is the file's
+final key→value map excluding `name`/`inherits`.
+
+**Errors**: `<outputDir>/<name>.json` not found (create it with
+`write_profile` first); schema violations, reserved keys, and unknown
+`remove` keys listed together; nothing to do when both `set` and `remove`
+are omitted; config missing (run `init_config` first).
 
 ### `list_profiles`
 

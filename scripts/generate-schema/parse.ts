@@ -43,9 +43,24 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
   return options;
 }
 
+/** Strips C++ `/* block *\/` and `// line` comments so commented-out keys are not extracted. */
+function stripComments(text: string): string {
+  return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+}
+
 /** Extracts the quoted option keys from a `print_options()` / `filament_options()` list body. */
 export function parseOptionList(cppSource: string, fnName: string): string[] {
+  // `Preset::<fnName>()` commonly just returns a static vector defined elsewhere,
+  // e.g. `const std::vector<std::string>& Preset::print_options() { return s_Preset_print_options; }`.
+  const indirect = cppSource.match(new RegExp(`${fnName}\\s*\\(\\)\\s*\\{\\s*return\\s+(\\w+)\\s*;\\s*\\}`));
+  if (indirect) {
+    const varName = indirect[1];
+    const decl = cppSource.match(new RegExp(`\\b${varName}\\s*\\{([\\s\\S]*?)\\}\\s*;`));
+    if (decl) return [...stripComments(decl[1]).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  }
+
+  // Fallback: the list is inlined directly in the function body.
   const fn = cppSource.match(new RegExp(`${fnName}\\s*\\(\\)[\\s\\S]*?\\{([\\s\\S]*?)\\n\\}`));
   if (!fn) return [];
-  return [...fn[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  return [...stripComments(fn[1]).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }

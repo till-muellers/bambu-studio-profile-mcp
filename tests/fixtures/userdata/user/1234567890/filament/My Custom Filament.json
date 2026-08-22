@@ -1,0 +1,5 @@
+{
+  "name": "My Custom Filament",
+  "inherits": "Generic PLA @BBL X1C",
+  "filament_id": "GFA00"
+}

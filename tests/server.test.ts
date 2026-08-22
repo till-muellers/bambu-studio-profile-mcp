@@ -57,19 +57,53 @@ async function connectedClientAndServer(
 }
 
 describe("printing-profile-mcp server", () => {
-  it("exposes exactly the eight tools", async () => {
+  it("exposes exactly the nine tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "init_config",
-      "list_filament_profiles",
-      "list_process_profiles",
+      "list_filament_ids",
+      "list_parameters",
+      "list_profiles",
       "list_vendors",
       "resolve_filament_profile",
       "resolve_process_profile",
       "write_filament_profile",
       "write_process_profile",
     ]);
+  });
+
+  it("serves list_profiles end-to-end over the protocol", async () => {
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "list_profiles",
+      arguments: { kind: "process", search: "Standard" },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      kind: "process",
+      profiles: [{ name: "0.20mm Standard @BBL X1C", source: "system", vendor: "BBL" }],
+    });
+  });
+
+  it("serves list_vendors end-to-end over the protocol with no arguments", async () => {
+    const client = await connectedClient();
+    const result = await client.callTool({ name: "list_vendors", arguments: {} });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toEqual({ vendors: ["BBL"] });
+  });
+
+  it("serves list_parameters end-to-end over the protocol", async () => {
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "list_parameters",
+      arguments: { kind: "process", search: "layer_height" },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      kind: "process",
+      parameters: [{ key: "layer_height", type: "float" }],
+    });
   });
 
   it("serves resolve_process_profile end-to-end over the protocol", async () => {

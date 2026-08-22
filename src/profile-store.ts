@@ -95,26 +95,46 @@ export async function listProfiles(
   return [...userEntries, ...systemEntries];
 }
 
-async function countJsonFiles(dir: string): Promise<number> {
-  if (!existsSync(dir)) return 0;
-  return (await readdir(dir)).filter((entry) => entry.endsWith(".json")).length;
+/** List vendor folder names under resources/profiles, sorted. */
+export async function listVendors(cfg: ServerConfig): Promise<string[]> {
+  const profilesDir = join(cfg.installDir, "resources", "profiles");
+  return (await listVendorDirNames(profilesDir)).sort((a, b) => a.localeCompare(b));
 }
 
-/** List vendor folders under resources/profiles with per-kind profile counts. */
-export async function listVendors(
-  cfg: ServerConfig
-): Promise<{ name: string; processCount: number; filamentCount: number }[]> {
-  const profilesDir = join(cfg.installDir, "resources", "profiles");
-  const vendorNames = (await listVendorDirNames(profilesDir)).sort((a, b) => a.localeCompare(b));
-  const vendors = [];
-  for (const name of vendorNames) {
-    vendors.push({
-      name,
-      processCount: await countJsonFiles(join(profilesDir, name, "process")),
-      filamentCount: await countJsonFiles(join(profilesDir, name, "filament")),
-    });
+async function collectFilamentIds(dir: string): Promise<string[]> {
+  if (!existsSync(dir)) return [];
+  const ids: string[] = [];
+  for (const entry of await readdir(dir)) {
+    if (!entry.endsWith(".json")) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await readFile(join(dir, entry), "utf8"));
+    } catch {
+      continue; // unreadable/non-JSON files are not candidates
+    }
+    if (!parsed || typeof parsed !== "object") continue;
+    const filamentId = (parsed as RawProfile).filament_id;
+    if (typeof filamentId === "string" && filamentId.length > 0) ids.push(filamentId);
   }
-  return vendors;
+  return ids;
+}
+
+/**
+ * Collects the distinct `filament_id` values across the configured user filament store and every
+ * vendor's system filament directory. Missing/unknown directories contribute nothing rather than
+ * throwing; profiles without a `filament_id` are skipped.
+ */
+export async function listFilamentIds(cfg: ServerConfig): Promise<string[]> {
+  const userDir = join(cfg.userDataDir, "user", cfg.userId, "filament");
+  const profilesDir = join(cfg.installDir, "resources", "profiles");
+
+  const ids = new Set<string>(await collectFilamentIds(userDir));
+  for (const vendorName of await listVendorDirNames(profilesDir)) {
+    for (const id of await collectFilamentIds(join(profilesDir, vendorName, "filament"))) {
+      ids.add(id);
+    }
+  }
+  return [...ids].sort((a, b) => a.localeCompare(b));
 }
 
 export class FsProfileStore implements ProfileStore {

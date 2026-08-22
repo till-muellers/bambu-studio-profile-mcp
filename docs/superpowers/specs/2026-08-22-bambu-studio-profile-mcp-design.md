@@ -62,8 +62,10 @@ BambuStudio source checkout and emits two files checked into this repo:
 - `schema/process.schema.json`
 - `schema/filament.schema.json`
 
-Each maps option key → `{ type, vector, enum?, min?, max?, default? }`.
-Types: `string`, `int`, `float`, `bool`, `enum`, `percent`. The MCP server
+Each maps option key → `{ type, vector, enum?, min?, max?, default?, label?, description? }`.
+Types: `string`, `int`, `float`, `bool`, `enum`, `percent`. `label` and
+`description` come from Bambu Studio's own `def->label`/`def->tooltip`
+strings and are omitted when the source declares neither. The MCP server
 only ever reads these two files at runtime; it never parses C++ or touches
 a BambuStudio source checkout itself.
 
@@ -196,23 +198,23 @@ configured (fix via `init_config`).
 Same contract as `write_process_profile`, with `"kind": "filament"`,
 validated against `schema/filament.schema.json`.
 
-### `list_process_profiles`
+### `list_profiles`
 
-Discover process profiles in the user preset store and, optionally, the
-system store.
+Discover profiles of the given `kind` in the user preset store and,
+optionally, the system store.
 
 **Input**
 ```json
-{ "vendor": "string (optional)", "nameContains": "string (optional)" }
+{ "kind": "process | filament", "vendor": "string (optional)", "search": "string (optional)" }
 ```
 `vendor` scopes system results to one vendor folder; omitted, every vendor
-subdirectory of `resources/profiles` is scanned. `nameContains` narrows the
+subdirectory of `resources/profiles` is scanned. `search` narrows the
 result by a case-insensitive substring match on `name`.
 
 **Output**
 ```json
 {
-  "kind": "process",
+  "kind": "process | filament",
   "profiles": [
     { "name": "string", "source": "user | system", "vendor": "string (system only)", "inherits": "string (optional)" }
   ]
@@ -224,24 +226,68 @@ name.
 **Errors**: vendor not found (only when `vendor` is given); paths not
 configured (fix via `init_config`).
 
-### `list_filament_profiles`
-
-Same contract as `list_process_profiles`, with `"kind": "filament"`,
-listing filament profiles instead of process profiles.
-
 ### `list_vendors`
 
-List the vendor folders under `resources/profiles` with per-kind profile
-counts, for discovering valid `vendor` arguments to the resolve/write/list
-tools.
+List the vendor folder names under `resources/profiles`, for discovering
+valid `vendor` arguments to the resolve/write/list_profiles tools.
 
 **Input**: none.
 
 **Output**
 ```json
-{ "vendors": [{ "name": "string", "processCount": 0, "filamentCount": 0 }] }
+{ "vendors": ["string", "..."] }
 ```
-Sorted by vendor name.
+Sorted.
+
+**Errors**: paths not configured (fix via `init_config`).
+
+### `list_parameters`
+
+Discover the option keys valid for `kind` profiles, enriched with the
+schema's `label`/`description` where present.
+
+**Input**
+```json
+{ "kind": "process | filament", "search": "string (optional)" }
+```
+`search` narrows the result by a case-insensitive substring match against
+the key, label, and description.
+
+**Output**
+```json
+{
+  "kind": "process | filament",
+  "parameters": [
+    {
+      "key": "string",
+      "type": "string | int | float | bool | enum | percent",
+      "vector": true,
+      "enum": ["string", "..."],
+      "min": 0,
+      "max": 0,
+      "default": "...",
+      "label": "string (optional)",
+      "description": "string (optional)"
+    }
+  ]
+}
+```
+
+**Errors**: paths not configured (fix via `init_config`).
+
+### `list_filament_ids`
+
+List the distinct `filament_id` values found across all filament profiles:
+the configured user filament store plus every vendor's system filament
+directory. Profiles without a `filament_id` are skipped.
+
+**Input**: none.
+
+**Output**
+```json
+{ "filamentIds": ["string", "..."] }
+```
+Sorted, deduplicated.
 
 **Errors**: paths not configured (fix via `init_config`).
 

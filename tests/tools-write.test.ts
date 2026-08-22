@@ -103,6 +103,36 @@ describe("handleWrite", () => {
     expect(existsSync(outDir)).toBe(false);
   });
 
+  it("rejects a reserved 'inherits' key in kvps and writes nothing", async () => {
+    const promise = handleWrite(deps(), "process", {
+      vendor: "BBL",
+      name: "Sneaky Preset",
+      baseProfile: "fdm_process_common",
+      kvps: { inherits: "ghost", layer_height: "0.2" },
+      outputDir: outDir,
+    });
+    await expect(promise).rejects.toBeInstanceOf(SchemaValidationError);
+    const err = (await promise.catch((e: unknown) => e)) as SchemaValidationError;
+    const violation = err.violations.find((v) => v.key === "inherits");
+    expect(violation?.reason).toMatch(/reserved key/i);
+    expect(existsSync(outDir)).toBe(false);
+  });
+
+  it("rejects a reserved 'name' key in kvps and writes nothing", async () => {
+    const promise = handleWrite(deps(), "process", {
+      vendor: "BBL",
+      name: "Sneaky Preset 2",
+      baseProfile: "fdm_process_common",
+      kvps: { name: "x" },
+      outputDir: outDir,
+    });
+    await expect(promise).rejects.toBeInstanceOf(SchemaValidationError);
+    const err = (await promise.catch((e: unknown) => e)) as SchemaValidationError;
+    const violation = err.violations.find((v) => v.key === "name");
+    expect(violation?.reason).toMatch(/reserved key/i);
+    expect(existsSync(outDir)).toBe(false);
+  });
+
   it("validates filament writes against the filament schema, per element", async () => {
     await expect(
       handleWrite(deps(), "filament", {

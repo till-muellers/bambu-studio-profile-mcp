@@ -31,7 +31,15 @@ export async function handleWrite(
 ): Promise<WriteResult> {
   const cfg = await deps.config.require();
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
-  const violations = validateKvps(schema, args.kvps);
+  const reservedKeys = (["inherits", "name"] as const).filter((key) => key in args.kvps);
+  const reservedViolations = reservedKeys.map((key) => ({
+    key,
+    reason: "reserved key: set via the 'name'/'baseProfile' argument, not kvps",
+  }));
+  const kvpsToValidate = Object.fromEntries(
+    Object.entries(args.kvps).filter(([key]) => !reservedKeys.includes(key as "inherits" | "name"))
+  );
+  const violations = [...reservedViolations, ...validateKvps(schema, kvpsToValidate)];
   if (violations.length > 0) throw new SchemaValidationError(violations);
 
   const store = deps.storeFactory(cfg);

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the `printing-profile-mcp` server exposing five tools that resolve and schema-validate-write Bambu Studio process/filament profiles.
+**Goal:** Build the `printing-profile-mcp` server exposing five tools that resolve Bambu Studio process/filament profiles and write schema-validated profile files to caller-chosen directories.
 
-**Architecture:** A foundation task locks all shared types, error classes, and test fixtures. Five independent building blocks (config, profile store, resolver, validator, schema generator) are then built in parallel against those locked interfaces. Tool tasks compose the blocks; a final task wires the MCP server entry point.
+**Architecture:** A foundation task locks all shared types, error classes, and test fixtures. Five independent building blocks (config, profile store, resolver, validator, schema generator) are then built in parallel against those locked interfaces. Tool tasks compose the blocks; a final task wires the MCP server entry point and generates the real schemas.
 
 **Tech Stack:** TypeScript (strict, ESM), Node.js ≥ 20, `@modelcontextprotocol/sdk`, `zod` v3, Vitest.
 
@@ -16,11 +16,13 @@
 - MCP server name: `printing-profile-mcp`. Transport: stdio only.
 - Register tools ONLY via `server.registerTool()` — never `server.tool()` or manual request handlers.
 - Every tool handler's business logic lives in a plain exported function (`handleX(deps, args)`); the `registerTool` callback is a thin wrapper. Tests target the plain functions.
-- Vendor is an explicit argument on every resolve/write call; tools hold no session state.
-- `config.json` (repo root) is machine-specific and gitignored. It stores `installDir`/`userDataDir` only.
-- Schema files live at `schema/process.schema.json` and `schema/filament.schema.json` (repo root). The server reads them at runtime; it never parses C++.
+- Bambu Studio directories are read-only. Written profiles go ONLY to the per-call `outputDir`.
+- Resolution reads user presets ONLY from `user/<userId>` where `userId` comes from `config.json`.
+- There is no zero-config operation: resolve/write fail with `ConfigMissingError` until `config.json` exists (created via `init_config`).
+- Value serialization (verified against a real 2.7.0.8 install): scalars are bare JSON strings (`"layer_height": "0.1"`, `"100%"`); vector options are string arrays of ≥1 elements (`["200", "500", "500"]`). Scalar options reject arrays; vector options require arrays and validate every element. Array length is never validated.
 - All schema violations in a request are collected and reported together as `{ key, reason }[]`, never just the first.
-- Bambu Studio wraps scalars in single-element string arrays (`["0.2"]`); the validator must accept both the wrapped and the bare form when `serializedAsArray` is true.
+- `config.json` (repo root) is machine-specific and gitignored. It stores `installDir`, `userDataDir`, `userId`.
+- Schema files live at `schema/process.schema.json` and `schema/filament.schema.json` (repo root). The server reads them at runtime; it never parses C++.
 - TypeScript: `strict: true`, no `any` (use `unknown`), explicit `Promise<T>` return types on async functions.
 - Test command: `npx vitest run <file>` (per-file) / `npm test` (all). Every task follows red-green: write failing test → see it fail → implement → see it pass → commit.
 - Commit after every task with the message given in the task. Do not batch tasks into one commit.
@@ -34,13 +36,13 @@ Wave 1 (parallel):  Task 2  (config)
                     Task 4  (resolver)
                     Task 5  (kvps validator)
                     Task 6  (schema generator script)
-Wave 2 (parallel):  Task 7  (resolve tools)      — needs 3, 4
-                    Task 8  (write tools)        — needs 3, 4, 5
+Wave 2 (parallel):  Task 7  (resolve tools)      — needs 2, 3, 4
+                    Task 8  (write tools)        — needs 2, 3, 4, 5
                     Task 9  (init_config tool)   — needs 2
-Wave 3 (serial):    Task 10 (server entry + integration + README)
+Wave 3 (serial):    Task 10 (server entry + integration + schema generation + README)
 ```
 
-Wave-1 tasks share no files: each creates exactly one `src/` module and one test file. Wave-2 tasks each create one `src/tools/` module and one test file. Only Tasks 1 and 10 touch shared files. Agents working the same wave must not edit `src/types.ts` or `src/errors.ts` — if an interface there proves wrong, stop and escalate to the orchestrator instead of editing it.
+Wave-1 tasks share no files: each creates exactly one `src/` module (or `scripts/` dir) and one test file. Wave-2 tasks each create one `src/tools/` module and one test file, except the shared `src/tools/deps.ts` whose exact content is given in Task 7 — whichever Wave-2 agent starts first creates it verbatim (first writer wins, content is identical). Only Tasks 1 and 10 touch shared files. Agents working the same wave must not edit `src/types.ts` or `src/errors.ts` — if an interface there proves wrong, stop and escalate to the orchestrator instead of editing it.
 
 ---
 
@@ -128,6 +130,8 @@ export type ProfileKind = "process" | "filament";
 export interface ServerConfig {
   installDir: string;
   userDataDir: string;
+  /** The user/<userId> directory resolution reads. */
+  userId: string;
 }
 
 /** A profile JSON file as read from disk. */
@@ -143,16 +147,10 @@ export interface ProfileHit {
   path: string;
 }
 
-/** Lookup/write abstraction over the system + user preset stores. */
+/** Read-only lookup over the system + user preset stores. */
 export interface ProfileStore {
-  /** User store first, then system store under the given vendor. Null if absent in both. */
+  /** User store (user/<userId>/<kind>) first, then system store under the given vendor. Null if absent in both. */
   findProfile(kind: ProfileKind, vendor: string, name: string): Promise<ProfileHit | null>;
-  /** Create or overwrite a user preset. `body` is written verbatim as pretty-printed JSON. */
-  writeUserPreset(
-    kind: ProfileKind,
-    name: string,
-    body: Record<string, unknown>
-  ): Promise<{ path: string; created: boolean }>;
 }
 
 export interface ResolvedProfile {
@@ -167,12 +165,12 @@ export type SchemaType = "string" | "int" | "float" | "bool" | "enum" | "percent
 
 export interface SchemaOption {
   type: SchemaType;
+  /** True for per-extruder/per-filament options stored as string arrays; false for bare scalars. */
+  vector: boolean;
   enum?: string[];
   min?: number;
   max?: number;
   default?: unknown;
-  /** True when Bambu Studio stores this option as a single-element string array. */
-  serializedAsArray: boolean;
 }
 
 export type ProfileSchema = Record<string, SchemaOption>;
@@ -192,7 +190,6 @@ import {
   ConfigMissingError,
   ProfileNotFoundError,
   SchemaValidationError,
-  UserStoreError,
   VendorNotFoundError,
 } from "../src/errors.js";
 
@@ -216,7 +213,6 @@ describe("errors", () => {
       new VendorNotFoundError("BBL"),
       new ProfileNotFoundError("process", "X"),
       new CircularInheritanceError(["a", "b", "a"]),
-      new UserStoreError("no user dir"),
     ]) {
       expect(err).toBeInstanceOf(Error);
       expect(err.name).not.toBe("Error");
@@ -271,17 +267,11 @@ export class SchemaValidationError extends Error {
 export class ConfigMissingError extends Error {
   constructor() {
     super(
-      "Bambu Studio paths are not configured and auto-detection failed. " +
-        "Call the init_config tool with installDir and userDataDir."
+      "config.json does not exist yet. Call the init_config tool with your userId " +
+        "(the user/<id> directory in the Bambu Studio user-data folder); installDir " +
+        "and userDataDir are auto-detected if omitted."
     );
     this.name = "ConfigMissingError";
-  }
-}
-
-export class UserStoreError extends Error {
-  constructor(detail: string) {
-    super(`User preset store problem: ${detail}`);
-    this.name = "UserStoreError";
   }
 }
 ```
@@ -293,16 +283,17 @@ Expected: PASS (3 tests).
 
 - [ ] **Step 10: Create the profile fixtures**
 
-Create these files exactly. All value wrapping uses Bambu's single-element string arrays.
+Create these files exactly. Serialization mirrors real Bambu Studio files: scalars as bare strings, vector options as multi-element string arrays.
 
 `tests/fixtures/install/resources/profiles/BBL/process/fdm_process_common.json`
 ```json
 {
   "name": "fdm_process_common",
-  "layer_height": ["0.2"],
-  "wall_loops": ["2"],
-  "sparse_infill_density": ["15%"],
-  "wall_generator": ["classic"]
+  "layer_height": "0.2",
+  "wall_loops": "2",
+  "sparse_infill_density": "15%",
+  "wall_generator": "classic",
+  "outer_wall_speed": ["200", "500", "500"]
 }
 ```
 
@@ -311,7 +302,8 @@ Create these files exactly. All value wrapping uses Bambu's single-element strin
 {
   "name": "0.20mm Standard @BBL X1C",
   "inherits": "fdm_process_common",
-  "wall_loops": ["3"]
+  "wall_loops": "3",
+  "outer_wall_speed": ["250", "500", "500"]
 }
 ```
 
@@ -350,36 +342,39 @@ Create these files exactly. All value wrapping uses Bambu's single-element strin
 
 `tests/fixtures/install/resources/profiles_template/.gitkeep` — empty file.
 
-`tests/fixtures/userdata/user/12345/process/My Custom Draft.json`
+`tests/fixtures/userdata/user/1234567890/process/My Custom Draft.json`
 ```json
 {
   "name": "My Custom Draft",
   "inherits": "0.20mm Standard @BBL X1C",
-  "layer_height": ["0.28"]
+  "layer_height": "0.28"
 }
 ```
 
-`tests/fixtures/userdata/user/12345/filament/.gitkeep` — empty file.
+`tests/fixtures/userdata/user/1234567890/filament/.gitkeep` — empty file.
+
+`tests/fixtures/userdata/user/default/process/.gitkeep` — empty file (mirrors the real machine's empty `default` account dir).
 
 - [ ] **Step 11: Create the schema fixtures**
 
 `tests/fixtures/schema/process.schema.json`
 ```json
 {
-  "layer_height": { "type": "float", "min": 0.04, "max": 1.0, "default": 0.2, "serializedAsArray": true },
-  "wall_loops": { "type": "int", "min": 0, "max": 1000, "default": 2, "serializedAsArray": true },
-  "enable_support": { "type": "bool", "default": false, "serializedAsArray": true },
-  "wall_generator": { "type": "enum", "enum": ["classic", "arachne"], "default": "classic", "serializedAsArray": true },
-  "sparse_infill_density": { "type": "percent", "min": 0, "max": 100, "default": 15, "serializedAsArray": true },
-  "notes": { "type": "string", "default": "", "serializedAsArray": false }
+  "layer_height": { "type": "float", "vector": false, "min": 0.04, "max": 1.0, "default": 0.2 },
+  "wall_loops": { "type": "int", "vector": false, "min": 0, "max": 1000, "default": 2 },
+  "enable_support": { "type": "bool", "vector": false, "default": false },
+  "wall_generator": { "type": "enum", "vector": false, "enum": ["classic", "arachne"], "default": "classic" },
+  "sparse_infill_density": { "type": "percent", "vector": false, "min": 0, "max": 100, "default": 15 },
+  "outer_wall_speed": { "type": "float", "vector": true, "min": 0, "default": 200 },
+  "notes": { "type": "string", "vector": false, "default": "" }
 }
 ```
 
 `tests/fixtures/schema/filament.schema.json`
 ```json
 {
-  "nozzle_temperature": { "type": "int", "min": 0, "max": 350, "default": 220, "serializedAsArray": true },
-  "filament_type": { "type": "enum", "enum": ["PLA", "PETG", "ABS", "TPU"], "default": "PLA", "serializedAsArray": true }
+  "nozzle_temperature": { "type": "int", "vector": true, "min": 0, "max": 350, "default": 220 },
+  "filament_type": { "type": "enum", "vector": true, "enum": ["PLA", "PETG", "ABS", "TPU"], "default": "PLA" }
 }
 ```
 
@@ -397,7 +392,7 @@ git commit -m "feat: scaffold project with shared types, errors, and test fixtur
 
 ---
 
-### Task 2: Config manager with auto-detection
+### Task 2: Config manager and path detection
 
 **Files:**
 - Create: `src/config.ts`
@@ -406,9 +401,10 @@ git commit -m "feat: scaffold project with shared types, errors, and test fixtur
 **Interfaces:**
 - Consumes: `ServerConfig`, `ConfigMissingError` from Task 1.
 - Produces:
-  - `class ConfigManager { constructor(configPath: string, detect?: () => ServerConfig | null); load(): Promise<ServerConfig | null>; require(): Promise<ServerConfig>; save(cfg: ServerConfig): Promise<string>; }`
-  - `function validateConfigPaths(cfg: ServerConfig): Promise<string[]>` — empty array means valid.
-  - `function detectDefaultPaths(): ServerConfig | null`
+  - `class ConfigManager { constructor(configPath: string); load(): Promise<ServerConfig | null>; require(): Promise<ServerConfig>; save(cfg: ServerConfig): Promise<string>; }` — `load` reads `config.json` only (no detection); `save` returns the persisted path.
+  - `function validateConfigPaths(cfg: ServerConfig): Promise<string[]>` — empty array means valid; checks `installDir/resources/profiles` and `userDataDir/user/<userId>` exist.
+  - `type DetectedPaths = Partial<Pick<ServerConfig, "installDir" | "userDataDir">>`
+  - `function detectDefaultPaths(): Promise<DetectedPaths>` — best-effort; each field present only if its layout check passes.
 
 - [ ] **Step 1: Write the failing test `tests/config.test.ts`**
 
@@ -424,6 +420,7 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 const VALID = {
   installDir: join(FIXTURES, "install"),
   userDataDir: join(FIXTURES, "userdata"),
+  userId: "1234567890",
 };
 
 let dir: string;
@@ -438,34 +435,32 @@ describe("ConfigManager.load", () => {
   it("returns the persisted config when config.json exists", async () => {
     const path = join(dir, "config.json");
     await writeFile(path, JSON.stringify(VALID));
-    const mgr = new ConfigManager(path, () => null);
-    expect(await mgr.load()).toEqual(VALID);
+    expect(await new ConfigManager(path).load()).toEqual(VALID);
   });
 
-  it("falls back to auto-detection when config.json is absent", async () => {
-    const mgr = new ConfigManager(join(dir, "config.json"), () => VALID);
-    expect(await mgr.load()).toEqual(VALID);
+  it("returns null when config.json is absent", async () => {
+    expect(await new ConfigManager(join(dir, "config.json")).load()).toBeNull();
   });
 
-  it("returns null when neither exists", async () => {
-    const mgr = new ConfigManager(join(dir, "config.json"), () => null);
-    expect(await mgr.load()).toBeNull();
+  it("returns null when config.json is missing a field", async () => {
+    const path = join(dir, "config.json");
+    await writeFile(path, JSON.stringify({ installDir: "x", userDataDir: "y" }));
+    expect(await new ConfigManager(path).load()).toBeNull();
   });
 });
 
 describe("ConfigManager.require", () => {
   it("throws ConfigMissingError naming init_config when unconfigured", async () => {
-    const mgr = new ConfigManager(join(dir, "config.json"), () => null);
+    const mgr = new ConfigManager(join(dir, "config.json"));
     await expect(mgr.require()).rejects.toBeInstanceOf(ConfigMissingError);
   });
 });
 
 describe("ConfigManager.save", () => {
-  it("persists config.json and load() reads it back without re-detecting", async () => {
+  it("persists config.json and load() reads it back", async () => {
     const path = join(dir, "config.json");
-    const mgr = new ConfigManager(path, () => null);
-    const persistedTo = await mgr.save(VALID);
-    expect(persistedTo).toBe(path);
+    const mgr = new ConfigManager(path);
+    expect(await mgr.save(VALID)).toBe(path);
     expect(JSON.parse(await readFile(path, "utf8"))).toEqual(VALID);
     expect(await mgr.load()).toEqual(VALID);
   });
@@ -476,11 +471,17 @@ describe("validateConfigPaths", () => {
     expect(await validateConfigPaths(VALID)).toEqual([]);
   });
 
-  it("reports installDir without resources/profiles and userDataDir without user/", async () => {
-    const problems = await validateConfigPaths({ installDir: dir, userDataDir: dir });
+  it("reports bad installDir, bad userDataDir/userId — all collected", async () => {
+    const problems = await validateConfigPaths({ installDir: dir, userDataDir: dir, userId: "nobody" });
     expect(problems).toHaveLength(2);
     expect(problems[0]).toContain("resources");
-    expect(problems[1]).toContain("user");
+    expect(problems[1]).toContain("nobody");
+  });
+
+  it("reports a wrong userId even when userDataDir is right", async () => {
+    const problems = await validateConfigPaths({ ...VALID, userId: "99999" });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain("99999");
   });
 });
 ```
@@ -493,31 +494,61 @@ Expected: FAIL — cannot resolve `../src/config.js`.
 - [ ] **Step 3: Write `src/config.ts`**
 
 ```typescript
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import { ConfigMissingError } from "./errors.js";
 import type { ServerConfig } from "./types.js";
 
-/** Best-effort per-OS candidates; returns the first pair whose layout checks pass. */
-export function detectDefaultPaths(): ServerConfig | null {
+const execFileAsync = promisify(execFile);
+
+export type DetectedPaths = Partial<Pick<ServerConfig, "installDir" | "userDataDir">>;
+
+async function detectWindowsInstallDir(): Promise<string | undefined> {
+  // The install drive varies, so read the uninstall entry's DisplayIcon (path to bambu-studio.exe).
+  for (const hive of ["HKLM", "HKCU"]) {
+    try {
+      const { stdout } = await execFileAsync("reg", [
+        "query",
+        `${hive}\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall`,
+        "/s",
+        "/f",
+        "Bambu Studio",
+      ]);
+      const icon = stdout.match(/DisplayIcon\s+REG_SZ\s+(.+bambu-studio\.exe)/i);
+      if (icon) return dirname(icon[1].trim());
+    } catch {
+      // hive missing or reg query found nothing — try the next hive
+    }
+  }
+  return undefined;
+}
+
+/** Best-effort; each field is present only if its layout check passes. userId is never detected. */
+export async function detectDefaultPaths(): Promise<DetectedPaths> {
   const installCandidates: string[] = [];
   const userDataCandidates: string[] = [];
   if (process.platform === "win32") {
+    const fromRegistry = await detectWindowsInstallDir();
+    if (fromRegistry) installCandidates.push(fromRegistry);
     installCandidates.push("C:\\Program Files\\Bambu Studio");
     if (process.env.APPDATA) userDataCandidates.push(join(process.env.APPDATA, "BambuStudio"));
   } else if (process.platform === "darwin") {
-    installCandidates.push("/Applications/BambuStudio.app/Contents/Resources/..");
+    installCandidates.push("/Applications/BambuStudio.app/Contents");
     userDataCandidates.push(join(homedir(), "Library", "Application Support", "BambuStudio"));
   } else {
     installCandidates.push("/usr/share/BambuStudio", "/opt/bambustudio");
     userDataCandidates.push(join(homedir(), ".config", "BambuStudio"));
   }
+  const result: DetectedPaths = {};
   const installDir = installCandidates.find((d) => existsSync(join(d, "resources", "profiles")));
+  if (installDir) result.installDir = installDir;
   const userDataDir = userDataCandidates.find((d) => existsSync(join(d, "user")));
-  if (!installDir || !userDataDir) return null;
-  return { installDir, userDataDir };
+  if (userDataDir) result.userDataDir = userDataDir;
+  return result;
 }
 
 export async function validateConfigPaths(cfg: ServerConfig): Promise<string[]> {
@@ -525,27 +556,27 @@ export async function validateConfigPaths(cfg: ServerConfig): Promise<string[]> 
   if (!existsSync(join(cfg.installDir, "resources", "profiles"))) {
     problems.push(`installDir '${cfg.installDir}' does not contain resources/profiles.`);
   }
-  if (!existsSync(join(cfg.userDataDir, "user"))) {
-    problems.push(`userDataDir '${cfg.userDataDir}' does not contain a user/ preset store.`);
+  if (!existsSync(join(cfg.userDataDir, "user", cfg.userId))) {
+    problems.push(`userDataDir '${cfg.userDataDir}' does not contain user/${cfg.userId}.`);
   }
   return problems;
 }
 
 export class ConfigManager {
-  constructor(
-    private readonly configPath: string,
-    private readonly detect: () => ServerConfig | null = detectDefaultPaths
-  ) {}
+  constructor(private readonly configPath: string) {}
 
   async load(): Promise<ServerConfig | null> {
-    if (existsSync(this.configPath)) {
-      const raw: unknown = JSON.parse(await readFile(this.configPath, "utf8"));
-      const cfg = raw as ServerConfig;
-      if (typeof cfg.installDir === "string" && typeof cfg.userDataDir === "string") {
-        return { installDir: cfg.installDir, userDataDir: cfg.userDataDir };
-      }
+    if (!existsSync(this.configPath)) return null;
+    const raw: unknown = JSON.parse(await readFile(this.configPath, "utf8"));
+    const cfg = raw as ServerConfig;
+    if (
+      typeof cfg.installDir === "string" &&
+      typeof cfg.userDataDir === "string" &&
+      typeof cfg.userId === "string"
+    ) {
+      return { installDir: cfg.installDir, userDataDir: cfg.userDataDir, userId: cfg.userId };
     }
-    return this.detect();
+    return null;
   }
 
   async require(): Promise<ServerConfig> {
@@ -561,18 +592,23 @@ export class ConfigManager {
 }
 ```
 
-Note: the macOS install candidate is best-effort only; auto-detection failing there is handled by design via `init_config`. Do not spend time perfecting candidates — `detect` is injectable and tested via injection.
+Note: `detectDefaultPaths` has no unit test (registry and machine layout are not portable); it is exercised by the manual check in the next step and injected as a fake everywhere else.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/config.test.ts`
-Expected: PASS (7 tests).
+Expected: PASS (8 tests).
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Manually verify detection on this machine**
+
+Run: `npx tsx -e "import('./src/config.js').then(async (m) => console.log(await m.detectDefaultPaths()))"`
+Expected on this machine: `{ installDir: 'C:\\Program Files\\Bambu Studio', userDataDir: 'C:\\Users\\user\\AppData\\Roaming\\BambuStudio' }`. If the registry lookup misses, fix `detectWindowsInstallDir` before proceeding — do not weaken the expectation.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/config.ts tests/config.test.ts
-git commit -m "feat: config manager with persistence and per-OS auto-detection"
+git commit -m "feat: config manager with validation and registry-based path detection"
 ```
 
 ---
@@ -584,105 +620,99 @@ git commit -m "feat: config manager with persistence and per-OS auto-detection"
 - Test: `tests/profile-store.test.ts`
 
 **Interfaces:**
-- Consumes: `ProfileStore`, `ProfileHit`, `ProfileKind`, `RawProfile`, `ServerConfig` types and `VendorNotFoundError`, `UserStoreError` from Task 1.
-- Produces: `class FsProfileStore implements ProfileStore { constructor(cfg: ServerConfig) }`.
+- Consumes: `ProfileStore`, `ProfileHit`, `ProfileKind`, `RawProfile`, `ServerConfig` types and `VendorNotFoundError` from Task 1.
+- Produces:
+  - `class FsProfileStore implements ProfileStore { constructor(cfg: ServerConfig) }`
+  - `function writeProfileFile(outputDir: string, name: string, body: Record<string, unknown>): Promise<{ path: string; created: boolean }>` — creates `outputDir` if missing, writes `<name>.json` pretty-printed (4-space, matching Bambu's own files), `created` reflects whether the file existed.
 
-Lookup semantics (locked): profiles are matched by the `name` field inside each JSON file, not by filename. `findProfile` searches the user store first (`<userDataDir>/user/<id>/<kind>/*.json`, across ALL `<id>` directories), then the system store (`<installDir>/resources/profiles/<vendor>/<kind>/*.json`). A missing vendor directory throws `VendorNotFoundError` only when the user store also had no hit. `writeUserPreset` requires exactly one `user/<id>` directory; zero or multiple throw `UserStoreError` (the exact multi-account layout is a spec-flagged open point — failing loudly is the designed behavior). The file is written as `<name>.json` inside `user/<id>/<kind>/`.
+Lookup semantics (locked): profiles are matched by the `name` field inside each JSON file, not by filename. `findProfile` searches `user/<cfg.userId>/<kind>/*.json` first (ONLY that userId — other account dirs are invisible), then the system store `resources/profiles/<vendor>/<kind>/*.json`. A missing vendor directory throws `VendorNotFoundError` only when the user store had no hit. Non-JSON and unparseable files are skipped, not errors.
 
 - [ ] **Step 1: Write the failing test `tests/profile-store.test.ts`**
 
 ```typescript
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { UserStoreError, VendorNotFoundError } from "../src/errors.js";
-import { FsProfileStore } from "../src/profile-store.js";
+import { VendorNotFoundError } from "../src/errors.js";
+import { FsProfileStore, writeProfileFile } from "../src/profile-store.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
-function fixtureStore(): FsProfileStore {
+function store(userId = "1234567890"): FsProfileStore {
   return new FsProfileStore({
     installDir: join(FIXTURES, "install"),
     userDataDir: join(FIXTURES, "userdata"),
+    userId,
   });
 }
 
 describe("FsProfileStore.findProfile", () => {
   it("finds a system process profile by its name field", async () => {
-    const hit = await fixtureStore().findProfile("process", "BBL", "0.20mm Standard @BBL X1C");
+    const hit = await store().findProfile("process", "BBL", "0.20mm Standard @BBL X1C");
     expect(hit?.source).toBe("system");
     expect(hit?.profile.inherits).toBe("fdm_process_common");
   });
 
   it("finds a user preset before the system store", async () => {
-    const hit = await fixtureStore().findProfile("process", "BBL", "My Custom Draft");
+    const hit = await store().findProfile("process", "BBL", "My Custom Draft");
     expect(hit?.source).toBe("user");
-    expect(hit?.profile.layer_height).toEqual(["0.28"]);
+    expect(hit?.profile.layer_height).toBe("0.28");
+  });
+
+  it("does not see presets from other userId directories", async () => {
+    const hit = await store("default").findProfile("process", "BBL", "My Custom Draft");
+    expect(hit).toBeNull();
+  });
+
+  it("still finds system profiles when the configured userId dir does not exist", async () => {
+    const hit = await store("99999").findProfile("process", "BBL", "fdm_process_common");
+    expect(hit?.source).toBe("system");
   });
 
   it("finds a filament profile under the filament kind", async () => {
-    const hit = await fixtureStore().findProfile("filament", "BBL", "Generic PLA @BBL X1C");
+    const hit = await store().findProfile("filament", "BBL", "Generic PLA @BBL X1C");
     expect(hit?.source).toBe("system");
   });
 
   it("returns null for an unknown profile in a known vendor", async () => {
-    expect(await fixtureStore().findProfile("process", "BBL", "nope")).toBeNull();
+    expect(await store().findProfile("process", "BBL", "nope")).toBeNull();
   });
 
   it("throws VendorNotFoundError for an unknown vendor", async () => {
-    await expect(fixtureStore().findProfile("process", "Acme", "anything")).rejects.toBeInstanceOf(
+    await expect(store().findProfile("process", "Acme", "anything")).rejects.toBeInstanceOf(
       VendorNotFoundError
     );
   });
 });
 
-describe("FsProfileStore.writeUserPreset", () => {
-  let workDir: string;
+describe("writeProfileFile", () => {
+  let outDir: string;
   beforeEach(async () => {
-    workDir = await mkdtemp(join(tmpdir(), "ppm-store-"));
-    await cp(join(FIXTURES, "userdata"), join(workDir, "userdata"), { recursive: true });
+    outDir = join(await mkdtemp(join(tmpdir(), "ppm-out-")), "nested", "profiles");
   });
   afterEach(async () => {
-    await rm(workDir, { recursive: true, force: true });
+    await rm(join(outDir, "..", ".."), { recursive: true, force: true });
   });
 
-  function writableStore(): FsProfileStore {
-    return new FsProfileStore({
-      installDir: join(FIXTURES, "install"),
-      userDataDir: join(workDir, "userdata"),
-    });
-  }
-
-  it("creates a new preset file and reports created: true", async () => {
-    const result = await writableStore().writeUserPreset("process", "Fresh Preset", {
+  it("creates the directory and file, reporting created: true", async () => {
+    const result = await writeProfileFile(outDir, "Fresh Preset", {
       name: "Fresh Preset",
       inherits: "fdm_process_common",
-      wall_loops: ["4"],
+      wall_loops: "4",
     });
     expect(result.created).toBe(true);
-    expect(result.path).toBe(join(workDir, "userdata", "user", "12345", "process", "Fresh Preset.json"));
-    const onDisk = JSON.parse(await readFile(result.path, "utf8"));
-    expect(onDisk.wall_loops).toEqual(["4"]);
+    expect(result.path).toBe(join(outDir, "Fresh Preset.json"));
+    expect(JSON.parse(await readFile(result.path, "utf8")).wall_loops).toBe("4");
   });
 
-  it("overwrites an existing preset and reports created: false", async () => {
-    const store = writableStore();
-    const result = await store.writeUserPreset("process", "My Custom Draft", {
-      name: "My Custom Draft",
-      inherits: "fdm_process_common",
-      layer_height: ["0.3"],
-    });
-    expect(result.created).toBe(false);
-    const hit = await store.findProfile("process", "BBL", "My Custom Draft");
-    expect(hit?.profile.layer_height).toEqual(["0.3"]);
-  });
-
-  it("throws UserStoreError when no user/<id> directory exists", async () => {
-    await rm(join(workDir, "userdata", "user", "12345"), { recursive: true });
-    await expect(
-      writableStore().writeUserPreset("process", "X", { name: "X" })
-    ).rejects.toBeInstanceOf(UserStoreError);
+  it("overwrites an existing file, reporting created: false", async () => {
+    await writeProfileFile(outDir, "Twice", { name: "Twice", layer_height: "0.2" });
+    const second = await writeProfileFile(outDir, "Twice", { name: "Twice", layer_height: "0.3" });
+    expect(second.created).toBe(false);
+    expect(JSON.parse(await readFile(second.path, "utf8")).layer_height).toBe("0.3");
+    expect(existsSync(second.path)).toBe(true);
   });
 });
 ```
@@ -698,10 +728,13 @@ Expected: FAIL — cannot resolve `../src/profile-store.js`.
 import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { UserStoreError, VendorNotFoundError } from "./errors.js";
+import { VendorNotFoundError } from "./errors.js";
 import type { ProfileHit, ProfileKind, ProfileStore, RawProfile, ServerConfig } from "./types.js";
 
-async function scanDirForName(dir: string, name: string): Promise<{ profile: RawProfile; path: string } | null> {
+async function scanDirForName(
+  dir: string,
+  name: string
+): Promise<{ profile: RawProfile; path: string } | null> {
   if (!existsSync(dir)) return null;
   for (const entry of await readdir(dir)) {
     if (!entry.endsWith(".json")) continue;
@@ -723,58 +756,41 @@ async function scanDirForName(dir: string, name: string): Promise<{ profile: Raw
 export class FsProfileStore implements ProfileStore {
   constructor(private readonly cfg: ServerConfig) {}
 
-  private async userKindDirs(kind: ProfileKind): Promise<string[]> {
-    const userRoot = join(this.cfg.userDataDir, "user");
-    if (!existsSync(userRoot)) return [];
-    const ids = await readdir(userRoot, { withFileTypes: true });
-    return ids.filter((d) => d.isDirectory()).map((d) => join(userRoot, d.name, kind));
-  }
-
   async findProfile(kind: ProfileKind, vendor: string, name: string): Promise<ProfileHit | null> {
-    for (const dir of await this.userKindDirs(kind)) {
-      const found = await scanDirForName(dir, name);
-      if (found) return { ...found, source: "user" };
-    }
+    const userDir = join(this.cfg.userDataDir, "user", this.cfg.userId, kind);
+    const userHit = await scanDirForName(userDir, name);
+    if (userHit) return { ...userHit, source: "user" };
+
     const vendorDir = join(this.cfg.installDir, "resources", "profiles", vendor);
     if (!existsSync(vendorDir)) throw new VendorNotFoundError(vendor);
-    const found = await scanDirForName(join(vendorDir, kind), name);
-    return found ? { ...found, source: "system" } : null;
+    const systemHit = await scanDirForName(join(vendorDir, kind), name);
+    return systemHit ? { ...systemHit, source: "system" } : null;
   }
+}
 
-  async writeUserPreset(
-    kind: ProfileKind,
-    name: string,
-    body: Record<string, unknown>
-  ): Promise<{ path: string; created: boolean }> {
-    const userRoot = join(this.cfg.userDataDir, "user");
-    if (!existsSync(userRoot)) throw new UserStoreError(`'${userRoot}' does not exist.`);
-    const ids = (await readdir(userRoot, { withFileTypes: true })).filter((d) => d.isDirectory());
-    if (ids.length === 0) throw new UserStoreError(`no user id directory under '${userRoot}'.`);
-    if (ids.length > 1) {
-      throw new UserStoreError(
-        `multiple user id directories under '${userRoot}' (${ids.map((d) => d.name).join(", ")}); cannot pick a write target.`
-      );
-    }
-    const dir = join(userRoot, ids[0].name, kind);
-    await mkdir(dir, { recursive: true });
-    const path = join(dir, `${name}.json`);
-    const created = !existsSync(path);
-    await writeFile(path, JSON.stringify(body, null, 4) + "\n", "utf8");
-    return { path, created };
-  }
+export async function writeProfileFile(
+  outputDir: string,
+  name: string,
+  body: Record<string, unknown>
+): Promise<{ path: string; created: boolean }> {
+  await mkdir(outputDir, { recursive: true });
+  const path = join(outputDir, `${name}.json`);
+  const created = !existsSync(path);
+  await writeFile(path, JSON.stringify(body, null, 4) + "\n", "utf8");
+  return { path, created };
 }
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/profile-store.test.ts`
-Expected: PASS (8 tests).
+Expected: PASS (9 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/profile-store.ts tests/profile-store.test.ts
-git commit -m "feat: filesystem profile store over system and user preset dirs"
+git commit -m "feat: userId-scoped profile store and output-dir profile writer"
 ```
 
 ---
@@ -789,7 +805,7 @@ git commit -m "feat: filesystem profile store over system and user preset dirs"
 - Consumes: `ProfileStore`, `ProfileHit`, `ResolvedProfile`, `ProfileKind` types and `ProfileNotFoundError`, `CircularInheritanceError` from Task 1. Uses only the `ProfileStore` interface — NOT `FsProfileStore` — so this task runs in parallel with Task 3 using an in-memory fake.
 - Produces: `function resolveProfile(store: ProfileStore, kind: ProfileKind, vendor: string, name: string): Promise<ResolvedProfile>`.
 
-Merge semantics (locked): walk `inherits` links from the requested profile up to the root; `chain` lists names root-first, requested profile last. Merge by applying each chain link in `chain` order — later (more specific) keys overwrite earlier ones. `settings` excludes the `inherits` and `name` keys; everything else passes through untouched (array-wrapped values stay wrapped).
+Merge semantics (locked): walk `inherits` links from the requested profile up to the root; `chain` lists names root-first, requested profile last. Merge by applying each chain link in `chain` order — later (more specific) keys overwrite earlier ones wholesale (a vector value replaces the parent's vector entirely; no element-wise merging). `settings` excludes the `inherits` and `name` keys; everything else passes through with its on-disk serialization untouched.
 
 - [ ] **Step 1: Write the failing test `tests/resolver.test.ts`**
 
@@ -808,21 +824,21 @@ function fakeStore(profiles: Record<string, RawProfile & { source?: "user" | "sy
       const { source, ...profile } = p;
       return { profile, source: source ?? "system", path: `/fake/${name}.json` };
     },
-    async writeUserPreset(): Promise<{ path: string; created: boolean }> {
-      throw new Error("not used in resolver tests");
-    },
   };
 }
 
 describe("resolveProfile", () => {
-  it("merges a chain root-first with child keys overwriting parent keys", async () => {
+  it("merges a chain root-first with child keys overwriting parent keys wholesale", async () => {
     const store = fakeStore({
-      root: { name: "root", layer_height: ["0.2"], wall_loops: ["2"] },
-      child: { name: "child", inherits: "root", wall_loops: ["3"] },
+      root: { name: "root", layer_height: "0.2", outer_wall_speed: ["200", "500", "500"] },
+      child: { name: "child", inherits: "root", outer_wall_speed: ["250", "500", "500"] },
     });
     const result = await resolveProfile(store, "process", "BBL", "child");
     expect(result.chain).toEqual(["root", "child"]);
-    expect(result.settings).toEqual({ layer_height: ["0.2"], wall_loops: ["3"] });
+    expect(result.settings).toEqual({
+      layer_height: "0.2",
+      outer_wall_speed: ["250", "500", "500"],
+    });
     expect(result).toMatchObject({ vendor: "BBL", name: "child", kind: "process" });
   });
 
@@ -837,9 +853,9 @@ describe("resolveProfile", () => {
   });
 
   it("excludes name and inherits from settings", async () => {
-    const store = fakeStore({ solo: { name: "solo", layer_height: ["0.2"] } });
+    const store = fakeStore({ solo: { name: "solo", layer_height: "0.2" } });
     const result = await resolveProfile(store, "process", "BBL", "solo");
-    expect(result.settings).toEqual({ layer_height: ["0.2"] });
+    expect(result.settings).toEqual({ layer_height: "0.2" });
   });
 
   it("throws ProfileNotFoundError for a missing profile", async () => {
@@ -944,7 +960,7 @@ git commit -m "feat: inheritance-chain resolver with cycle and missing-parent de
   - `function loadSchema(path: string): Promise<ProfileSchema>` — reads and parses a schema JSON file; throws `Error` with the path in the message if the file is missing or invalid JSON.
   - `function validateKvps(schema: ProfileSchema, kvps: Record<string, unknown>): Violation[]` — pure; empty array means valid; collects ALL violations.
 
-Value acceptance rules (locked): when `serializedAsArray` is true, accept either the bare value or a single-element array wrapping it (a multi-element array is a violation). After unwrapping: `int` accepts integers or strings matching `/^-?\d+$/`; `float` accepts finite numbers or strings parseable by `Number`; `percent` is like `float` but the string form may carry a trailing `%`; `bool` accepts booleans or `"1"`, `"0"`, `"true"`, `"false"`; `enum` accepts a string contained in `enum`; `string` accepts any string. `min`/`max` are checked on the parsed numeric value, inclusive.
+Value acceptance rules (locked). Shape first: `vector: false` options reject any array; `vector: true` options require an array of ≥1 elements (any length — length is never validated) and validate each element, reporting per-element violations as `element <index>: <reason>`. Element/scalar rules by type: `int` accepts integers or strings matching `/^-?\d+$/`; `float` accepts finite numbers or numeric strings; `percent` is like `float` but the string form may carry a trailing `%`; `bool` accepts booleans or `"1"`, `"0"`, `"true"`, `"false"`; `enum` accepts a string contained in `enum`; `string` accepts any string. `min`/`max` are checked on the parsed numeric value, inclusive.
 
 - [ ] **Step 1: Write the failing test `tests/validator.test.ts`**
 
@@ -957,18 +973,20 @@ import type { ProfileSchema } from "../src/types.js";
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
 const schema: ProfileSchema = {
-  layer_height: { type: "float", min: 0.04, max: 1.0, default: 0.2, serializedAsArray: true },
-  wall_loops: { type: "int", min: 0, max: 1000, default: 2, serializedAsArray: true },
-  enable_support: { type: "bool", default: false, serializedAsArray: true },
-  wall_generator: { type: "enum", enum: ["classic", "arachne"], default: "classic", serializedAsArray: true },
-  sparse_infill_density: { type: "percent", min: 0, max: 100, default: 15, serializedAsArray: true },
-  notes: { type: "string", default: "", serializedAsArray: false },
+  layer_height: { type: "float", vector: false, min: 0.04, max: 1.0, default: 0.2 },
+  wall_loops: { type: "int", vector: false, min: 0, max: 1000, default: 2 },
+  enable_support: { type: "bool", vector: false, default: false },
+  wall_generator: { type: "enum", vector: false, enum: ["classic", "arachne"], default: "classic" },
+  sparse_infill_density: { type: "percent", vector: false, min: 0, max: 100, default: 15 },
+  outer_wall_speed: { type: "float", vector: true, min: 0, default: 200 },
+  notes: { type: "string", vector: false, default: "" },
 };
 
 describe("loadSchema", () => {
   it("loads the checked-in fixture schema", async () => {
     const loaded = await loadSchema(join(FIXTURES, "schema", "process.schema.json"));
     expect(loaded.layer_height.type).toBe("float");
+    expect(loaded.outer_wall_speed.vector).toBe(true);
   });
 
   it("names the path when the file is missing", async () => {
@@ -977,30 +995,54 @@ describe("loadSchema", () => {
 });
 
 describe("validateKvps", () => {
-  it("accepts valid kvps in both bare and array-wrapped form", () => {
+  it("accepts valid scalars (bare) and vectors (arrays of any length)", () => {
     expect(
       validateKvps(schema, {
-        layer_height: ["0.28"],
+        layer_height: "0.28",
         wall_loops: 3,
-        enable_support: ["1"],
+        enable_support: "1",
         wall_generator: "arachne",
-        sparse_infill_density: ["25%"],
+        sparse_infill_density: "25%",
+        outer_wall_speed: ["200", "500", "500"],
         notes: "hello",
       })
     ).toEqual([]);
   });
 
+  it("accepts a single-element vector", () => {
+    expect(validateKvps(schema, { outer_wall_speed: ["200"] })).toEqual([]);
+  });
+
   it("rejects unknown keys", () => {
-    const violations = validateKvps(schema, { bogus_key: ["1"] });
+    const violations = validateKvps(schema, { bogus_key: "1" });
     expect(violations).toEqual([{ key: "bogus_key", reason: expect.stringContaining("unknown") }]);
+  });
+
+  it("rejects an array for a scalar option", () => {
+    const violations = validateKvps(schema, { layer_height: ["0.2"] });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].key).toBe("layer_height");
+  });
+
+  it("rejects a bare value for a vector option", () => {
+    const violations = validateKvps(schema, { outer_wall_speed: "200" });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toContain("array");
+  });
+
+  it("reports per-element vector violations with the element index", () => {
+    const violations = validateKvps(schema, { outer_wall_speed: ["200", "-5", "abc"] });
+    expect(violations).toHaveLength(1);
+    expect(violations[0].reason).toContain("element 1");
+    expect(violations[0].reason).toContain("element 2");
   });
 
   it("rejects wrong types, out-of-range values, and bad enums — all collected", () => {
     const violations = validateKvps(schema, {
-      layer_height: ["5.0"],
-      wall_loops: ["2.5"],
-      wall_generator: ["spiral"],
-      enable_support: ["maybe"],
+      layer_height: "5.0",
+      wall_loops: "2.5",
+      wall_generator: "spiral",
+      enable_support: "maybe",
     });
     expect(violations.map((v) => v.key).sort()).toEqual([
       "enable_support",
@@ -1010,14 +1052,8 @@ describe("validateKvps", () => {
     ]);
   });
 
-  it("rejects multi-element arrays for scalar options", () => {
-    const violations = validateKvps(schema, { layer_height: ["0.2", "0.3"] });
-    expect(violations).toHaveLength(1);
-    expect(violations[0].key).toBe("layer_height");
-  });
-
   it("checks range bounds inclusively", () => {
-    expect(validateKvps(schema, { layer_height: ["1.0"], wall_loops: [0] })).toEqual([]);
+    expect(validateKvps(schema, { layer_height: "1.0", wall_loops: 0 })).toEqual([]);
   });
 });
 ```
@@ -1047,15 +1083,6 @@ export async function loadSchema(path: string): Promise<ProfileSchema> {
   }
 }
 
-/** Unwraps ["x"] to "x" when the option is array-serialized. Returns undefined on shape violation. */
-function unwrap(option: SchemaOption, value: unknown): { value: unknown } | undefined {
-  if (Array.isArray(value)) {
-    if (!option.serializedAsArray || value.length !== 1) return undefined;
-    return { value: value[0] };
-  }
-  return { value };
-}
-
 function parseNumeric(option: SchemaOption, value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value !== "string") return undefined;
@@ -1066,42 +1093,59 @@ function parseNumeric(option: SchemaOption, value: unknown): number | undefined 
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function checkValue(key: string, option: SchemaOption, raw: unknown): Violation | null {
-  const unwrapped = unwrap(option, raw);
-  if (!unwrapped) {
-    return { key, reason: `expected a single ${option.type} value, got ${JSON.stringify(raw)}` };
-  }
-  const value = unwrapped.value;
-
+/** Validates one scalar value (or one vector element). Returns the failure reason or null. */
+function checkScalar(option: SchemaOption, value: unknown): string | null {
   switch (option.type) {
     case "string":
-      return typeof value === "string" ? null : { key, reason: `expected a string, got ${JSON.stringify(value)}` };
+      return typeof value === "string" ? null : `expected a string, got ${JSON.stringify(value)}`;
     case "enum": {
       const allowed = option.enum ?? [];
       return typeof value === "string" && allowed.includes(value)
         ? null
-        : { key, reason: `expected one of [${allowed.join(", ")}], got ${JSON.stringify(value)}` };
+        : `expected one of [${allowed.join(", ")}], got ${JSON.stringify(value)}`;
     }
     case "bool": {
-      const ok = typeof value === "boolean" || (typeof value === "string" && ["0", "1", "true", "false"].includes(value));
-      return ok ? null : { key, reason: `expected a bool (true/false/"0"/"1"), got ${JSON.stringify(value)}` };
+      const ok =
+        typeof value === "boolean" ||
+        (typeof value === "string" && ["0", "1", "true", "false"].includes(value));
+      return ok ? null : `expected a bool (true/false/"0"/"1"), got ${JSON.stringify(value)}`;
     }
     case "int":
     case "float":
     case "percent": {
       const parsed = parseNumeric(option, value);
       if (parsed === undefined) {
-        return { key, reason: `expected ${option.type === "int" ? "an integer" : `a ${option.type}`}, got ${JSON.stringify(value)}` };
+        return `expected ${option.type === "int" ? "an integer" : `a ${option.type}`}, got ${JSON.stringify(value)}`;
       }
       if (option.min !== undefined && parsed < option.min) {
-        return { key, reason: `value ${parsed} is below minimum ${option.min}` };
+        return `value ${parsed} is below minimum ${option.min}`;
       }
       if (option.max !== undefined && parsed > option.max) {
-        return { key, reason: `value ${parsed} is above maximum ${option.max}` };
+        return `value ${parsed} is above maximum ${option.max}`;
       }
       return null;
     }
   }
+}
+
+function checkValue(key: string, option: SchemaOption, value: unknown): Violation | null {
+  if (option.vector) {
+    if (!Array.isArray(value) || value.length === 0) {
+      return { key, reason: `expected a non-empty array of ${option.type} values, got ${JSON.stringify(value)}` };
+    }
+    const elementReasons = value
+      .map((element, index) => {
+        const reason = checkScalar(option, element);
+        return reason ? `element ${index}: ${reason}` : null;
+      })
+      .filter((r): r is string => r !== null);
+    return elementReasons.length > 0 ? { key, reason: elementReasons.join("; ") } : null;
+  }
+  if (Array.isArray(value)) {
+    return { key, reason: `expected a single ${option.type} value, got an array` };
+  }
+  const reason = checkScalar(option, value);
+  return reason ? { key, reason } : null;
 }
 
 export function validateKvps(schema: ProfileSchema, kvps: Record<string, unknown>): Violation[] {
@@ -1122,13 +1166,13 @@ export function validateKvps(schema: ProfileSchema, kvps: Record<string, unknown
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/validator.test.ts`
-Expected: PASS (7 tests).
+Expected: PASS (10 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/validator.ts tests/validator.test.ts
-git commit -m "feat: schema loader and kvps validator with array-wrapped scalar support"
+git commit -m "feat: schema loader and kvps validator with scalar/vector shape rules"
 ```
 
 ---
@@ -1141,12 +1185,12 @@ git commit -m "feat: schema loader and kvps validator with array-wrapped scalar 
 - Test: `tests/generate-schema.test.ts`
 
 **Interfaces:**
-- Consumes: `ProfileSchema`, `SchemaOption` types from Task 1.
-- Produces: a CLI (`npx tsx scripts/generate-schema/index.ts <bambustudio-checkout-dir>`) that writes `schema/process.schema.json` and `schema/filament.schema.json`, plus the pure function `parsePrintConfig(cppSource: string): Record<string, SchemaOption & { assignedTo?: "process" | "filament" }>` used by the smoke test.
+- Consumes: `ProfileSchema`, `SchemaOption`, `SchemaType` types from Task 1.
+- Produces: a CLI (`npx tsx scripts/generate-schema/index.ts <bambustudio-checkout-dir>`) that writes `schema/process.schema.json` and `schema/filament.schema.json`, plus the pure functions `parsePrintConfig(cppSource: string): Record<string, SchemaOption>` and `parseOptionList(cppSource: string, fnName: string): string[]` used by the smoke test and Task 10.
 
-Per the spec, this task is smoke-test only: the parser is exercised against a small checked-in C++ fixture, not a real checkout. Running it against a real BambuStudio checkout is a manual step done later (Task 10 documents it); if the regexes below miss patterns in the real source, extend them then — do not block this task on it.
+Per the spec, this task is smoke-test only: the parser is exercised against a small checked-in C++ fixture, not a real checkout. Task 10 runs it against the real checkout; if the regexes miss patterns in the real source, they get extended there — do not block this task on it.
 
-Parsing approach (locked): Bambu Studio defines options in `src/libslic3r/PrintConfig.cpp` as blocks like `def = this->add("layer_height", coFloat); ... def->min = 0; ... def->set_default_value(new ConfigOptionFloat(0.2));`. Extract per-block: key, `co*` type token, `def->min`/`def->max`, `def->enum_values`, and default. Map `coFloat|coFloats→float`, `coInt|coInts→int`, `coBool|coBools→bool`, `coString|coStrings→string`, `coEnum→enum`, `coPercent|coPercents→percent`; the plural (`co*s`) forms and all `coStrings` set `serializedAsArray: true`, and since Bambu also array-wraps singulars on disk, set `serializedAsArray: true` for ALL types except bare `coString`. Assignment to process vs filament comes from the option-key lists in `Preset::print_options()` and `Preset::filament_options()` in `src/slic3r/GUI/Preset.cpp` (fallback: `src/libslic3r/Preset.cpp`); keys in neither list are dropped.
+Parsing approach (locked): Bambu Studio defines options in `src/libslic3r/PrintConfig.cpp` as blocks like `def = this->add("layer_height", coFloat); ... def->min = 0; ... def->set_default_value(new ConfigOptionFloat(0.2));`. Extract per-block: key, `co*` type token, `def->min`/`def->max`, `def->enum_values`, and default. Type mapping: `coFloat→float`, `coInt→int`, `coBool→bool`, `coString→string`, `coEnum→enum`, `coPercent→percent`, each with `vector: false`; the plural forms `coFloats/coInts/coBools/coStrings/coPercents` map to the same types with `vector: true`. Assignment to process vs filament comes from the option-key lists in `Preset::print_options()` and `Preset::filament_options()` (in `src/slic3r/GUI/Preset.cpp`, fallback `src/libslic3r/Preset.cpp`); keys in neither list are dropped.
 
 - [ ] **Step 1: Write the C++ fixture `tests/fixtures/cpp/print-config-snippet.cpp`**
 
@@ -1176,6 +1220,11 @@ void PrintConfigDef::init_fff_params()
     def->enum_values.push_back("arachne");
     def->set_default_value(new ConfigOptionEnum<PerimeterGeneratorType>(PerimeterGeneratorType::Classic));
 
+    def = this->add("outer_wall_speed", coFloats);
+    def->label = L("Outer wall speed");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloats { 200 });
+
     def = this->add("nozzle_temperature", coInts);
     def->label = L("Nozzle temperature");
     def->min = 0;
@@ -1195,15 +1244,16 @@ import { parsePrintConfig } from "../scripts/generate-schema/parse.js";
 const FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "print-config-snippet.cpp");
 
 describe("parsePrintConfig (smoke test)", () => {
-  it("extracts key, type, range, and enum values from definition blocks", async () => {
+  it("extracts key, type, vector flag, range, and enum values from definition blocks", async () => {
     const source = await readFile(FIXTURE, "utf8");
     const options = parsePrintConfig(source);
 
-    expect(options.layer_height).toMatchObject({ type: "float", min: 0.04, max: 1.0, serializedAsArray: true });
-    expect(options.wall_loops).toMatchObject({ type: "int", min: 0 });
-    expect(options.enable_support).toMatchObject({ type: "bool" });
-    expect(options.wall_generator).toMatchObject({ type: "enum", enum: ["classic", "arachne"] });
-    expect(options.nozzle_temperature).toMatchObject({ type: "int", min: 0, max: 350, serializedAsArray: true });
+    expect(options.layer_height).toMatchObject({ type: "float", vector: false, min: 0.04, max: 1.0 });
+    expect(options.wall_loops).toMatchObject({ type: "int", vector: false, min: 0 });
+    expect(options.enable_support).toMatchObject({ type: "bool", vector: false });
+    expect(options.wall_generator).toMatchObject({ type: "enum", vector: false, enum: ["classic", "arachne"] });
+    expect(options.outer_wall_speed).toMatchObject({ type: "float", vector: true, min: 0 });
+    expect(options.nozzle_temperature).toMatchObject({ type: "int", vector: true, min: 0, max: 350 });
   });
 });
 ```
@@ -1218,13 +1268,18 @@ Expected: FAIL — cannot resolve `../scripts/generate-schema/parse.js`.
 ```typescript
 import type { SchemaOption, SchemaType } from "../../src/types.js";
 
-const TYPE_MAP: Record<string, SchemaType> = {
-  coFloat: "float", coFloats: "float",
-  coInt: "int", coInts: "int",
-  coBool: "bool", coBools: "bool",
-  coString: "string", coStrings: "string",
-  coEnum: "enum",
-  coPercent: "percent", coPercents: "percent",
+const TYPE_MAP: Record<string, { type: SchemaType; vector: boolean }> = {
+  coFloat: { type: "float", vector: false },
+  coFloats: { type: "float", vector: true },
+  coInt: { type: "int", vector: false },
+  coInts: { type: "int", vector: true },
+  coBool: { type: "bool", vector: false },
+  coBools: { type: "bool", vector: true },
+  coString: { type: "string", vector: false },
+  coStrings: { type: "string", vector: true },
+  coEnum: { type: "enum", vector: false },
+  coPercent: { type: "percent", vector: false },
+  coPercents: { type: "percent", vector: true },
 };
 
 export function parsePrintConfig(cppSource: string): Record<string, SchemaOption> {
@@ -1233,18 +1288,15 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
   const blockRe = /def\s*=\s*this->add\("([^"]+)",\s*(co\w+)\)([\s\S]*?)(?=def\s*=\s*this->add\(|$)/g;
   for (const match of cppSource.matchAll(blockRe)) {
     const [, key, coType, body] = match;
-    const type = TYPE_MAP[coType];
-    if (!type) continue;
+    const mapped = TYPE_MAP[coType];
+    if (!mapped) continue;
 
-    const option: SchemaOption = {
-      type,
-      serializedAsArray: coType !== "coString",
-    };
+    const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     if (min) option.min = Number(min[1]);
     const max = body.match(/def->max\s*=\s*(-?[\d.]+)/);
     if (max) option.max = Number(max[1]);
-    if (type === "enum") {
+    if (mapped.type === "enum") {
       option.enum = [...body.matchAll(/enum_values\.push_back\("([^"]+)"\)/g)].map((m) => m[1]);
     }
     const def = body.match(/set_default_value\(new\s+ConfigOption\w+(?:<[^>]+>)?\s*[({]\s*([^)}]*?)\s*[)}]\)/);
@@ -1362,9 +1414,9 @@ git commit -m "feat: offline schema generator parsing BambuStudio PrintConfig.cp
 - Test: `tests/tools-resolve.test.ts`
 
 **Interfaces:**
-- Consumes: `ConfigManager` (Task 2), `FsProfileStore` (Task 3), `resolveProfile` (Task 4), types/errors (Task 1).
+- Consumes: `ConfigManager`/`DetectedPaths` (Task 2), `FsProfileStore` (Task 3), `resolveProfile` (Task 4), types/errors (Task 1).
 - Produces:
-  - `interface ToolDeps { config: ConfigManager; storeFactory: (cfg: ServerConfig) => ProfileStore; schemaDir: string; }` (in `src/tools/deps.ts` — Task 8 and 9 import this exact interface).
+  - `interface ToolDeps { config: ConfigManager; storeFactory: (cfg: ServerConfig) => ProfileStore; schemaDir: string; detectPaths: () => Promise<DetectedPaths>; }` (in `src/tools/deps.ts` — Tasks 8 and 9 import this exact interface; whichever Wave-2 agent starts first creates the file verbatim from Step 3 below).
   - `function handleResolve(deps: ToolDeps, kind: ProfileKind, args: { vendor: string; name: string }): Promise<ResolvedProfile>`
   - `function registerResolveTools(server: McpServer, deps: ToolDeps): void` — registers `resolve_process_profile` and `resolve_filament_profile`.
   - `function toToolError(error: unknown): { content: [{ type: "text"; text: string }]; isError: true }` (also in `deps.ts`, shared by Tasks 8/9): maps a thrown error to an MCP error result whose text is `Error: <error.message>`.
@@ -1382,14 +1434,24 @@ import { handleResolve } from "../src/tools/resolve.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
-function fixtureDeps(): ToolDeps {
+/** ConfigManager whose config.json path points at a pre-written fixture config. */
+class FixtureConfig extends ConfigManager {
+  constructor(private readonly present: boolean) {
+    super(join(FIXTURES, "does-not-exist.json"));
+  }
+  override async load() {
+    return this.present
+      ? { installDir: join(FIXTURES, "install"), userDataDir: join(FIXTURES, "userdata"), userId: "1234567890" }
+      : null;
+  }
+}
+
+function fixtureDeps(configured = true): ToolDeps {
   return {
-    config: new ConfigManager(join(FIXTURES, "no-config.json"), () => ({
-      installDir: join(FIXTURES, "install"),
-      userDataDir: join(FIXTURES, "userdata"),
-    })),
+    config: new FixtureConfig(configured),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(FIXTURES, "schema"),
+    detectPaths: async () => ({}),
   };
 }
 
@@ -1401,8 +1463,9 @@ describe("handleResolve", () => {
     });
     expect(result.kind).toBe("process");
     expect(result.chain).toEqual(["fdm_process_common", "0.20mm Standard @BBL X1C"]);
-    expect(result.settings.wall_loops).toEqual(["3"]);
-    expect(result.settings.layer_height).toEqual(["0.2"]);
+    expect(result.settings.wall_loops).toBe("3");
+    expect(result.settings.layer_height).toBe("0.2");
+    expect(result.settings.outer_wall_speed).toEqual(["250", "500", "500"]);
   });
 
   it("resolves a user preset crossing into the system store", async () => {
@@ -1411,7 +1474,7 @@ describe("handleResolve", () => {
       name: "My Custom Draft",
     });
     expect(result.chain).toEqual(["fdm_process_common", "0.20mm Standard @BBL X1C", "My Custom Draft"]);
-    expect(result.settings.layer_height).toEqual(["0.28"]);
+    expect(result.settings.layer_height).toBe("0.28");
   });
 
   it("resolves filament profiles under the filament kind", async () => {
@@ -1430,9 +1493,8 @@ describe("handleResolve", () => {
   });
 
   it("throws ConfigMissingError when unconfigured", async () => {
-    const deps: ToolDeps = { ...fixtureDeps(), config: new ConfigManager(join(FIXTURES, "no-config.json"), () => null) };
     await expect(
-      handleResolve(deps, "process", { vendor: "BBL", name: "anything" })
+      handleResolve(fixtureDeps(false), "process", { vendor: "BBL", name: "anything" })
     ).rejects.toBeInstanceOf(ConfigMissingError);
   });
 });
@@ -1455,7 +1517,7 @@ Expected: FAIL — cannot resolve `../src/tools/deps.js`.
 - [ ] **Step 3: Write `src/tools/deps.ts`**
 
 ```typescript
-import type { ConfigManager } from "../config.js";
+import type { ConfigManager, DetectedPaths } from "../config.js";
 import type { ProfileStore, ServerConfig } from "../types.js";
 
 export interface ToolDeps {
@@ -1463,6 +1525,8 @@ export interface ToolDeps {
   storeFactory: (cfg: ServerConfig) => ProfileStore;
   /** Directory containing process.schema.json and filament.schema.json. */
   schemaDir: string;
+  /** Best-effort path auto-detection; init_config uses it to fill omitted args. */
+  detectPaths: () => Promise<DetectedPaths>;
 }
 
 export function toToolError(error: unknown): { content: [{ type: "text"; text: string }]; isError: true } {
@@ -1502,12 +1566,13 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
       title: `Resolve ${kind} profile`,
       description:
         `Resolve a Bambu Studio ${kind} profile's fully-merged active settings by walking its ` +
-        `'inherits' chain across the user preset store and the system profiles of the given vendor.\n\n` +
+        `'inherits' chain across the configured user preset store and the system profiles of the given vendor.\n\n` +
         `Args:\n  - vendor (string): vendor folder under resources/profiles, e.g. 'BBL'\n` +
         `  - name (string): profile name as shown in the profile JSON 'name' field\n\n` +
-        `Returns: { vendor, name, kind, chain: string[] (root-first), settings: object (flat merged key->value map) }\n\n` +
+        `Returns: { vendor, name, kind, chain: string[] (root-first), settings: object (flat merged key->value map; ` +
+        `scalars are bare strings, per-extruder options are string arrays) }\n\n` +
         `Errors: vendor not found; profile not found; circular or unresolvable inherits chain; ` +
-        `paths not configured (fix via init_config).`,
+        `config missing (fix via init_config).`,
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -1557,18 +1622,18 @@ git commit -m "feat: resolve_process_profile and resolve_filament_profile tools"
 - Test: `tests/tools-write.test.ts`
 
 **Interfaces:**
-- Consumes: `ToolDeps`/`toToolError` (Task 7's `src/tools/deps.ts`), `resolveProfile` (Task 4), `loadSchema`/`validateKvps` (Task 5), `FsProfileStore` (Task 3), types/errors (Task 1). If Task 7 has not landed yet, create `src/tools/deps.ts` with the exact content shown in Task 7 Step 3 — first writer wins, content is identical.
+- Consumes: `ToolDeps`/`toToolError` (Task 7's `src/tools/deps.ts` — first-writer-wins rule from the Parallel Execution Guide), `resolveProfile` (Task 4), `loadSchema`/`validateKvps` (Task 5), `FsProfileStore`/`writeProfileFile` (Task 3), types/errors (Task 1).
 - Produces:
   - `interface WriteResult { vendor: string; name: string; kind: ProfileKind; created: boolean; path: string; inherits: string; overrides: Record<string, unknown>; }`
-  - `function handleWrite(deps: ToolDeps, kind: ProfileKind, args: { vendor: string; name: string; baseProfile: string; kvps: Record<string, unknown> }): Promise<WriteResult>`
+  - `function handleWrite(deps: ToolDeps, kind: ProfileKind, args: { vendor: string; name: string; baseProfile: string; kvps: Record<string, unknown>; outputDir: string }): Promise<WriteResult>`
   - `function registerWriteTools(server: McpServer, deps: ToolDeps): void` — registers `write_process_profile` and `write_filament_profile`.
 
-Behavior (locked): validate ALL kvps against `<schemaDir>/<kind>.schema.json` first (violations → `SchemaValidationError`); then resolve `baseProfile` via `resolveProfile` (proves it exists and its chain is sound) BEFORE writing anything; then write `{ name, inherits: baseProfile, ...kvps }` to the user store. Nothing is written if any check fails.
+Behavior (locked): validate ALL kvps against `<schemaDir>/<kind>.schema.json` first (violations → `SchemaValidationError`); then resolve `baseProfile` via `resolveProfile` (proves it exists and its chain is sound) BEFORE writing anything; then write exactly `{ name, inherits: baseProfile, ...kvps }` via `writeProfileFile(outputDir, name, body)`. Nothing is written if any check fails. Bambu Studio directories are never written.
 
 - [ ] **Step 1: Write the failing test `tests/tools-write.test.ts`**
 
 ```typescript
-import { cp, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1581,33 +1646,40 @@ import { handleWrite } from "../src/tools/write.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
-let workDir: string;
-beforeEach(async () => {
-  workDir = await mkdtemp(join(tmpdir(), "ppm-write-"));
-  await cp(join(FIXTURES, "userdata"), join(workDir, "userdata"), { recursive: true });
-});
-afterEach(async () => {
-  await rm(workDir, { recursive: true, force: true });
-});
+class FixtureConfig extends ConfigManager {
+  constructor() {
+    super(join(FIXTURES, "does-not-exist.json"));
+  }
+  override async load() {
+    return { installDir: join(FIXTURES, "install"), userDataDir: join(FIXTURES, "userdata"), userId: "1234567890" };
+  }
+}
 
 function deps(): ToolDeps {
   return {
-    config: new ConfigManager(join(workDir, "no-config.json"), () => ({
-      installDir: join(FIXTURES, "install"),
-      userDataDir: join(workDir, "userdata"),
-    })),
+    config: new FixtureConfig(),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(FIXTURES, "schema"),
+    detectPaths: async () => ({}),
   };
 }
 
+let outDir: string;
+beforeEach(async () => {
+  outDir = join(await mkdtemp(join(tmpdir(), "ppm-write-")), "out");
+});
+afterEach(async () => {
+  await rm(join(outDir, ".."), { recursive: true, force: true });
+});
+
 describe("handleWrite", () => {
-  it("creates a new preset with inherits and only the given kvps", async () => {
+  it("creates a new profile file with inherits and only the given kvps", async () => {
     const result = await handleWrite(deps(), "process", {
       vendor: "BBL",
       name: "Plan Test Preset",
       baseProfile: "0.20mm Standard @BBL X1C",
-      kvps: { layer_height: ["0.16"], wall_loops: 4 },
+      kvps: { layer_height: "0.16", outer_wall_speed: ["150", "400", "400"] },
+      outputDir: outDir,
     });
     expect(result).toMatchObject({
       vendor: "BBL",
@@ -1615,39 +1687,42 @@ describe("handleWrite", () => {
       kind: "process",
       created: true,
       inherits: "0.20mm Standard @BBL X1C",
-      overrides: { layer_height: ["0.16"], wall_loops: 4 },
     });
+    expect(result.path).toBe(join(outDir, "Plan Test Preset.json"));
     const onDisk = JSON.parse(await readFile(result.path, "utf8"));
     expect(onDisk).toEqual({
       name: "Plan Test Preset",
       inherits: "0.20mm Standard @BBL X1C",
-      layer_height: ["0.16"],
-      wall_loops: 4,
+      layer_height: "0.16",
+      outer_wall_speed: ["150", "400", "400"],
     });
   });
 
-  it("overwrites an existing preset with created: false", async () => {
-    const result = await handleWrite(deps(), "process", {
+  it("overwrites an existing file with created: false", async () => {
+    const args = {
       vendor: "BBL",
-      name: "My Custom Draft",
+      name: "Twice",
       baseProfile: "fdm_process_common",
-      kvps: { layer_height: ["0.3"] },
-    });
-    expect(result.created).toBe(false);
+      kvps: { layer_height: "0.3" },
+      outputDir: outDir,
+    };
+    await handleWrite(deps(), "process", args);
+    const second = await handleWrite(deps(), "process", args);
+    expect(second.created).toBe(false);
   });
 
   it("collects ALL schema violations and writes nothing", async () => {
-    const d = deps();
-    const promise = handleWrite(d, "process", {
+    const promise = handleWrite(deps(), "process", {
       vendor: "BBL",
       name: "Broken Preset",
       baseProfile: "fdm_process_common",
-      kvps: { layer_height: ["5.0"], bogus_key: ["1"] },
+      kvps: { layer_height: "5.0", bogus_key: "1" },
+      outputDir: outDir,
     });
     await expect(promise).rejects.toBeInstanceOf(SchemaValidationError);
     const err = (await promise.catch((e: unknown) => e)) as SchemaValidationError;
     expect(err.violations.map((v) => v.key).sort()).toEqual(["bogus_key", "layer_height"]);
-    expect(existsSync(join(workDir, "userdata", "user", "12345", "process", "Broken Preset.json"))).toBe(false);
+    expect(existsSync(outDir)).toBe(false);
   });
 
   it("rejects a missing baseProfile and writes nothing", async () => {
@@ -1656,19 +1731,21 @@ describe("handleWrite", () => {
         vendor: "BBL",
         name: "Orphaned Preset",
         baseProfile: "ghost_base",
-        kvps: { wall_loops: ["3"] },
+        kvps: { wall_loops: "3" },
+        outputDir: outDir,
       })
     ).rejects.toBeInstanceOf(ProfileNotFoundError);
-    expect(existsSync(join(workDir, "userdata", "user", "12345", "process", "Orphaned Preset.json"))).toBe(false);
+    expect(existsSync(outDir)).toBe(false);
   });
 
-  it("validates filament writes against the filament schema", async () => {
+  it("validates filament writes against the filament schema, per element", async () => {
     await expect(
       handleWrite(deps(), "filament", {
         vendor: "BBL",
         name: "Hot PLA",
         baseProfile: "Generic PLA @BBL X1C",
-        kvps: { nozzle_temperature: ["999"] },
+        kvps: { nozzle_temperature: ["230", "999"] },
+        outputDir: outDir,
       })
     ).rejects.toBeInstanceOf(SchemaValidationError);
 
@@ -1677,9 +1754,11 @@ describe("handleWrite", () => {
       name: "Hot PLA",
       baseProfile: "Generic PLA @BBL X1C",
       kvps: { nozzle_temperature: ["230"] },
+      outputDir: outDir,
     });
     expect(ok.kind).toBe("filament");
     expect(ok.created).toBe(true);
+    expect(await readdir(outDir)).toEqual(["Hot PLA.json"]);
   });
 });
 ```
@@ -1696,6 +1775,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { join } from "node:path";
 import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
+import { writeProfileFile } from "../profile-store.js";
 import { resolveProfile } from "../resolver.js";
 import type { ProfileKind } from "../types.js";
 import { loadSchema, validateKvps } from "../validator.js";
@@ -1714,7 +1794,13 @@ export interface WriteResult {
 export async function handleWrite(
   deps: ToolDeps,
   kind: ProfileKind,
-  args: { vendor: string; name: string; baseProfile: string; kvps: Record<string, unknown> }
+  args: {
+    vendor: string;
+    name: string;
+    baseProfile: string;
+    kvps: Record<string, unknown>;
+    outputDir: string;
+  }
 ): Promise<WriteResult> {
   const cfg = await deps.config.require();
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
@@ -1725,7 +1811,7 @@ export async function handleWrite(
   await resolveProfile(store, kind, args.vendor, args.baseProfile);
 
   const body = { name: args.name, inherits: args.baseProfile, ...args.kvps };
-  const { path, created } = await store.writeUserPreset(kind, args.name, body);
+  const { path, created } = await writeProfileFile(args.outputDir, args.name, body);
   return {
     vendor: args.vendor,
     name: args.name,
@@ -1739,11 +1825,15 @@ export async function handleWrite(
 
 const writeInputShape = {
   vendor: z.string().min(1).describe("Vendor folder under resources/profiles, e.g. 'BBL'"),
-  name: z.string().min(1).describe("Name of the preset to create or overwrite in the user store"),
-  baseProfile: z.string().min(1).describe("Existing profile this preset will inherit from"),
+  name: z.string().min(1).describe("Name of the profile to create; also the output filename (<name>.json)"),
+  baseProfile: z.string().min(1).describe("Existing profile this profile will inherit from"),
   kvps: z
     .record(z.unknown())
-    .describe("Only the keys to override; each is validated against the schema before writing"),
+    .describe(
+      "Only the keys to override; validated against the schema. Scalar options take bare values " +
+        "(e.g. \"0.2\"), per-extruder options take string arrays (e.g. [\"200\",\"500\",\"500\"])"
+    ),
+  outputDir: z.string().min(1).describe("Directory the profile file is written to; created if missing"),
 };
 
 function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
@@ -1752,17 +1842,24 @@ function register(server: McpServer, deps: ToolDeps, kind: ProfileKind): void {
     {
       title: `Write ${kind} profile`,
       description:
-        `Create or update a Bambu Studio ${kind} preset in the user store. The preset inherits from ` +
+        `Create or update a Bambu Studio ${kind} profile file in outputDir (NOT in the Bambu Studio ` +
+        `directories — importing into Bambu Studio is a separate, later step). The file inherits from ` +
         `baseProfile and contains ONLY the kvps overrides. Every kvps key and value is validated ` +
         `against schema/${kind}.schema.json before anything is written; all violations are reported together.\n\n` +
-        `Args:\n  - vendor (string), name (string), baseProfile (string), kvps (object of key->value overrides)\n\n` +
+        `Args:\n  - vendor (string), name (string), baseProfile (string), kvps (object), outputDir (string)\n\n` +
         `Returns: { vendor, name, kind, created, path, inherits, overrides }\n\n` +
         `Errors: baseProfile not found or unresolvable; schema violations listed per key; ` +
-        `paths not configured (fix via init_config).`,
+        `config missing (fix via init_config).`,
       inputSchema: writeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { vendor: string; name: string; baseProfile: string; kvps: Record<string, unknown> }) => {
+    async (args: {
+      vendor: string;
+      name: string;
+      baseProfile: string;
+      kvps: Record<string, unknown>;
+      outputDir: string;
+    }) => {
       try {
         const result = await handleWrite(deps, kind, args);
         return {
@@ -1808,12 +1905,12 @@ git commit -m "feat: write_process_profile and write_filament_profile tools"
 - Test: `tests/tools-init-config.test.ts`
 
 **Interfaces:**
-- Consumes: `ToolDeps`/`toToolError` (Task 7's `src/tools/deps.ts` — same first-writer-wins rule as Task 8), `ConfigManager`/`validateConfigPaths` (Task 2).
+- Consumes: `ToolDeps`/`toToolError` (Task 7's `src/tools/deps.ts` — first-writer-wins rule), `ConfigManager`/`validateConfigPaths` (Task 2).
 - Produces:
-  - `function handleInitConfig(deps: ToolDeps, args: { installDir: string; userDataDir: string }): Promise<{ installDir: string; userDataDir: string; persistedTo: string }>`
+  - `function handleInitConfig(deps: ToolDeps, args: { installDir?: string; userDataDir?: string; userId: string }): Promise<{ installDir: string; userDataDir: string; userId: string; persistedTo: string }>`
   - `function registerInitConfigTool(server: McpServer, deps: ToolDeps): void` — registers `init_config`.
 
-Behavior (locked): validate both paths via `validateConfigPaths`; any problem → throw `Error` whose message joins all problems with newlines (nothing persisted). On success, `ConfigManager.save` persists `config.json` — and because `load()` prefers the file over auto-detection, subsequent tool calls in the same server process pick it up with no restart.
+Behavior (locked): omitted `installDir`/`userDataDir` are filled from `deps.detectPaths()`; any still-missing field → `Error` naming it. Then validate via `validateConfigPaths`; any problem → `Error` whose message joins all problems with newlines. Nothing is persisted on any failure. On success, `ConfigManager.save` persists `config.json`; because `load()` reads the file each call, subsequent tool calls in the same server process pick it up with no restart.
 
 - [ ] **Step 1: Write the failing test `tests/tools-init-config.test.ts`**
 
@@ -1838,34 +1935,59 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-function deps(): ToolDeps {
+function deps(detected: Awaited<ReturnType<ToolDeps["detectPaths"]>> = {}): ToolDeps {
   return {
-    config: new ConfigManager(join(dir, "config.json"), () => null),
+    config: new ConfigManager(join(dir, "config.json")),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(FIXTURES, "schema"),
+    detectPaths: async () => detected,
   };
 }
 
 describe("handleInitConfig", () => {
-  it("persists valid paths and makes them available to load() immediately", async () => {
+  it("persists explicit valid paths and makes them available to load() immediately", async () => {
     const d = deps();
     const result = await handleInitConfig(d, {
       installDir: join(FIXTURES, "install"),
       userDataDir: join(FIXTURES, "userdata"),
+      userId: "1234567890",
     });
     expect(result.persistedTo).toBe(join(dir, "config.json"));
     expect(await d.config.load()).toEqual({
       installDir: join(FIXTURES, "install"),
       userDataDir: join(FIXTURES, "userdata"),
+      userId: "1234567890",
     });
   });
 
-  it("rejects invalid paths with all problems listed and persists nothing", async () => {
-    const d = deps();
-    const promise = handleInitConfig(d, { installDir: dir, userDataDir: dir });
-    await expect(promise).rejects.toThrow(/resources/);
-    await expect(promise).rejects.toThrow(/user/);
+  it("fills omitted paths from detection", async () => {
+    const d = deps({ installDir: join(FIXTURES, "install"), userDataDir: join(FIXTURES, "userdata") });
+    const result = await handleInitConfig(d, { userId: "1234567890" });
+    expect(result.installDir).toBe(join(FIXTURES, "install"));
+    expect(result.userDataDir).toBe(join(FIXTURES, "userdata"));
+  });
+
+  it("fails naming the missing field when detection cannot fill it", async () => {
+    const promise = handleInitConfig(deps({ installDir: join(FIXTURES, "install") }), { userId: "1234567890" });
+    await expect(promise).rejects.toThrow(/userDataDir/);
     expect(existsSync(join(dir, "config.json"))).toBe(false);
+  });
+
+  it("rejects invalid paths with all problems listed and persists nothing", async () => {
+    const promise = handleInitConfig(deps(), { installDir: dir, userDataDir: dir, userId: "nobody" });
+    await expect(promise).rejects.toThrow(/resources/);
+    await expect(promise).rejects.toThrow(/nobody/);
+    expect(existsSync(join(dir, "config.json"))).toBe(false);
+  });
+
+  it("rejects a userId with no matching user/<id> directory", async () => {
+    await expect(
+      handleInitConfig(deps(), {
+        installDir: join(FIXTURES, "install"),
+        userDataDir: join(FIXTURES, "userdata"),
+        userId: "99999",
+      })
+    ).rejects.toThrow(/99999/);
   });
 });
 ```
@@ -1881,40 +2003,68 @@ Expected: FAIL — cannot resolve `../src/tools/init-config.js`.
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { validateConfigPaths } from "../config.js";
+import type { ServerConfig } from "../types.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
 export async function handleInitConfig(
   deps: ToolDeps,
-  args: { installDir: string; userDataDir: string }
-): Promise<{ installDir: string; userDataDir: string; persistedTo: string }> {
-  const problems = await validateConfigPaths(args);
+  args: { installDir?: string; userDataDir?: string; userId: string }
+): Promise<ServerConfig & { persistedTo: string }> {
+  const detected = args.installDir && args.userDataDir ? {} : await deps.detectPaths();
+  const installDir = args.installDir ?? detected.installDir;
+  const userDataDir = args.userDataDir ?? detected.userDataDir;
+
+  const missing: string[] = [];
+  if (!installDir) missing.push("installDir");
+  if (!userDataDir) missing.push("userDataDir");
+  if (missing.length > 0 || !installDir || !userDataDir) {
+    throw new Error(
+      `Auto-detection could not determine: ${missing.join(", ")}. Pass ${missing.join(" and ")} explicitly.`
+    );
+  }
+
+  const cfg: ServerConfig = { installDir, userDataDir, userId: args.userId };
+  const problems = await validateConfigPaths(cfg);
   if (problems.length > 0) throw new Error(problems.join("\n"));
-  const persistedTo = await deps.config.save(args);
-  return { ...args, persistedTo };
+  const persistedTo = await deps.config.save(cfg);
+  return { ...cfg, persistedTo };
 }
 
 const initConfigInputShape = {
-  installDir: z.string().min(1).describe("Bambu Studio install dir containing resources/profiles"),
-  userDataDir: z.string().min(1).describe("Bambu Studio user-data dir containing the user/ preset store"),
+  installDir: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Bambu Studio install dir containing resources/profiles; auto-detected if omitted"),
+  userDataDir: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Bambu Studio user-data dir containing the user/ preset store; auto-detected if omitted"),
+  userId: z
+    .string()
+    .min(1)
+    .describe("The user/<userId> directory resolution reads (a cloud-account id or 'default'); never auto-detected"),
 };
 
 export function registerInitConfigTool(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "init_config",
     {
-      title: "Initialize path configuration",
+      title: "Initialize configuration",
       description:
-        `Set and persist the Bambu Studio installDir and userDataDir used by all other tools. ` +
-        `Call this when resolve/write tools report that paths are not configured, or to override auto-detection. ` +
-        `Takes effect immediately — no server restart needed.\n\n` +
-        `Args:\n  - installDir (string): must contain resources/profiles\n` +
-        `  - userDataDir (string): must contain the user/ preset store\n\n` +
-        `Returns: { installDir, userDataDir, persistedTo }\n\n` +
-        `Errors: each invalid path is reported; nothing is persisted on failure.`,
+        `Set and persist the Bambu Studio installDir, userDataDir, and userId used by all other tools. ` +
+        `Required once before any resolve/write call succeeds. installDir/userDataDir are auto-detected ` +
+        `when omitted; userId must always be given. Takes effect immediately — no server restart needed.\n\n` +
+        `Args:\n  - installDir (string, optional): must contain resources/profiles\n` +
+        `  - userDataDir (string, optional): must contain the user/ preset store\n` +
+        `  - userId (string): the user/<userId> directory resolution reads\n\n` +
+        `Returns: { installDir, userDataDir, userId, persistedTo }\n\n` +
+        `Errors: each invalid or undetectable value is reported; nothing is persisted on failure.`,
       inputSchema: initConfigInputShape,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { installDir: string; userDataDir: string }) => {
+    async (args: { installDir?: string; userDataDir?: string; userId: string }) => {
       try {
         const result = await handleInitConfig(deps, args);
         return {
@@ -1932,26 +2082,27 @@ export function registerInitConfigTool(server: McpServer, deps: ToolDeps): void 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run tests/tools-init-config.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (5 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/tools/init-config.ts tests/tools-init-config.test.ts
-git commit -m "feat: init_config tool with path validation and immediate persistence"
+git commit -m "feat: init_config tool with detection fallback and full validation"
 ```
 
 ---
 
-### Task 10: Server entry point, integration test, README
+### Task 10: Server entry point, integration test, real schema generation, README
 
 **Files:**
 - Create: `src/index.ts`
 - Modify: `README.md`
+- Create: `schema/process.schema.json`, `schema/filament.schema.json` (generated)
 - Test: `tests/server.test.ts`
 
 **Interfaces:**
-- Consumes: everything from Tasks 2, 3, 7, 8, 9.
+- Consumes: everything from Tasks 2, 3, 6, 7, 8, 9.
 - Produces: `function buildServer(deps: ToolDeps): McpServer` (exported for tests) and the stdio entry point.
 
 - [ ] **Step 1: Write the failing integration test `tests/server.test.ts`**
@@ -1968,14 +2119,21 @@ import type { ToolDeps } from "../src/tools/deps.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
+class FixtureConfig extends ConfigManager {
+  constructor() {
+    super(join(FIXTURES, "does-not-exist.json"));
+  }
+  override async load() {
+    return { installDir: join(FIXTURES, "install"), userDataDir: join(FIXTURES, "userdata"), userId: "1234567890" };
+  }
+}
+
 function fixtureDeps(): ToolDeps {
   return {
-    config: new ConfigManager(join(FIXTURES, "no-config.json"), () => ({
-      installDir: join(FIXTURES, "install"),
-      userDataDir: join(FIXTURES, "userdata"),
-    })),
+    config: new FixtureConfig(),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(FIXTURES, "schema"),
+    detectPaths: async () => ({}),
   };
 }
 
@@ -2037,7 +2195,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ConfigManager } from "./config.js";
+import { ConfigManager, detectDefaultPaths } from "./config.js";
 import { FsProfileStore } from "./profile-store.js";
 import { type ToolDeps } from "./tools/deps.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
@@ -2059,6 +2217,7 @@ async function main(): Promise<void> {
     config: new ConfigManager(join(projectRoot, "config.json")),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(projectRoot, "schema"),
+    detectPaths: detectDefaultPaths,
   };
   const server = buildServer(deps);
   await server.connect(new StdioServerTransport());
@@ -2084,7 +2243,27 @@ Expected: PASS (3 tests).
 Run: `npm run build && npm test`
 Expected: build succeeds; every test file passes.
 
-- [ ] **Step 6: Replace `README.md` content**
+- [ ] **Step 6: Generate the real schemas from the BambuStudio source**
+
+The installed Bambu Studio version is 2.7.0.8 (from the `version` field in the user's preset files). Find the matching release tag, shallow-clone it into the scratchpad (NOT into this repo), and run the generator:
+
+```bash
+git ls-remote --tags https://github.com/bambulab/BambuStudio | grep -i "02.07\|2\.7\." | tail -20
+```
+
+Pick the tag matching 2.7.0.8 (or the nearest 2.7.0.x release tag if no exact match), then:
+
+```bash
+git clone --depth 1 --branch <TAG> https://github.com/bambulab/BambuStudio "$SCRATCHPAD/BambuStudio"
+npx tsx scripts/generate-schema/index.ts "$SCRATCHPAD/BambuStudio"
+```
+
+Expected: the generator prints key counts for both schema files (hundreds of process keys, dozens+ of filament keys). If it exits with the "option-list parsing likely needs adjusting" error or the counts are implausibly low, inspect the named source file, extend the regexes in `scripts/generate-schema/parse.ts` accordingly (keeping the smoke test green), and re-run. Sanity-check the output:
+
+Run: `node -e "const s=require('./schema/process.schema.json'); console.log(Object.keys(s).length, s.layer_height, s.outer_wall_speed)"`
+Expected: `layer_height` is `{ type: 'float', vector: false, ... }` and `outer_wall_speed` is `{ ..., vector: true }`.
+
+- [ ] **Step 7: Replace `README.md` content**
 
 ```markdown
 # printing-profile-mcp
@@ -2093,9 +2272,9 @@ An MCP (Model Context Protocol) server for managing 3D printing slicer profiles,
 
 ## Tools
 
-- `resolve_process_profile` / `resolve_filament_profile` — resolve a profile's fully-merged active settings by walking its `inherits` chain across the user preset store and system profiles.
-- `write_process_profile` / `write_filament_profile` — create or update a user preset from a base profile plus schema-validated key-value overrides.
-- `init_config` — set and persist the Bambu Studio `installDir`/`userDataDir` when auto-detection fails.
+- `resolve_process_profile` / `resolve_filament_profile` — resolve a profile's fully-merged active settings by walking its `inherits` chain across the configured user preset store and system profiles.
+- `write_process_profile` / `write_filament_profile` — create a profile file in a caller-chosen output directory from a base profile plus schema-validated key-value overrides. Bambu Studio's own directories are never written; importing profiles into Bambu Studio is a planned later feature.
+- `init_config` — set and persist `installDir`/`userDataDir`/`userId`. Required once; paths are auto-detected when omitted, `userId` never is.
 
 ## Setup (Windows)
 
@@ -2104,19 +2283,22 @@ npm install
 npm run build
 ```
 
-Generate the option schemas once from a local BambuStudio source checkout (re-run after Bambu Studio updates):
-
-```powershell
-npx tsx scripts/generate-schema/index.ts C:\path\to\BambuStudio
-```
-
 Register with Claude Code:
 
 ```powershell
 claude mcp add printing-profiles -- node <checkout>\dist\index.js
 ```
 
-Paths are auto-detected on first use; if that fails, call the `init_config` tool with your Bambu Studio install and user-data directories. They persist in `config.json` (gitignored, machine-specific).
+Then call the `init_config` tool once with your `userId` — the `user\<id>` folder name under `%APPDATA%\BambuStudio\user` (a numeric cloud-account id, or `default` when not logged in). Configuration persists in `config.json` (gitignored, machine-specific).
+
+## Regenerating the option schemas
+
+`schema/*.schema.json` are generated from the BambuStudio source matching the installed version. After a Bambu Studio update:
+
+```powershell
+git clone --depth 1 --branch <matching-version-tag> https://github.com/bambulab/BambuStudio C:\temp\BambuStudio
+npx tsx scripts/generate-schema/index.ts C:\temp\BambuStudio
+```
 
 ## Development
 
@@ -2129,20 +2311,20 @@ npm test
 Private / unlicensed.
 ```
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/index.ts tests/server.test.ts README.md
-git commit -m "feat: stdio server entry point wiring all five tools"
+git add src/index.ts tests/server.test.ts schema/ README.md
+git commit -m "feat: stdio server entry point, generated schemas, and README"
 ```
 
-- [ ] **Step 8: Manual verification note (not automatable in-repo)**
+- [ ] **Step 9: Report remaining manual items**
 
-Running `scripts/generate-schema` against a real BambuStudio checkout and smoke-calling the tools against a real Bambu Studio installation is a post-plan manual step for the user's machine (needs the checkout path and an actual install). Report this as the remaining open item when handing the branch back — do not silently skip it, and do not attempt to download the BambuStudio source yourself.
+When handing the branch back, report: (a) which BambuStudio tag the schemas were generated from and the key counts; (b) that a real end-to-end smoke call (init_config with userId `1234567890`, then resolve of a real profile on this machine) is worth doing from an MCP client before daily use. Do not silently skip this report.
 
 ---
 
 ## Self-Review Notes
 
-- Spec coverage: data sources (Tasks 3, 6), schema + array-wrapped scalars (Tasks 5, 6), path configuration ladder (Tasks 2, 9), all five tool contracts (Tasks 7–9), error handling (Tasks 1, 5, 7–9), testing requirements including the user→system chain crossing (Tasks 4, 7) and generator smoke test (Task 6), tech stack (Task 1). `profiles_template` exists as a fixture only — the spec assigns it no tool behavior, so no task consumes it.
-- Interface names cross-checked: `ToolDeps`, `toToolError`, `handleResolve`, `handleWrite`, `handleInitConfig`, `buildServer`, `FsProfileStore`, `resolveProfile`, `loadSchema`, `validateKvps`, `ConfigManager`, `validateConfigPaths` are used with identical signatures everywhere they appear.
+- Spec coverage: data sources incl. userId scoping (Task 3), serialization model (Tasks 1, 5), schema + generator + version-matched clone (Tasks 6, 10), path configuration and no-zero-config rule (Tasks 2, 9), all five tool contracts incl. outputDir writes (Tasks 7–9), error handling (Tasks 1, 5, 7–9), testing requirements including the user→system chain crossing (Tasks 4, 7) and generator smoke test (Task 6), tech stack (Task 1). `profiles_template` exists as a fixture only — the spec assigns it no tool behavior, so no task consumes it.
+- Interface names cross-checked: `ToolDeps`, `toToolError`, `handleResolve`, `handleWrite`, `handleInitConfig`, `buildServer`, `FsProfileStore`, `writeProfileFile`, `resolveProfile`, `loadSchema`, `validateKvps`, `ConfigManager`, `validateConfigPaths`, `detectDefaultPaths`, `DetectedPaths` are used with identical signatures everywhere they appear.

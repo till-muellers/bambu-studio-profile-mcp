@@ -196,6 +196,55 @@ configured (fix via `init_config`).
 Same contract as `write_process_profile`, with `"kind": "filament"`,
 validated against `schema/filament.schema.json`.
 
+### `list_process_profiles`
+
+Discover process profiles in the user preset store and, optionally, the
+system store.
+
+**Input**
+```json
+{ "vendor": "string (optional)", "nameContains": "string (optional)" }
+```
+`vendor` scopes system results to one vendor folder; omitted, every vendor
+subdirectory of `resources/profiles` is scanned. `nameContains` narrows the
+result by a case-insensitive substring match on `name`.
+
+**Output**
+```json
+{
+  "kind": "process",
+  "profiles": [
+    { "name": "string", "source": "user | system", "vendor": "string (system only)", "inherits": "string (optional)" }
+  ]
+}
+```
+User entries are listed first, then system entries sorted by vendor then
+name.
+
+**Errors**: vendor not found (only when `vendor` is given); paths not
+configured (fix via `init_config`).
+
+### `list_filament_profiles`
+
+Same contract as `list_process_profiles`, with `"kind": "filament"`,
+listing filament profiles instead of process profiles.
+
+### `list_vendors`
+
+List the vendor folders under `resources/profiles` with per-kind profile
+counts, for discovering valid `vendor` arguments to the resolve/write/list
+tools.
+
+**Input**: none.
+
+**Output**
+```json
+{ "vendors": [{ "name": "string", "processCount": 0, "filamentCount": 0 }] }
+```
+Sorted by vendor name.
+
+**Errors**: paths not configured (fix via `init_config`).
+
 ### `init_config`
 
 Set and persist the configuration. Required before any resolve/write call

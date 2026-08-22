@@ -4,7 +4,7 @@ import { ConfigManager } from "../src/config.js";
 import { ConfigMissingError } from "../src/errors.js";
 import { FsProfileStore } from "../src/profile-store.js";
 import {
-  handleListFilamentIds,
+  handleListFilaments,
   handleListParameters,
   handleListProfiles,
   handleListVendors,
@@ -68,9 +68,14 @@ describe("handleListProfiles", () => {
 });
 
 describe("handleListVendors", () => {
-  it("returns a plain, sorted vendor name list", async () => {
+  it("returns sorted vendor ids with display names", async () => {
     const result = await handleListVendors(fixtureDeps());
-    expect(result).toEqual({ vendors: ["BBL"] });
+    expect(result).toEqual({
+      vendors: [
+        { id: "BBL", name: "Bambulab" },
+        { id: "OTHERCO", name: "OTHERCO" },
+      ],
+    });
   });
 
   it("throws ConfigMissingError when unconfigured", async () => {
@@ -128,14 +133,20 @@ describe("handleListParameters", () => {
   });
 });
 
-describe("handleListFilamentIds", () => {
-  it("returns distinct, sorted filament_id values across the user store and every vendor", async () => {
-    const result = await handleListFilamentIds(fixtureDeps());
-    expect(result).toEqual({ filamentIds: ["GFA00", "GFB99"] });
+describe("handleListFilaments", () => {
+  it("returns distinct, sorted filament ids with display names across the user store and every vendor", async () => {
+    const result = await handleListFilaments(fixtureDeps());
+    expect(result).toEqual({
+      filaments: [
+        { id: "GFA00", name: "fdm_filament_common" },
+        { id: "GFB99", name: "Generic PLA" },
+        { id: "GFC00", name: "Other PLA" },
+      ],
+    });
   });
 
   it("throws ConfigMissingError when unconfigured", async () => {
-    await expect(handleListFilamentIds(fixtureDeps(false))).rejects.toBeInstanceOf(ConfigMissingError);
+    await expect(handleListFilaments(fixtureDeps(false))).rejects.toBeInstanceOf(ConfigMissingError);
   });
 });
 

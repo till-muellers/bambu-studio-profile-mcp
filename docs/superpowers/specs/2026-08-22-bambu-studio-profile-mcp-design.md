@@ -228,16 +228,19 @@ configured (fix via `init_config`).
 
 ### `list_vendors`
 
-List the vendor folder names under `resources/profiles`, for discovering
-valid `vendor` arguments to the resolve/write/list_profiles tools.
+List the vendor folder ids under `resources/profiles` with their display
+names, for discovering valid `vendor` arguments to the
+resolve/write/list_profiles tools.
 
 **Input**: none.
 
 **Output**
 ```json
-{ "vendors": ["string", "..."] }
+{ "vendors": [{ "id": "string", "name": "string" }] }
 ```
-Sorted.
+`id` is the folder name; `name` is the sibling
+`resources/profiles/<id>.json` metadata file's top-level `name` field, or
+`id` when that file is absent/unparseable/nameless. Sorted by `id`.
 
 **Errors**: paths not configured (fix via `init_config`).
 
@@ -276,19 +279,22 @@ the key, label, and description.
 
 **Errors**: paths not configured (fix via `init_config`).
 
-### `list_filament_ids`
+### `list_filaments`
 
-List the distinct `filament_id` values found across all filament profiles:
-the configured user filament store plus every vendor's system filament
-directory. Only profiles that carry a `filament_id` contribute an entry.
+List the distinct `filament_id` values found across all filament profiles,
+with display names: the configured user filament store plus every vendor's
+system filament directory. Only profiles that carry a `filament_id`
+contribute an entry.
 
 **Input**: none.
 
 **Output**
 ```json
-{ "filamentIds": ["string", "..."] }
+{ "filaments": [{ "id": "string", "name": "string" }] }
 ```
-Sorted, deduplicated.
+`name` is the ` @...`-suffix-stripped `name` of the id's root carrier (a
+profile with that id and no `inherits`), or of its shortest-named carrier
+when no root carrier exists. Sorted by `id`, deduplicated.
 
 **Errors**: paths not configured (fix via `init_config`).
 

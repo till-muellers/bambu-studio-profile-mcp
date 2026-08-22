@@ -67,6 +67,13 @@ export async function handleUpdate(
     violations.push({ key, reason: "reserved key: managed via write_profile's name/baseProfile arguments" });
   }
 
+  const overlapKeys = Object.keys(set).filter(
+    (key) => remove.includes(key) && !reservedInSet.includes(key as (typeof RESERVED_KEYS)[number])
+  );
+  for (const key of overlapKeys) {
+    violations.push({ key, reason: "key appears in both set and remove; choose one" });
+  }
+
   const setToValidate = Object.fromEntries(
     Object.entries(set).filter(([key]) => !reservedInSet.includes(key as (typeof RESERVED_KEYS)[number]))
   );

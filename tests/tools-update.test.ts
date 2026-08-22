@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -140,6 +140,65 @@ describe("handleUpdate", () => {
     for (const v of err.violations) {
       expect(v.reason).toMatch(/reserved key/i);
     }
+  });
+
+  it("rejects a key present in both set and remove, and writes nothing", async () => {
+    await seedProfile("Existing", { layer_height: "0.2", wall_loops: "2" });
+    const before = await readFile(join(outDir, "Existing.json"), "utf8");
+    const promise = handleUpdate(deps(), "process", {
+      name: "Existing",
+      outputDir: outDir,
+      set: { wall_loops: "3" },
+      remove: ["wall_loops"],
+    });
+    await expect(promise).rejects.toBeInstanceOf(SchemaValidationError);
+    const err = (await promise.catch((e: unknown) => e)) as SchemaValidationError;
+    const violation = err.violations.find((v) => v.key === "wall_loops");
+    expect(violation?.reason).toMatch(/both set and remove/i);
+    const after = await readFile(join(outDir, "Existing.json"), "utf8");
+    expect(after).toBe(before);
+  });
+
+  it("confirms the reserved-key double-report exclusion still holds (reserved keys don't also report as 'not present')", async () => {
+    await seedProfile("Existing", { layer_height: "0.2" });
+    const promise = handleUpdate(deps(), "process", {
+      name: "Existing",
+      outputDir: outDir,
+      set: { name: "Sneaky" },
+      remove: ["inherits"],
+    });
+    await expect(promise).rejects.toBeInstanceOf(SchemaValidationError);
+    const err = (await promise.catch((e: unknown) => e)) as SchemaValidationError;
+    expect(err.violations.map((v) => v.key).sort()).toEqual(["inherits", "name"]);
+    for (const v of err.violations) {
+      expect(v.reason).toMatch(/reserved key/i);
+    }
+  });
+
+  it("rejects unparseable JSON in the profile file with an error naming the path", async () => {
+    await mkdir(outDir, { recursive: true });
+    const path = join(outDir, "Broken.json");
+    await writeFile(path, "{ not valid json", "utf8");
+    await expect(
+      handleUpdate(deps(), "process", {
+        name: "Broken",
+        outputDir: outDir,
+        set: { layer_height: "0.2" },
+      })
+    ).rejects.toThrow(new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  });
+
+  it("rejects non-object JSON in the profile file with an error naming the path", async () => {
+    await mkdir(outDir, { recursive: true });
+    const path = join(outDir, "ArrayBody.json");
+    await writeFile(path, "[1, 2, 3]", "utf8");
+    await expect(
+      handleUpdate(deps(), "process", {
+        name: "ArrayBody",
+        outputDir: outDir,
+        set: { layer_height: "0.2" },
+      })
+    ).rejects.toThrow(new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   });
 
   it("rejects an invalid set value and writes nothing", async () => {

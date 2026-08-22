@@ -33,4 +33,35 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->max = 350;
     def->set_default_value(new ConfigOptionInts { 200 });
+
+    def = this->add("override_process_overhang_speed", coBools);
+    def->label = L("Override overhang speed");
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionBoolsNullable({false}));
+
+    def = this->add("precise_z_height", coBool);
+    def->label = L("Precise Z height");
+    def->set_default_value(new ConfigOptionBool(0));
+
+    def = this->add("exclude_object", coBool);
+    def->label = L("Exclude objects");
+    def->set_default_value(new ConfigOptionBool(1));
+
+    auto def_top_fill_pattern = def = this->add("top_surface_pattern", coEnum);
+    def->label = L("Top surface pattern");
+    def->enum_values.push_back("concentric");
+    def->enum_values.push_back("zig-zag");
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipRectilinear));
+
+    def = this->add("bottom_surface_pattern", coEnum);
+    def->label = L("Bottom surface pattern");
+    def->enum_values = def_top_fill_pattern->enum_values;
+    def->enum_labels = def_top_fill_pattern->enum_labels;
+    def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipRectilinear));
+
+    def = this->add("brim_type", coEnum);
+    def->label = L("Brim type");
+    def->enum_values.emplace_back("auto_brim");
+    def->enum_values.emplace_back("no_brim");
+    def->set_default_value(new ConfigOptionEnum<BrimType>(btAutoBrim));
 }

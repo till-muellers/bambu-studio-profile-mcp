@@ -1,13 +1,14 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parsePrintConfig } from "../scripts/generate-schema/parse.js";
+import { parseOptionList, parsePrintConfig } from "../scripts/generate-schema/parse.js";
 
-const FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "print-config-snippet.cpp");
+const PRINT_CONFIG_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "print-config-snippet.cpp");
+const PRESET_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "preset-snippet.cpp");
 
 describe("parsePrintConfig (smoke test)", () => {
   it("extracts key, type, vector flag, range, and enum values from definition blocks", async () => {
-    const source = await readFile(FIXTURE, "utf8");
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
     const options = parsePrintConfig(source);
 
     expect(options.layer_height).toMatchObject({ type: "float", vector: false, min: 0.04, max: 1.0 });
@@ -16,5 +17,69 @@ describe("parsePrintConfig (smoke test)", () => {
     expect(options.wall_generator).toMatchObject({ type: "enum", vector: false, enum: ["classic", "arachne"] });
     expect(options.outer_wall_speed).toMatchObject({ type: "float", vector: true, min: 0 });
     expect(options.nozzle_temperature).toMatchObject({ type: "int", vector: true, min: 0, max: 350 });
+  });
+
+  it("unwraps a nested-brace vector-bool default to a real boolean, not a literal '{false' string", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.override_process_overhang_speed).toMatchObject({
+      type: "bool",
+      vector: true,
+      default: false,
+    });
+  });
+
+  it("coerces an int-literal bool default (ConfigOptionBool(0)/(1)) to a real boolean", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.precise_z_height).toMatchObject({ type: "bool", default: false });
+    expect(options.exclude_object).toMatchObject({ type: "bool", default: true });
+  });
+
+  it("extracts enum values declared via enum_values.emplace_back(...)", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.brim_type).toMatchObject({ type: "enum", enum: ["auto_brim", "no_brim"] });
+  });
+
+  it("resolves an enum aliased from an earlier option via `def->enum_values = <alias>->enum_values`", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.bottom_surface_pattern).toMatchObject({
+      type: "enum",
+      enum: ["concentric", "zig-zag"],
+    });
+  });
+});
+
+describe("parseOptionList", () => {
+  it("resolves the indirect `fnName() { return <var>; }` pattern to the static vector's keys", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    expect(parseOptionList(source, "print_options")).toEqual([
+      "layer_height",
+      "wall_loops",
+      "enable_support",
+      "wall_generator",
+      "outer_wall_speed",
+    ]);
+  });
+
+  it("strips commented-out keys and multi-line entries for filament_options", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    const keys = parseOptionList(source, "filament_options");
+    expect(keys).toEqual(["default_filament_colour", "filament_diameter", "nozzle_temperature", "filament_type"]);
+    expect(keys).not.toContain("filament_colour");
+  });
+
+  it("returns an empty array for a function name that isn't present", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    expect(parseOptionList(source, "sla_print_options")).toEqual([]);
   });
 });

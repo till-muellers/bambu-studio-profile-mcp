@@ -1,0 +1,5 @@
+{
+  "name": "Generic PLA @BBL X1C",
+  "inherits": "fdm_filament_common",
+  "nozzle_temperature": ["210"]
+}

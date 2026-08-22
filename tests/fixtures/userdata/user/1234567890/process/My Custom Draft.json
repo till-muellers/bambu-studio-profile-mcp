@@ -1,0 +1,5 @@
+{
+  "name": "My Custom Draft",
+  "inherits": "0.20mm Standard @BBL X1C",
+  "layer_height": "0.28"
+}

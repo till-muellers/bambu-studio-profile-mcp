@@ -1,0 +1,8 @@
+{
+  "name": "fdm_process_common",
+  "layer_height": "0.2",
+  "wall_loops": "2",
+  "sparse_infill_density": "15%",
+  "wall_generator": "classic",
+  "outer_wall_speed": ["200", "500", "500"]
+}

@@ -1,0 +1,9 @@
+{
+  "layer_height": { "type": "float", "vector": false, "min": 0.04, "max": 1.0, "default": 0.2 },
+  "wall_loops": { "type": "int", "vector": false, "min": 0, "max": 1000, "default": 2 },
+  "enable_support": { "type": "bool", "vector": false, "default": false },
+  "wall_generator": { "type": "enum", "vector": false, "enum": ["classic", "arachne"], "default": "classic" },
+  "sparse_infill_density": { "type": "percent", "vector": false, "min": 0, "max": 100, "default": 15 },
+  "outer_wall_speed": { "type": "float", "vector": true, "min": 0, "default": 200 },
+  "notes": { "type": "string", "vector": false, "default": "" }
+}

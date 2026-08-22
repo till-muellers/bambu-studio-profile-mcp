@@ -1,0 +1,5 @@
+{
+  "name": "fdm_filament_common",
+  "filament_type": ["PLA"],
+  "nozzle_temperature": ["220"]
+}

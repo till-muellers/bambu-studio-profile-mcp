@@ -1,0 +1,6 @@
+{
+  "name": "0.20mm Standard @BBL X1C",
+  "inherits": "fdm_process_common",
+  "wall_loops": "3",
+  "outer_wall_speed": ["250", "500", "500"]
+}

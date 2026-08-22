@@ -70,14 +70,10 @@ export function registerInitConfigTool(server: McpServer, deps: ToolDeps): void 
       title: "Initialize configuration",
       description:
         `Set and persist the Bambu Studio installDir, userDataDir, and userId used by all other tools. ` +
-        `Required once before any resolve/write call succeeds. installDir/userDataDir are auto-detected ` +
-        `when omitted; userId is auto-detected from <userDataDir>\\BambuStudio.conf's app.preset_folder ` +
-        `(the logged-in account's preset folder) when omitted. Takes effect immediately — no server ` +
-        `restart needed.\n\n` +
-        `Args:\n  - installDir (string, optional): must contain resources/profiles\n` +
-        `  - userDataDir (string, optional): must contain the user/ preset store\n` +
-        `  - userId (string, optional): the user/<userId> directory resolution reads; auto-detected from ` +
-        `BambuStudio.conf when omitted, or pass explicitly to override (e.g. 'default')\n\n` +
+        `Required once before any other tool succeeds; on a machine with Bambu Studio installed, calling ` +
+        `it with no arguments usually suffices — every value is auto-detected (userId from ` +
+        `<userDataDir>\\BambuStudio.conf's app.preset_folder, the logged-in account's preset folder). ` +
+        `Takes effect immediately — no server restart needed.\n\n` +
         `Returns: { installDir, userDataDir, userId, persistedTo }\n\n` +
         `Errors: each invalid or undetectable value is reported (including userId when BambuStudio.conf ` +
         `is missing, unparseable, or lacks app.preset_folder); nothing is persisted on failure.`,

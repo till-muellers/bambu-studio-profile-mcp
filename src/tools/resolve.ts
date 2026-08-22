@@ -15,9 +15,18 @@ export async function handleResolve(
 }
 
 const resolveInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Which profile store to resolve from"),
-  vendor: z.string().min(1).describe("Vendor folder under resources/profiles, e.g. 'BBL'"),
-  name: z.string().min(1).describe("Profile name (the 'name' field inside the profile JSON)"),
+  kind: z.enum(["process", "filament"]).describe("Profile type to resolve"),
+  vendor: z
+    .string()
+    .min(1)
+    .describe(
+      "Vendor id from list_vendors, e.g. 'BBL'. Required for user presets too: it names the system " +
+        "store their inherits chain can reference"
+    ),
+  name: z
+    .string()
+    .min(1)
+    .describe("Exact profile name as returned by list_profiles (the 'name' field inside the profile JSON)"),
 };
 
 export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
@@ -27,17 +36,16 @@ export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
       title: "Resolve profile",
       description:
         "Resolve a Bambu Studio process or filament profile's fully-merged active settings. Walks the " +
-        "profile's 'inherits' chain across the configured user preset store and the system profiles of " +
-        "the given vendor, merging settings root-first so a more specific profile's values override " +
-        "its ancestors'.\n\n" +
-        "Args:\n  - kind (\"process\" | \"filament\"): which profile store to resolve from\n" +
-        "  - vendor (string): vendor folder under resources/profiles, e.g. 'BBL'\n" +
-        "  - name (string): profile name as shown in the profile JSON 'name' field\n\n" +
-        "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object (flat merged " +
-        "key->value map; scalars are bare strings, per-extruder options are string arrays) }\n\n" +
+        "profile's 'inherits' chain across the configured user preset store and the vendor's system " +
+        "profiles, merging settings root-first so a more specific profile's values override its " +
+        "ancestors'.\n\n" +
+        "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object } — settings is " +
+        "the flat merged key->value map; scalar options are bare strings like \"0.2\", per-extruder " +
+        "options are string arrays like [\"250\",\"500\",\"500\"].\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
-        "missing (fix via init_config).\n\n" +
-        "Find valid vendor and name values with list_vendors and list_profiles.",
+        "missing (run init_config first).\n\n" +
+        "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +
+        "a profile's effective settings before creating a variant of it with write_profile.",
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },

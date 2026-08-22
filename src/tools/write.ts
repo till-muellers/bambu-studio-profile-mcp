@@ -59,10 +59,16 @@ export async function handleWrite(
 }
 
 const writeInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Which profile store the new profile belongs to"),
-  vendor: z.string().min(1).describe("Vendor folder under resources/profiles, e.g. 'BBL'"),
+  kind: z.enum(["process", "filament"]).describe("Profile type to create"),
+  vendor: z
+    .string()
+    .min(1)
+    .describe("Vendor id from list_vendors, e.g. 'BBL'; names the system store baseProfile is resolved against"),
   name: z.string().min(1).describe("Name of the profile to create; also the output filename (<name>.json)"),
-  baseProfile: z.string().min(1).describe("Existing profile this profile will inherit from"),
+  baseProfile: z
+    .string()
+    .min(1)
+    .describe("Exact name of the existing profile to inherit from, as returned by list_profiles"),
   kvps: z
     .record(z.unknown())
     .describe(
@@ -81,23 +87,18 @@ export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
     {
       title: "Write profile",
       description:
-        "Create or update a Bambu Studio process or filament profile file in outputDir (NOT in the " +
-        "Bambu Studio directories — importing into Bambu Studio is a separate, later step). The file " +
-        "inherits from baseProfile and contains ONLY the kvps overrides. Every kvps key and value is " +
-        "validated against schema/<kind>.schema.json before anything is written; all violations are " +
-        "reported together.\n\n" +
-        "Args:\n  - kind (\"process\" | \"filament\"): which profile store the new profile belongs to\n" +
-        "  - vendor (string), name (string), baseProfile (string), outputDir (string)\n" +
-        "  - kvps (object): option key -> value, per schema/<kind>.schema.json. Scalar options take a " +
-        "single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array like " +
-        "[\"200\",\"500\",\"500\"]. Example: {\"layer_height\": \"0.16\", \"outer_wall_speed\": " +
-        "[\"150\",\"400\",\"400\"]}. 'name'/'inherits' are reserved, set via the name/baseProfile " +
-        "arguments instead.\n\n" +
-        "Returns: { vendor, name, kind, created, path, inherits, overrides }\n\n" +
+        "Create a Bambu Studio process or filament profile file: writes <outputDir>/<name>.json, " +
+        "inheriting from baseProfile and containing only the kvps overrides. Overwrites the file when it " +
+        "already exists; Bambu Studio's own directories stay untouched. Every kvps key and value is " +
+        "validated against the option schema before anything is written; all violations are reported " +
+        "together.\n\n" +
+        "Returns: { vendor, name, kind, created (false when an existing file was overwritten), path, " +
+        "inherits, overrides }\n\n" +
         "Errors: baseProfile not found or unresolvable; schema violations listed per key; config " +
-        "missing (fix via init_config).\n\n" +
-        "Find baseProfile values with list_profiles or resolve_profile, and valid kvps keys with " +
-        "list_parameters.",
+        "missing (run init_config first).\n\n" +
+        "Typical flow to extend an existing profile: find it with list_profiles, inspect its effective " +
+        "settings with resolve_profile, look up valid option keys and value ranges with list_parameters, " +
+        "then call write_profile with only the changed keys as kvps.",
       inputSchema: writeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },

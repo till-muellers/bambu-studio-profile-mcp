@@ -66,19 +66,16 @@ function registerListProfiles(server: McpServer, deps: ToolDeps): void {
     {
       title: "List profiles",
       description:
-        "Discover process or filament profiles available in the user preset store and the system store. " +
-        "Omit vendor to search every vendor; search narrows results by a case-insensitive substring match " +
-        "on the profile name. Results feed the vendor/name/baseProfile arguments of the resolve_<kind>_profile " +
-        "and write_<kind>_profile tools.\n\n" +
-        "Args:\n  - kind (\"process\" | \"filament\"): which profile store to list\n" +
-        "  - vendor (string, optional): vendor folder under resources/profiles, e.g. 'BBL'\n" +
-        "  - search (string, optional): case-insensitive substring filter on the profile name\n\n" +
-        "Returns: { kind, profiles: [{ name, source: \"user\"|\"system\", vendor?, inherits? }] }\n\n" +
-        "Errors: vendor not found (only when vendor is given); config missing (fix via init_config).",
+        "Discover the process or filament profiles available in the user preset store and the vendors' " +
+        "system stores.\n\n" +
+        "Returns: { kind, profiles: [{ name, source: \"user\"|\"system\", vendor?, inherits? }] } — " +
+        "user presets carry no vendor field; inherits names a profile's parent.\n\n" +
+        "Errors: vendor not found (only when vendor is given); config missing (run init_config first).\n\n" +
+        "Results feed the vendor/name/baseProfile arguments of resolve_profile and write_profile.",
       inputSchema: {
-        kind: kindEnum.describe("Which profile store to list"),
-        vendor: z.string().min(1).optional().describe("Vendor folder under resources/profiles, e.g. 'BBL'; omit to search every vendor"),
-        search: z.string().min(1).optional().describe("Case-insensitive substring filter on the profile name"),
+        kind: kindEnum.describe("Profile type to list"),
+        vendor: z.string().min(1).optional().describe("Vendor id from list_vendors, e.g. 'BBL'; omit to search every vendor"),
+        search: z.string().min(1).optional().describe("Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'"),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -102,10 +99,11 @@ function registerListVendors(server: McpServer, deps: ToolDeps): void {
     {
       title: "List vendors",
       description:
-        "List the vendor folders under resources/profiles with their display names. Use this to discover " +
-        "valid vendor arguments (the id) for the resolve/write/list_profiles tools.\n\n" +
-        "Returns: { vendors: [{ id, name }] } (sorted by id)\n\n" +
-        "Errors: config missing (fix via init_config).",
+        "List the profile vendors shipped with Bambu Studio.\n\n" +
+        "Returns: { vendors: [{ id, name }] }, sorted by id — id (e.g. 'BBL') is the value the vendor " +
+        "arguments of resolve_profile, write_profile, and list_profiles expect; name is the display " +
+        "name (e.g. 'Bambulab').\n\n" +
+        "Errors: config missing (run init_config first).",
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -129,17 +127,22 @@ function registerListParameters(server: McpServer, deps: ToolDeps): void {
     {
       title: "List parameters",
       description:
-        "Discover the option keys valid for process or filament profiles, with their type, range/enum, " +
-        "default, and (where Bambu Studio provides them) a display label and description. search narrows " +
-        "results by a case-insensitive substring match against the key, label, and description. Results feed " +
-        "the kvps argument of the write_<kind>_profile tools.\n\n" +
-        "Args:\n  - kind (\"process\" | \"filament\"): which schema to list\n" +
-        "  - search (string, optional): case-insensitive substring filter on key, label, or description\n\n" +
-        "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, description? }] }\n\n" +
-        "Errors: config missing (fix via init_config).",
+        "Discover the option keys valid for process or filament profiles, with their value type, " +
+        "range/enum, default, and (where Bambu Studio provides them) the GUI label and description. " +
+        "Search by name or by what a setting does — the filter matches key, label, and description.\n\n" +
+        "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, " +
+        "description? }] } — vector: true means the option takes a string array (one element per " +
+        "extruder/filament), vector: false a single value.\n\n" +
+        "Errors: config missing (run init_config first).\n\n" +
+        "Results feed the kvps argument of write_profile: use key as the kvps key and respect " +
+        "type/vector/enum/min/max when choosing the value.",
       inputSchema: {
-        kind: kindEnum.describe("Which schema to list"),
-        search: z.string().min(1).optional().describe("Case-insensitive substring filter on key, label, or description"),
+        kind: kindEnum.describe("Profile type whose option schema to list"),
+        search: z
+          .string()
+          .min(1)
+          .optional()
+          .describe("Case-insensitive substring matched against key, label, and description, e.g. 'seam' or 'temperature'"),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -163,11 +166,13 @@ function registerListFilaments(server: McpServer, deps: ToolDeps): void {
     {
       title: "List filaments",
       description:
-        "List the distinct filament ids with their display names across all filament profiles (the " +
-        "configured user store plus every vendor's system filament directory). Only profiles that carry a " +
-        "filament_id contribute an entry.\n\n" +
-        "Returns: { filaments: [{ id, name }] } (sorted by id, deduplicated)\n\n" +
-        "Errors: config missing (fix via init_config).",
+        "List the distinct filament products known to Bambu Studio: every filament_id found across the " +
+        "user store and all vendors' filament profiles, with a display name.\n\n" +
+        "Returns: { filaments: [{ id, name }] }, sorted by id, deduplicated — id is the product code " +
+        "(e.g. 'GFB00'), name the human-readable filament name (e.g. 'Bambu ABS').\n\n" +
+        "Errors: config missing (run init_config first).\n\n" +
+        "Use it to see which filaments exist, then find their concrete profiles by name via " +
+        "list_profiles with kind 'filament'.",
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },

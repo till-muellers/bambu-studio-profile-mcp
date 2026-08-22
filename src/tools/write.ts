@@ -74,7 +74,8 @@ const writeInputShape = {
     .describe(
       "Object mapping option key to value, validated against schema/<kind>.schema.json. Scalar options " +
         "take a single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array " +
-        "like [\"200\",\"500\",\"500\"]. Example: " +
+        "like [\"200\",\"500\",\"500\"] — any length from 1 up is accepted, so a single-element array " +
+        "like [\"230\"] is fine. Example: " +
         "{\"layer_height\": \"0.16\", \"outer_wall_speed\": [\"150\",\"400\",\"400\"]}. " +
         "'name' and 'inherits' are reserved, set via the name/baseProfile arguments instead."
     ),

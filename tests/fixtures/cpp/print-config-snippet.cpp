@@ -5,6 +5,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("layer_height", coFloat);
     def->label = L("Layer height");
+    def->tooltip = L("Slicing height for each layer. Smaller layer height means more accurate and more printing time");
     def->min = 0.04;
     def->max = 1.0;
     def->set_default_value(new ConfigOptionFloat(0.2));
@@ -25,11 +26,15 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("outer_wall_speed", coFloats);
     def->label = L("Outer wall speed");
+    def->tooltip = L("Speed of outer wall which is outermost and visible. It's used to be slower "
+        "than inner wall speed to get better quality.");
     def->min = 0;
     def->set_default_value(new ConfigOptionFloats { 200 });
 
     def = this->add("nozzle_temperature", coInts);
     def->label = L("Nozzle temperature");
+    def->tooltip = L("Nozzle temperature for layers except the initial one. "
+        "Value 0 means the filament does not support to print on this nozzle");
     def->min = 0;
     def->max = 350;
     def->set_default_value(new ConfigOptionInts { 200 });

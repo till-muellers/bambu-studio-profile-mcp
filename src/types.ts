@@ -44,6 +44,8 @@ export interface SchemaOption {
   min?: number;
   max?: number;
   default?: unknown;
+  label?: string;
+  description?: string;
 }
 
 export type ProfileSchema = Record<string, SchemaOption>;

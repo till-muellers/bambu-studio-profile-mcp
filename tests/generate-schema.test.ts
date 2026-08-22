@@ -61,6 +61,43 @@ describe("parsePrintConfig (smoke test)", () => {
 
     expect(options.filament_vendor).toMatchObject({ type: "string", default: "(Undefined)" });
   });
+
+  it("extracts label from def->label = L(\"...\")", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.layer_height.label).toBe("Layer height");
+    expect(options.wall_generator.label).toBeUndefined();
+  });
+
+  it("extracts a single-line description from def->tooltip = L(\"...\")", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.layer_height.description).toBe(
+      "Slicing height for each layer. Smaller layer height means more accurate and more printing time"
+    );
+  });
+
+  it("concatenates a multi-line adjacent-string-literal tooltip into one description", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.nozzle_temperature.description).toBe(
+      "Nozzle temperature for layers except the initial one. Value 0 means the filament does not support to print on this nozzle"
+    );
+    expect(options.outer_wall_speed.description).toBe(
+      "Speed of outer wall which is outermost and visible. It's used to be slower than inner wall speed to get better quality."
+    );
+  });
+
+  it("omits label/description for options that declare neither", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.wall_generator.label).toBeUndefined();
+    expect(options.wall_generator.description).toBeUndefined();
+  });
 });
 
 describe("parseOptionList", () => {

@@ -50,6 +50,23 @@ function extractDefaultRaw(body: string): string | undefined {
   return content;
 }
 
+/**
+ * Extracts `def-><field> = L(...)` where the L(...) argument is one or more adjacent quoted
+ * string literals (C++ string-literal concatenation, optionally spanning multiple lines), e.g.
+ * `def->tooltip = L("part a " "part b")`. Concatenates the literals' unescaped contents. Returns
+ * `undefined` when the field is absent from `body`.
+ */
+function extractLField(body: string, field: "label" | "tooltip"): string | undefined {
+  const re = new RegExp(
+    `def->${field}\\s*=\\s*L\\(\\s*((?:"(?:[^"\\\\]|\\\\.)*"\\s*)+)\\)`
+  );
+  const match = body.match(re);
+  if (!match) return undefined;
+  const literals = match[1].match(/"(?:[^"\\]|\\.)*"/g);
+  if (!literals) return undefined;
+  return literals.map((lit) => lit.slice(1, -1).replace(/\\(.)/g, "$1")).join("");
+}
+
 function parseScalar(text: string): unknown {
   let trimmed = text.trim();
   // Unwrap the C++ localization macro, e.g. `L("(Undefined)")` -> `"(Undefined)"`.
@@ -97,6 +114,10 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     if (!mapped) continue;
 
     const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
+    const label = extractLField(body, "label");
+    if (label !== undefined) option.label = label;
+    const description = extractLField(body, "tooltip");
+    if (description !== undefined) option.description = description;
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     if (min) option.min = Number(min[1]);
     const max = body.match(/def->max\s*=\s*(-?[\d.]+)/);

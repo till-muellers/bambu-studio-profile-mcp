@@ -44,13 +44,29 @@ Verified against a real Bambu Studio 2.7.0.8 installation:
 - Scalar options are stored as bare JSON strings: `"layer_height": "0.1"`,
   `"sparse_infill_density": "100%"`.
 - Vector options (per-extruder / per-filament values) are stored as string
-  arrays of one or more elements:
-  `"outer_wall_speed": ["200", "500", "500"]`. Array length varies by
-  printer/extruder configuration and is not validated.
+  arrays with one element per position of the target profile's own
+  flattened (extruder × hotend-variant) list, as enumerated by that
+  profile's `print_extruder_variant` (process) or `filament_extruder_variant`
+  (filament) array — e.g. `"outer_wall_speed": ["200", "500", "500"]` for a
+  3-position profile. This length varies by printer AND resources version;
+  it is never a fixed constant (observed lengths: A1=1, X1C=2, P2S=3,
+  H2D=7). Writing a vector shorter than the target's variant list is
+  accepted by Bambu Studio, which broadcast-resizes it (repeating the last
+  value) — legal but usually unintended; real profiles always ship
+  full-length vectors.
+- `"nil"` as a vector element means "keep the base/printer value at this
+  position". It is legal only on options the schema marks
+  `nullable: true` (Bambu Studio's own `def->nullable = true;`); real user
+  presets contain entries like
+  `"filament_flow_ratio": ["0.9576","nil","nil"]`.
 
-Every schema entry therefore carries a `vector` flag. Validation of a
-scalar option rejects arrays; validation of a vector option requires an
-array of at least one element and validates every element.
+Every schema entry therefore carries a `vector` flag, and nullable options
+additionally carry a `nullable: true` flag. Validation of a scalar option
+rejects arrays; validation of a vector option requires an array of at
+least one element and validates every element — except that the exact
+string `"nil"` is always accepted as an element (or as the scalar value)
+on an option with `nullable: true`. Array length itself remains
+unvalidated.
 
 ## Schema
 
@@ -62,7 +78,7 @@ BambuStudio source checkout and emits two files checked into this repo:
 - `schema/process.schema.json`
 - `schema/filament.schema.json`
 
-Each maps option key → `{ type, vector, enum?, min?, max?, default?, label?, description? }`.
+Each maps option key → `{ type, vector, enum?, min?, max?, default?, label?, description?, nullable? }`.
 Types: `string`, `int`, `float`, `bool`, `enum`, `percent`. `label` and
 `description` come from Bambu Studio's own `def->label`/`def->tooltip`
 strings and are omitted when the source declares neither. The MCP server
@@ -262,7 +278,8 @@ the key, label, and description.
       "max": 0,
       "default": "...",
       "label": "string (optional)",
-      "description": "string (optional)"
+      "description": "string (optional)",
+      "nullable": true
     }
   ]
 }

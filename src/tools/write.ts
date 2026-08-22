@@ -74,9 +74,11 @@ const writeInputShape = {
     .describe(
       "Object mapping option key to value, validated against schema/<kind>.schema.json. Scalar options " +
         "take a single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array " +
-        "like [\"200\",\"500\",\"500\"] — any length from 1 up is accepted, so a single-element array " +
-        "like [\"230\"] is fine. Example: " +
-        "{\"layer_height\": \"0.16\", \"outer_wall_speed\": [\"150\",\"400\",\"400\"]}. " +
+        "with one element per position of the base profile's variant list — the " +
+        "print_extruder_variant/filament_extruder_variant array visible in resolve_profile's settings — " +
+        "like [\"200\",\"500\",\"500\"] for a 3-position profile. \"nil\" as an element keeps the base " +
+        "value at that position and is valid only on options list_parameters marks nullable: true. " +
+        "Example: {\"layer_height\": \"0.16\", \"outer_wall_speed\": [\"150\",\"400\",\"400\"]}. " +
         "'name' and 'inherits' are reserved, set via the name/baseProfile arguments instead."
     ),
   outputDir: z.string().min(1).describe("Directory the profile file is written to; created if missing"),
@@ -99,7 +101,10 @@ export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
         "missing (run init_config first).\n\n" +
         "Typical flow to extend an existing profile: find it with list_profiles, inspect its effective " +
         "settings with resolve_profile, look up valid option keys and value ranges with list_parameters, " +
-        "then call write_profile with only the changed keys as kvps.",
+        "then call write_profile with only the changed keys as kvps. For a vector option, resolve the " +
+        "base profile first, copy the existing array for that key, modify only the positions you mean " +
+        "to change, and pass the full-length array back — a shorter array is accepted but Bambu Studio " +
+        "broadcast-resizes it (repeating the last value), which is rarely what you want.",
       inputSchema: writeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },

@@ -131,11 +131,14 @@ function registerListParameters(server: McpServer, deps: ToolDeps): void {
         "range/enum, default, and (where Bambu Studio provides them) the GUI label and description. " +
         "Search by name or by what a setting does — the filter matches key, label, and description.\n\n" +
         "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, " +
-        "description? }] } — vector: true means the option takes a string array (one element per " +
-        "extruder/filament), vector: false a single value.\n\n" +
+        "description?, nullable? }] } — vector: true means the option takes a string array with one " +
+        "element per (extruder × hotend-variant) position of the target profile — see the profile's " +
+        "print_extruder_variant/filament_extruder_variant in resolve_profile's settings; vector: false " +
+        "a single value. Options marked nullable: true accept \"nil\" as an element (or as the whole " +
+        "value) to keep the base/printer value at that position.\n\n" +
         "Errors: config missing (run init_config first).\n\n" +
         "Results feed the kvps argument of write_profile: use key as the kvps key and respect " +
-        "type/vector/enum/min/max when choosing the value.",
+        "type/vector/enum/min/max/nullable when choosing the value.",
       inputSchema: {
         kind: kindEnum.describe("Profile type whose option schema to list"),
         search: z

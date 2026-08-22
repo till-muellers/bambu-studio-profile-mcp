@@ -41,7 +41,9 @@ export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
         "ancestors'.\n\n" +
         "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object } — settings is " +
         "the flat merged key->value map; scalar options are bare strings like \"0.2\", per-extruder " +
-        "options are string arrays like [\"250\",\"500\",\"500\"].\n\n" +
+        "options are string arrays like [\"250\",\"500\",\"500\"]. settings also includes " +
+        "print_extruder_variant (process) or filament_extruder_variant (filament), which names what " +
+        "each position of every other vector option's array means for this profile.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
         "missing (run init_config first).\n\n" +
         "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +

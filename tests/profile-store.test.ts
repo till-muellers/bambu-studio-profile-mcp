@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { VendorNotFoundError } from "../src/errors.js";
-import { FsProfileStore, writeProfileFile } from "../src/profile-store.js";
+import { FsProfileStore, listProfiles, listVendors, writeProfileFile } from "../src/profile-store.js";
+import type { ServerConfig } from "../src/types.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
 
@@ -52,6 +53,58 @@ describe("FsProfileStore.findProfile", () => {
     await expect(store().findProfile("process", "Acme", "anything")).rejects.toBeInstanceOf(
       VendorNotFoundError
     );
+  });
+});
+
+function cfg(userId = "1234567890"): ServerConfig {
+  return {
+    installDir: join(FIXTURES, "install"),
+    userDataDir: join(FIXTURES, "userdata"),
+    userId,
+  };
+}
+
+describe("listProfiles", () => {
+  it("lists user and system entries across all vendors when vendor is omitted", async () => {
+    const result = await listProfiles(cfg(), "process");
+    const user = result.filter((p) => p.source === "user");
+    expect(user).toEqual([{ name: "My Custom Draft", source: "user", inherits: "0.20mm Standard @BBL X1C" }]);
+
+    const system = result.filter((p) => p.source === "system");
+    expect(system.every((p) => p.vendor === "BBL")).toBe(true);
+    expect(system.map((p) => p.name)).toContain("0.20mm Standard @BBL X1C");
+    expect(system.map((p) => p.name)).toContain("fdm_process_common");
+  });
+
+  it("scopes system entries to the given vendor", async () => {
+    const result = await listProfiles(cfg(), "process", "BBL");
+    expect(result.every((p) => p.source !== "system" || p.vendor === "BBL")).toBe(true);
+    expect(result.some((p) => p.name === "fdm_process_common")).toBe(true);
+  });
+
+  it("rejects an explicit unknown vendor with VendorNotFoundError", async () => {
+    await expect(listProfiles(cfg(), "process", "Acme")).rejects.toBeInstanceOf(VendorNotFoundError);
+  });
+
+  it("never throws for unknown/missing directories when vendor is omitted", async () => {
+    const result = await listProfiles(
+      { installDir: join(FIXTURES, "does-not-exist"), userDataDir: join(FIXTURES, "userdata"), userId: "1234567890" },
+      "process"
+    );
+    expect(result.filter((p) => p.source === "system")).toEqual([]);
+  });
+
+  it("lists filament profiles", async () => {
+    const result = await listProfiles(cfg(), "filament", "BBL");
+    expect(result.map((p) => p.name)).toContain("Generic PLA @BBL X1C");
+    expect(result.map((p) => p.name)).toContain("fdm_filament_common");
+  });
+});
+
+describe("listVendors", () => {
+  it("returns vendor names with per-kind profile counts", async () => {
+    const result = await listVendors(cfg());
+    expect(result).toEqual([{ name: "BBL", processCount: 5, filamentCount: 2 }]);
   });
 });
 

@@ -167,6 +167,52 @@ export const strings = {
         "Use it to see which filaments exist, then find their concrete profiles by name via " +
         "list_profiles with kind 'filament'.",
     },
+    // Source: src/tools/import.ts registerImportTools(...)
+    importProfile: {
+      title: "Import profile",
+      description:
+        "Install a profile file written by write_profile into Bambu Studio's user preset store " +
+        "(user/<userId>/<kind>/), synthesizing the metadata Bambu Studio expects (from, version, " +
+        "settings id) and a minimal .info sidecar. The source is fully re-validated against the " +
+        "option schema first and its inherits chain is resolved; nothing is installed when any " +
+        "check fails. Replacing an existing preset requires overwrite: true and only ever replaces " +
+        "presets whose own 'from' field is \"User\".\n\n" +
+        "Returns: { kind, name, path, infoPath, overwritten, note } — note states that Bambu Studio " +
+        "sees the preset after a restart.\n\n" +
+        "Errors: source missing or unparseable; schema violations listed per key; vendor or inherits " +
+        "target not found; target exists without overwrite; target's 'from' is not \"User\" (refused " +
+        "regardless of flags); config missing (run init_config first).\n\n" +
+        "Typical flow: write_profile into an outputDir, then import_profile with the same " +
+        "outputDir/name. Remove an installed preset again with remove_profile.",
+      inputs: {
+        kind: "Profile type to import",
+        vendor:
+          "Vendor id from list_vendors, e.g. 'BBL'; names the system store the source's inherits chain is resolved against",
+        outputDir: "Directory containing the source file written by write_profile",
+        name: "Name of the profile to import; locates <outputDir>/<name>.json and names the installed preset",
+        overwrite: "Pass true to replace an existing user preset of the same name; defaults to false",
+      },
+    },
+    // Source: src/tools/import.ts registerRemoveProfile(...)
+    removeProfile: {
+      title: "Remove profile",
+      description:
+        "Delete a user preset (its JSON plus .info sidecar) from Bambu Studio's user preset store " +
+        "(user/<userId>/<kind>/). Only presets whose own 'from' field is \"User\" are removable. " +
+        "When the preset has a cloud record (populated setting_id in its sidecar) it is still " +
+        "removed locally and the result flags cloudRecord: true, since Bambu Studio's sync may " +
+        "restore it.\n\n" +
+        "Returns: { kind, name, removedJson, removedInfo, cloudRecord, note } — removedInfo is null " +
+        "when no sidecar existed; note states that Bambu Studio sees the change after a restart.\n\n" +
+        "Errors: preset not found; a stray sidecar without its JSON; the preset's 'from' is not " +
+        "\"User\" or its JSON is unparseable (refused regardless of flags); config missing (run " +
+        "init_config first).\n\n" +
+        "Discover installed user presets with list_profiles (source \"user\").",
+      inputs: {
+        kind: "Profile type to remove",
+        name: "Name of the user preset to remove from user/<userId>/<kind>/",
+      },
+    },
   },
   errors: {
     // Source: src/errors.ts — each function returns the exact current message
@@ -224,6 +270,27 @@ export const strings = {
     // Source: src/validator.ts loadSchema
     schemaFileMissing: (path: string): string => `Schema file '${path}' not found. Run scripts/generate-schema to produce it.`,
     schemaFileInvalid: (path: string): string => `Schema file '${path}' is not valid JSON.`,
+    // Source: src/user-presets.ts
+    invalidProfileName: (name: string): string =>
+      `Invalid profile name '${name}': must be a plain filename without path separators.`,
+    studioRestartNote: "Bambu Studio picks this up after a restart.",
+    cloudRecordWarning: "A cloud record exists for this preset; Bambu Studio's sync may restore it.",
+    // Source: src/tools/import.ts handleImport
+    importSourceNotFound: (path: string): string => `Source profile '${path}' not found. Create it with write_profile first.`,
+    importSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
+    importSourceNotObject: (path: string): string => `Source profile '${path}' does not contain a JSON object.`,
+    importSourceMissingInherits: (path: string): string => `Source profile '${path}' has no 'inherits' field.`,
+    importTargetExists: (path: string): string => `Target preset '${path}' already exists. Pass overwrite: true to replace it.`,
+    importTargetUnparseable: (path: string): string =>
+      `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
+    // Source: src/tools/import.ts handleRemove
+    removeStraySidecar: (jsonPath: string, infoPath: string): string =>
+      `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`,
+    removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,
+    removeUnparseable: (path: string): string =>
+      `Refusing to remove '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    removeNotUser: (path: string): string => `Refusing to remove '${path}': its 'from' field is not "User".`,
   },
   formats: {
     // Source: src/tools/deps.ts toToolError

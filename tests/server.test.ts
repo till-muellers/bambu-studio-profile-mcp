@@ -60,10 +60,11 @@ async function connectedClientAndServer(
 }
 
 describe("printing-profile-mcp server", () => {
-  it("exposes exactly the eight tools", async () => {
+  it("exposes exactly the nine tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "import_profile",
       "init_config",
       "list_filaments",
       "list_parameters",

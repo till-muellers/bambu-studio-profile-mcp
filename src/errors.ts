@@ -1,22 +1,23 @@
 import type { Violation } from "./types.js";
+import { strings } from "./strings.js";
 
 export class VendorNotFoundError extends Error {
   constructor(vendor: string) {
-    super(`Vendor '${vendor}' not found under resources/profiles.`);
+    super(strings.errors.vendorNotFound(vendor));
     this.name = "VendorNotFoundError";
   }
 }
 
 export class ProfileNotFoundError extends Error {
   constructor(kind: string, name: string) {
-    super(`${kind} profile '${name}' not found in user or system presets.`);
+    super(strings.errors.profileNotFound(kind, name));
     this.name = "ProfileNotFoundError";
   }
 }
 
 export class CircularInheritanceError extends Error {
   constructor(chain: string[]) {
-    super(`Circular inherits chain: ${chain.join(" -> ")}`);
+    super(strings.errors.circularInheritance(chain));
     this.name = "CircularInheritanceError";
   }
 }
@@ -24,10 +25,7 @@ export class CircularInheritanceError extends Error {
 export class SchemaValidationError extends Error {
   readonly violations: Violation[];
   constructor(violations: Violation[]) {
-    super(
-      `Schema validation failed:\n` +
-        violations.map((v) => `- ${v.key}: ${v.reason}`).join("\n")
-    );
+    super(strings.errors.schemaValidation(violations));
     this.name = "SchemaValidationError";
     this.violations = violations;
   }
@@ -35,11 +33,7 @@ export class SchemaValidationError extends Error {
 
 export class ConfigMissingError extends Error {
   constructor() {
-    super(
-      "No configuration found for this project (.printing-profile-mcp/config.json). Call the init_config tool — a plain call with no arguments usually " +
-        "suffices, since installDir, userDataDir, and userId (from BambuStudio.conf's app.preset_folder) " +
-        "are all auto-detected. Arguments exist as overrides, e.g. to target a specific userId."
-    );
+    super(strings.errors.configMissing);
     this.name = "ConfigMissingError";
   }
 }

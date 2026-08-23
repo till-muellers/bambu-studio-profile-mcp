@@ -1,17 +1,18 @@
 import { readFile } from "node:fs/promises";
 import type { ProfileSchema, SchemaOption, Violation } from "./types.js";
+import { strings } from "./strings.js";
 
 export async function loadSchema(path: string): Promise<ProfileSchema> {
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
   } catch {
-    throw new Error(`Schema file '${path}' not found. Run scripts/generate-schema to produce it.`);
+    throw new Error(strings.messages.schemaFileMissing(path));
   }
   try {
     return JSON.parse(raw) as ProfileSchema;
   } catch {
-    throw new Error(`Schema file '${path}' is not valid JSON.`);
+    throw new Error(strings.messages.schemaFileInvalid(path));
   }
 }
 
@@ -30,31 +31,32 @@ function checkScalar(option: SchemaOption, value: unknown): string | null {
   if (option.nullable === true && value === "nil") return null;
   switch (option.type) {
     case "string":
-      return typeof value === "string" ? null : `expected a string, got ${JSON.stringify(value)}`;
+      return typeof value === "string" ? null : strings.violations.expectedString(value);
     case "enum": {
       const allowed = option.enum ?? [];
       return typeof value === "string" && allowed.includes(value)
         ? null
-        : `expected one of [${allowed.join(", ")}], got ${JSON.stringify(value)}`;
+        : strings.violations.expectedEnum(allowed, value);
     }
     case "bool": {
       const ok =
         typeof value === "boolean" ||
         (typeof value === "string" && ["0", "1", "true", "false"].includes(value));
-      return ok ? null : `expected a bool (true/false/"0"/"1"), got ${JSON.stringify(value)}`;
+      return ok ? null : strings.violations.expectedBool(value);
     }
     case "int":
     case "float":
     case "percent": {
       const parsed = parseNumeric(option, value);
       if (parsed === undefined) {
-        return `expected ${option.type === "int" ? "an integer" : `a ${option.type}`}, got ${JSON.stringify(value)}`;
+        const typeLabel = option.type === "int" ? "an integer" : `a ${option.type}`;
+        return strings.violations.expectedNumeric(typeLabel, value);
       }
       if (option.min !== undefined && parsed < option.min) {
-        return `value ${parsed} is below minimum ${option.min}`;
+        return strings.violations.belowMinimum(parsed, option.min);
       }
       if (option.max !== undefined && parsed > option.max) {
-        return `value ${parsed} is above maximum ${option.max}`;
+        return strings.violations.aboveMaximum(parsed, option.max);
       }
       return null;
     }
@@ -64,18 +66,18 @@ function checkScalar(option: SchemaOption, value: unknown): string | null {
 function checkValue(key: string, option: SchemaOption, value: unknown): Violation | null {
   if (option.vector) {
     if (!Array.isArray(value) || value.length === 0) {
-      return { key, reason: `expected a non-empty array of ${option.type} values, got ${JSON.stringify(value)}` };
+      return { key, reason: strings.violations.expectedVector(option.type, value) };
     }
     const elementReasons = value
       .map((element, index) => {
         const reason = checkScalar(option, element);
-        return reason ? `element ${index}: ${reason}` : null;
+        return reason ? strings.violations.element(index, reason) : null;
       })
       .filter((r): r is string => r !== null);
     return elementReasons.length > 0 ? { key, reason: elementReasons.join("; ") } : null;
   }
   if (Array.isArray(value)) {
-    return { key, reason: `expected a single ${option.type} value, got an array` };
+    return { key, reason: strings.violations.expectedScalar(option.type) };
   }
   const reason = checkScalar(option, value);
   return reason ? { key, reason } : null;
@@ -86,7 +88,7 @@ export function validateKvps(schema: ProfileSchema, kvps: Record<string, unknown
   for (const [key, value] of Object.entries(kvps)) {
     const option = schema[key];
     if (!option) {
-      violations.push({ key, reason: "unknown key (not present in the schema)" });
+      violations.push({ key, reason: strings.violations.unknownKey });
       continue;
     }
     const violation = checkValue(key, option, value);

@@ -1,5 +1,6 @@
 import type { ConfigManager, DetectedPaths } from "../config.js";
 import type { ProfileStore, ServerConfig } from "../types.js";
+import { strings } from "../strings.js";
 
 export interface ToolDeps {
   config: ConfigManager;
@@ -12,5 +13,5 @@ export interface ToolDeps {
 
 export function toToolError(error: unknown): { content: [{ type: "text"; text: string }]; isError: true } {
   const message = error instanceof Error ? error.message : String(error);
-  return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
+  return { content: [{ type: "text", text: strings.formats.toolError(message) }], isError: true };
 }

@@ -5,10 +5,11 @@ import { join } from "node:path";
 import { z } from "zod";
 import { strings } from "../strings.js";
 import type { ProfileKind, RawProfile } from "../types.js";
-import { userPresetPaths } from "../user-presets.js";
+import { SYNTHESIZED_METADATA_KEYS, userPresetPaths } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
-const SKIPPED_KEYS = new Set(["name", "from", "version", "print_settings_id", "filament_settings_id"]);
+/** Identity plus synthesized metadata. 'inherits' is absent deliberately: a changed base is drift. */
+const SKIPPED_KEYS = new Set<string>(["name", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface DiffFileInfo {
   path: string;

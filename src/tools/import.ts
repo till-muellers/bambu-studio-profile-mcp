@@ -9,6 +9,7 @@ import { strings } from "../strings.js";
 import type { ProfileKind, RawProfile } from "../types.js";
 import {
   STUDIO_RESTART_NOTE,
+  SYNTHESIZED_METADATA_KEYS,
   formatInfoSidecar,
   parseSettingId,
   userPresetPaths,
@@ -50,13 +51,9 @@ export async function handleImport(
     throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
   }
 
-  const METADATA_KEYS = ["from", "version", "print_settings_id", "filament_settings_id"];
-  const regenerated = METADATA_KEYS.filter((key) => key in source);
-  const kvps = Object.fromEntries(
-    Object.entries(source).filter(
-      ([key]) => key !== "name" && key !== "inherits" && !METADATA_KEYS.includes(key)
-    )
-  );
+  const regenerated = SYNTHESIZED_METADATA_KEYS.filter((key) => key in source);
+  const skipped = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
+  const kvps = Object.fromEntries(Object.entries(source).filter(([key]) => !skipped.has(key)));
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
   const violations = validateKvps(schema, kvps);
   if (violations.length > 0) throw new SchemaValidationError(violations);

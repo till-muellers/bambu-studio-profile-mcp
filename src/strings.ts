@@ -239,6 +239,34 @@ export const strings = {
         sourceName: "Local file name (without .json) when it differs from the installed preset's name",
       },
     },
+    // Source: src/tools/resolve-from-file.ts registerResolveFromFileTool(...)
+    resolveFromFile: {
+      title: "Resolve profile from file",
+      description:
+        "Resolve the fully-merged active settings a profile file in a caller-chosen directory would " +
+        "have once installed. Reads <outputDir>/<name>.json, walks its 'inherits' chain across the " +
+        "configured user preset store and the vendor's system profiles, and applies the file's own " +
+        "keys on top, so the file's values override its ancestors'. Identity and synthesized metadata " +
+        "(name, from, version, settings ids) stay out of the merged settings. Bambu Studio's " +
+        "directories stay untouched.\n\n" +
+        "Returns: { vendor, name, kind, chain: string[] (root-first, ending with this file), settings: " +
+        "object, path } — settings is the flat merged key->value map, matching resolve_profile's shape; " +
+        "path is the file that was read.\n\n" +
+        "Errors: file missing or unparseable; file lacking an 'inherits' field; vendor not found; " +
+        "inherits target not found; circular or unresolvable inherits chain; config missing (run " +
+        "init_config first).\n\n" +
+        "Use it to verify a file authored with write_profile or update_profile before installing it " +
+        "with import_profile. For presets already installed, resolve_profile is the tool.",
+      inputs: {
+        kind: "Profile type to resolve",
+        vendor:
+          "Vendor id from list_vendors, e.g. 'BBL'; names the system store the file's inherits chain " +
+          "is resolved against",
+        outputDir: "Directory containing the local profile file",
+        name: "Name the resolved profile carries; also the file name (<name>.json) unless sourceName says otherwise",
+        sourceName: "Local file name (without .json) when it differs from name",
+      },
+    },
   },
   errors: {
     // Source: src/errors.ts — each function returns the exact current message
@@ -324,6 +352,13 @@ export const strings = {
     removeUnparseable: (path: string): string =>
       `Refusing to remove '${path}': cannot verify it is a user preset (unparseable JSON).`,
     removeNotUser: (path: string): string => `Refusing to remove '${path}': its 'from' field is not "User".`,
+    // Source: src/tools/resolve-from-file.ts handleResolveFromFile
+    resolveFileNotFound: (path: string): string =>
+      `Profile file '${path}' not found. Create it with write_profile first.`,
+    resolveFileNotJson: (path: string): string => `Profile file '${path}' is not valid JSON.`,
+    resolveFileNotObject: (path: string): string => `Profile file '${path}' does not contain a JSON object.`,
+    resolveFileMissingInherits: (path: string): string =>
+      `Profile file '${path}' has no 'inherits' field; resolution needs a parent profile to start from.`,
   },
   formats: {
     // Source: src/tools/deps.ts toToolError

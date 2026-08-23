@@ -1,10 +1,10 @@
 {
-  "name": "printing-profile-mcp",
+  "name": "bambu-studio-profile-mcp",
   "version": "0.1.0",
   "description": "MCP server for resolving and writing Bambu Studio process/filament profiles",
   "type": "module",
   "main": "dist/index.js",
-  "bin": { "printing-profile-mcp": "dist/index.js" },
+  "bin": { "bambu-studio-profile-mcp": "dist/index.js" },
   "files": ["dist", "schema"],
   "scripts": {
     "build": "tsc",

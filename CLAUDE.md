@@ -1,4 +1,4 @@
-# printing-profile-mcp
+# bambu-studio-profile-mcp
 
 TypeScript MCP server (stdio) for Bambu Studio printing profiles. Specs and plans live in `docs/superpowers/`.
 

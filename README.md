@@ -1,4 +1,4 @@
-# printing-profile-mcp
+# bambu-studio-profile-mcp
 
 An MCP (Model Context Protocol) server for managing 3D printing slicer profiles, currently targeting Bambu Studio.
 
@@ -18,22 +18,22 @@ An MCP (Model Context Protocol) server for managing 3D printing slicer profiles,
 ## Setup (Windows)
 
 ```powershell
-claude mcp add printing-profiles -- npx -y github:till-muellers/printing-profile-mcp
+claude mcp add printing-profiles -- npx -y github:till-muellers/bambu-studio-profile-mcp
 ```
 
 Then call `init_config` once; with Bambu Studio installed and logged in, no arguments are needed (paths and `userId` are auto-detected). Pass `userId` explicitly to target a different account folder, such as `default` when not logged in.
 
-Configuration persists per project in `.printing-profile-mcp\config.json`. Add `.printing-profile-mcp/` to the project's `.gitignore` (it is machine-specific). The config directory resolves at server start (first match wins):
+Configuration persists per project in `.bambu-studio-profile-mcp\config.json`. Add `.bambu-studio-profile-mcp/` to the project's `.gitignore` (it is machine-specific). The config directory resolves at server start (first match wins):
 
-1. `PRINTING_PROFILE_MCP_CONFIG_DIR` — used as the config directory verbatim, for clients that set neither of the below.
-2. `CLAUDE_PROJECT_DIR` — set by Claude Code for stdio MCP servers; config dir is `<CLAUDE_PROJECT_DIR>\.printing-profile-mcp`.
-3. The current working directory — fallback; config dir is `<cwd>\.printing-profile-mcp`.
+1. `BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR` — used as the config directory verbatim, for clients that set neither of the below.
+2. `CLAUDE_PROJECT_DIR` — set by Claude Code for stdio MCP servers; config dir is `<CLAUDE_PROJECT_DIR>\.bambu-studio-profile-mcp`.
+3. The current working directory — fallback; config dir is `<cwd>\.bambu-studio-profile-mcp`.
 
 ## Development
 
 ```powershell
-git clone https://github.com/till-muellers/printing-profile-mcp.git
-cd printing-profile-mcp
+git clone https://github.com/till-muellers/bambu-studio-profile-mcp.git
+cd bambu-studio-profile-mcp
 npm install
 npm run build
 ```

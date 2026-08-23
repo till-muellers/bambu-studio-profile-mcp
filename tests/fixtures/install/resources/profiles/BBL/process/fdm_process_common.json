@@ -1,5 +1,6 @@
 {
   "name": "fdm_process_common",
+  "version": "2.7.0.8",
   "layer_height": "0.2",
   "wall_loops": "2",
   "sparse_infill_density": "15%",

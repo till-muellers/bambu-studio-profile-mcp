@@ -50,8 +50,12 @@ export async function handleImport(
     throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
   }
 
+  const METADATA_KEYS = ["from", "version", "print_settings_id", "filament_settings_id"];
+  const regenerated = METADATA_KEYS.filter((key) => key in source);
   const kvps = Object.fromEntries(
-    Object.entries(source).filter(([key]) => key !== "name" && key !== "inherits")
+    Object.entries(source).filter(
+      ([key]) => key !== "name" && key !== "inherits" && !METADATA_KEYS.includes(key)
+    )
   );
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
   const violations = validateKvps(schema, kvps);
@@ -92,7 +96,11 @@ export async function handleImport(
   await writeFile(jsonPath, JSON.stringify(body, null, 4) + "\n", "utf8");
   await writeFile(infoPath, formatInfoSidecar(Math.floor(Date.now() / 1000)), "utf8");
 
-  return { kind, name: args.name, path: jsonPath, infoPath, overwritten, note: STUDIO_RESTART_NOTE };
+  const note =
+    regenerated.length > 0
+      ? `${strings.messages.importMetadataRegenerated(regenerated)} ${STUDIO_RESTART_NOTE}`
+      : STUDIO_RESTART_NOTE;
+  return { kind, name: args.name, path: jsonPath, infoPath, overwritten, note };
 }
 
 export interface RemoveResult {

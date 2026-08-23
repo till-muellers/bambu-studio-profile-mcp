@@ -1,6 +1,6 @@
 .superpowers/
 node_modules/
 dist/
-.printing-profile-mcp/
+.bambu-studio-profile-mcp/
 .claude/
 .serena/

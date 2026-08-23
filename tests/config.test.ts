@@ -55,7 +55,7 @@ describe("ConfigManager.save", () => {
   });
 
   it("creates the parent directory when it does not exist yet", async () => {
-    const path = join(dir, ".printing-profile-mcp", "config.json");
+    const path = join(dir, ".bambu-studio-profile-mcp", "config.json");
     const mgr = new ConfigManager(path);
     expect(await mgr.save(VALID)).toBe(path);
     expect(await mgr.load()).toEqual(VALID);
@@ -65,21 +65,21 @@ describe("ConfigManager.save", () => {
 describe("resolveConfigDir", () => {
   const cwd = join("C", "cwd-root");
 
-  it("uses PRINTING_PROFILE_MCP_CONFIG_DIR verbatim when set", () => {
+  it("uses BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR verbatim when set", () => {
     const env = {
-      PRINTING_PROFILE_MCP_CONFIG_DIR: join("C", "explicit-dir"),
+      BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR: join("C", "explicit-dir"),
       CLAUDE_PROJECT_DIR: join("C", "claude-project"),
     };
     expect(resolveConfigDir(env, cwd)).toBe(join("C", "explicit-dir"));
   });
 
-  it("uses <CLAUDE_PROJECT_DIR>/.printing-profile-mcp when PRINTING_PROFILE_MCP_CONFIG_DIR is unset", () => {
+  it("uses <CLAUDE_PROJECT_DIR>/.bambu-studio-profile-mcp when BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR is unset", () => {
     const env = { CLAUDE_PROJECT_DIR: join("C", "claude-project") };
-    expect(resolveConfigDir(env, cwd)).toBe(join("C", "claude-project", ".printing-profile-mcp"));
+    expect(resolveConfigDir(env, cwd)).toBe(join("C", "claude-project", ".bambu-studio-profile-mcp"));
   });
 
-  it("falls back to <cwd>/.printing-profile-mcp when neither env var is set", () => {
-    expect(resolveConfigDir({}, cwd)).toBe(join(cwd, ".printing-profile-mcp"));
+  it("falls back to <cwd>/.bambu-studio-profile-mcp when neither env var is set", () => {
+    expect(resolveConfigDir({}, cwd)).toBe(join(cwd, ".bambu-studio-profile-mcp"));
   });
 });
 

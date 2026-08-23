@@ -135,13 +135,13 @@ currently 2.7.0.8). Re-run the generator after Bambu Studio updates.
 It lives at `<configDir>/config.json`, where `configDir` resolves at server
 start (first match wins):
 
-1. `PRINTING_PROFILE_MCP_CONFIG_DIR` env var — used as the config directory
+1. `BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR` env var — used as the config directory
    verbatim, no subdirectory appended.
 2. `CLAUDE_PROJECT_DIR` env var (set by Claude Code for stdio MCP servers) —
-   config dir is `<CLAUDE_PROJECT_DIR>/.printing-profile-mcp`.
-3. `process.cwd()` — fallback; config dir is `<cwd>/.printing-profile-mcp`.
+   config dir is `<CLAUDE_PROJECT_DIR>/.bambu-studio-profile-mcp`.
+3. `process.cwd()` — fallback; config dir is `<cwd>/.bambu-studio-profile-mcp`.
 
-The resulting directory is per-project and gitignored (`.printing-profile-mcp/`).
+The resulting directory is per-project and gitignored (`.bambu-studio-profile-mcp/`).
 
 - `installDir` — contains `resources/profiles` and
   `resources/profiles_template`.

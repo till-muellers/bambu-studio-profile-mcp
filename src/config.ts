@@ -11,15 +11,15 @@ const execFileAsync = promisify(execFile);
 
 /**
  * Resolve the per-project config directory (first match wins):
- * 1. PRINTING_PROFILE_MCP_CONFIG_DIR — used verbatim, no subdirectory appended.
+ * 1. BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR — used verbatim, no subdirectory appended.
  * 2. CLAUDE_PROJECT_DIR — Claude Code sets this for stdio MCP servers; config dir is
- *    <CLAUDE_PROJECT_DIR>/.printing-profile-mcp.
- * 3. cwd — fallback; config dir is <cwd>/.printing-profile-mcp.
+ *    <CLAUDE_PROJECT_DIR>/.bambu-studio-profile-mcp.
+ * 3. cwd — fallback; config dir is <cwd>/.bambu-studio-profile-mcp.
  */
 export function resolveConfigDir(env: NodeJS.ProcessEnv, cwd: string): string {
-  if (env.PRINTING_PROFILE_MCP_CONFIG_DIR) return env.PRINTING_PROFILE_MCP_CONFIG_DIR;
-  if (env.CLAUDE_PROJECT_DIR) return join(env.CLAUDE_PROJECT_DIR, ".printing-profile-mcp");
-  return join(cwd, ".printing-profile-mcp");
+  if (env.BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR) return env.BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR;
+  if (env.CLAUDE_PROJECT_DIR) return join(env.CLAUDE_PROJECT_DIR, ".bambu-studio-profile-mcp");
+  return join(cwd, ".bambu-studio-profile-mcp");
 }
 
 export type DetectedPaths = Partial<Pick<ServerConfig, "installDir" | "userDataDir">>;

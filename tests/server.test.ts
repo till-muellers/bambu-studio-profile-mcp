@@ -60,7 +60,7 @@ async function connectedClientAndServer(
   return { client, server };
 }
 
-describe("printing-profile-mcp server", () => {
+describe("bambu-studio-profile-mcp server", () => {
   it("exposes exactly the ten tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
@@ -202,8 +202,8 @@ describe("printing-profile-mcp server", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(received).toHaveLength(1);
-    expect(received[0]).toMatchObject({ level: "warning", logger: "printing-profile-mcp" });
-    expect((received[0] as { data: string }).data).toContain(".printing-profile-mcp/config.json");
+    expect(received[0]).toMatchObject({ level: "warning", logger: "bambu-studio-profile-mcp" });
+    expect((received[0] as { data: string }).data).toContain(".bambu-studio-profile-mcp/config.json");
     expect((received[0] as { data: string }).data).toContain("init_config");
   });
 

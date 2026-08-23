@@ -16,7 +16,7 @@ import { registerWriteTools } from "./tools/write.js";
 
 export function buildServer(deps: ToolDeps): McpServer {
   const server = new McpServer(
-    { name: "printing-profile-mcp", version: "0.1.0" },
+    { name: "bambu-studio-profile-mcp", version: "0.1.0" },
     { capabilities: { logging: {} } }
   );
   registerResolveTools(server, deps);
@@ -40,7 +40,7 @@ export async function warnIfUnconfigured(server: McpServer, deps: ToolDeps): Pro
   try {
     await server.server.sendLoggingMessage({
       level: "warning",
-      logger: "printing-profile-mcp",
+      logger: "bambu-studio-profile-mcp",
       data: strings.warnings.unconfiguredNotification,
     });
   } catch {
@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   };
   const server = buildServer(deps);
   await server.connect(new StdioServerTransport());
-  console.error("printing-profile-mcp running on stdio");
+  console.error("bambu-studio-profile-mcp running on stdio");
   await warnIfUnconfigured(server, deps);
 }
 

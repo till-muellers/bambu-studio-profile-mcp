@@ -97,8 +97,8 @@ export const strings = {
         `it with no arguments usually suffices — every value is auto-detected (userId from ` +
         `<userDataDir>\\BambuStudio.conf's app.preset_folder, the logged-in account's preset folder). ` +
         `Takes effect immediately — no server restart needed. Configuration persists per project in ` +
-        `.printing-profile-mcp/config.json, resolved from CLAUDE_PROJECT_DIR under Claude Code, the ` +
-        `working directory otherwise, or the PRINTING_PROFILE_MCP_CONFIG_DIR override.\n\n` +
+        `.bambu-studio-profile-mcp/config.json, resolved from CLAUDE_PROJECT_DIR under Claude Code, the ` +
+        `working directory otherwise, or the BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR override.\n\n` +
         `Returns: { installDir, userDataDir, userId, persistedTo }\n\n` +
         `Errors: each invalid or undetectable value is reported (including userId when BambuStudio.conf ` +
         `is missing, unparseable, or lacks app.preset_folder); nothing is persisted on failure.`,
@@ -222,7 +222,7 @@ export const strings = {
     schemaValidation: (violations: { key: string; reason: string }[]): string =>
       `Schema validation failed:\n` + violations.map((v) => `- ${v.key}: ${v.reason}`).join("\n"),
     configMissing:
-      "No configuration found for this project (.printing-profile-mcp/config.json). Call the init_config tool — a plain call with no arguments usually " +
+      "No configuration found for this project (.bambu-studio-profile-mcp/config.json). Call the init_config tool — a plain call with no arguments usually " +
       "suffices, since installDir, userDataDir, and userId (from BambuStudio.conf's app.preset_folder) " +
       "are all auto-detected. Arguments exist as overrides, e.g. to target a specific userId.",
   },
@@ -248,10 +248,10 @@ export const strings = {
   warnings: {
     // Source: src/index.ts warnIfUnconfigured — stderr line and notification data text
     unconfiguredStderr:
-      "printing-profile-mcp: no configuration found for this project (.printing-profile-mcp/config.json) " +
+      "bambu-studio-profile-mcp: no configuration found for this project (.bambu-studio-profile-mcp/config.json) " +
       "— call the init_config tool to get started.",
     unconfiguredNotification:
-      "printing-profile-mcp has no configuration for this project (.printing-profile-mcp/config.json). " +
+      "bambu-studio-profile-mcp has no configuration for this project (.bambu-studio-profile-mcp/config.json). " +
       "Call the init_config tool to get started.",
   },
   messages: {

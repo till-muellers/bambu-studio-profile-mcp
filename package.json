@@ -1,10 +1,27 @@
 {
-  "name": "printing-profile-mcp",
+  "name": "bambu-studio-profile-mcp",
   "version": "0.1.0",
-  "description": "MCP server for resolving and writing Bambu Studio process/filament profiles",
+  "description": "MCP server for resolving, writing, and importing Bambu Studio process/filament printing profiles",
+  "license": "AGPL-3.0-only",
+  "author": "Till Müllers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/till-muellers/bambu-studio-profile-mcp.git"
+  },
+  "homepage": "https://github.com/till-muellers/bambu-studio-profile-mcp#readme",
+  "bugs": { "url": "https://github.com/till-muellers/bambu-studio-profile-mcp/issues" },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "bambu-studio",
+    "3d-printing",
+    "slicer",
+    "printing-profiles",
+    "filament"
+  ],
   "type": "module",
   "main": "dist/index.js",
-  "bin": { "printing-profile-mcp": "dist/index.js" },
+  "bin": { "bambu-studio-profile-mcp": "dist/index.js" },
   "files": ["dist", "schema"],
   "scripts": {
     "build": "tsc",

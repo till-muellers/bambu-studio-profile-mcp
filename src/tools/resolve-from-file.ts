@@ -6,17 +6,11 @@ import { z } from "zod";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { ProfileKind, RawProfile, ResolvedProfile } from "../types.js";
+import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
-/** Identity and the metadata import_profile synthesizes; never part of merged settings. */
-const SKIPPED_KEYS = new Set([
-  "name",
-  "inherits",
-  "from",
-  "version",
-  "print_settings_id",
-  "filament_settings_id",
-]);
+/** Identity plus synthesized metadata; never part of merged settings. */
+const SKIPPED_KEYS = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface ResolvedFileProfile extends ResolvedProfile {
   /** The file the overrides were read from. */

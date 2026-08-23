@@ -16,6 +16,18 @@ export function userPresetPaths(
   return { jsonPath: join(dir, `${name}.json`), infoPath: join(dir, `${name}.info`) };
 }
 
+/**
+ * Preset metadata import_profile synthesizes when installing into the user store. Source files
+ * never author these: import regenerates them, and every tool reading a profile file treats them
+ * as non-content. Identity keys (name, inherits) are tool-specific and stay at the call sites.
+ */
+export const SYNTHESIZED_METADATA_KEYS = [
+  "from",
+  "version",
+  "print_settings_id",
+  "filament_settings_id",
+] as const;
+
 /** Exact byte layout Bambu Studio's Preset::save_info writes on Windows: five fields, CRLF. */
 export function formatInfoSidecar(updatedTime: number): string {
   return (

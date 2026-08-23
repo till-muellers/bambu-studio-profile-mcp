@@ -8,6 +8,11 @@ TypeScript MCP server (stdio) for Bambu Studio printing profiles. Specs and plan
 - `npm run build` — tsc to `dist/`
 - Schema regeneration: `npx tsx scripts/generate-schema/index.ts <BambuStudio-checkout>` (clone the release tag matching the installed Studio version; never clone into this repo)
 
+## Git workflow
+
+- `main` is protected: changes land via PR with the `ci` status check green. No direct pushes, no force-pushes.
+- Release: bump the version via PR (`npm version <patch|minor|major> --no-git-tag-version`), merge, tag the merge commit `v<version>`, push the tag. `release.yml` runs the test matrix, publishes to npm (trusted publishing, provenance), and creates the GitHub Release.
+
 ## Invariants
 
 - All user-facing strings (tool descriptions, `.describe` texts, error messages, violation reasons, warnings) live in `src/strings.ts`. Extend the module; never inline a user-facing literal elsewhere in `src/`.

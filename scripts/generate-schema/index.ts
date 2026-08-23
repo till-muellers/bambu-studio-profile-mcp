@@ -7,7 +7,13 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ProfileSchema } from "../../src/types.js";
-import { applyDescriptions, parseOptionList, parsePrintConfig } from "./parse.js";
+import {
+  applyDescriptions,
+  parseOptionList,
+  parsePrintConfig,
+  parseStringVector,
+  synthesizeFilamentOverrides,
+} from "./parse.js";
 
 const checkout = process.argv[2];
 if (!checkout) {
@@ -31,7 +37,13 @@ if (!presetPath) {
   process.exit(1);
 }
 
-const allOptions = parsePrintConfig(await readFile(printConfigPath, "utf8"));
+const printConfigSource = await readFile(printConfigPath, "utf8");
+const allOptions = parsePrintConfig(printConfigSource);
+synthesizeFilamentOverrides(
+  allOptions,
+  parseStringVector(printConfigSource, "filament_extruder_override_keys"),
+  parseStringVector(printConfigSource, "filament_overhang_override_keys")
+);
 const presetSource = await readFile(presetPath, "utf8");
 const processKeys = new Set(parseOptionList(presetSource, "print_options"));
 const filamentKeys = new Set(parseOptionList(presetSource, "filament_options"));

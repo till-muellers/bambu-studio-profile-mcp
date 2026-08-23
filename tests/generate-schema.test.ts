@@ -1,11 +1,65 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { applyDescriptions, parseOptionList, parsePrintConfig } from "../scripts/generate-schema/parse.js";
+import {
+  applyDescriptions,
+  parseOptionList,
+  parsePrintConfig,
+  parseStringVector,
+  synthesizeFilamentOverrides,
+} from "../scripts/generate-schema/parse.js";
 import type { SchemaOption } from "../src/types.js";
 
 const PRINT_CONFIG_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "print-config-snippet.cpp");
 const PRESET_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "preset-snippet.cpp");
+
+describe("filament override synthesis", () => {
+  it("parses a const std::vector<std::string> key list, ignoring comments", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    expect(parseStringVector(source, "filament_extruder_override_keys")).toEqual([
+      "filament_retraction_length",
+      "filament_z_hop_types",
+      "filament_wipe",
+    ]);
+    expect(parseStringVector(source, "filament_overhang_override_keys")).toEqual(["filament_bridge_speed"]);
+  });
+
+  it("clones base options as nullable filament overrides, mirroring Studio's synthesis loops", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    synthesizeFilamentOverrides(
+      options,
+      parseStringVector(source, "filament_extruder_override_keys"),
+      parseStringVector(source, "filament_overhang_override_keys")
+    );
+
+    expect(options.filament_retraction_length).toMatchObject({
+      type: "float",
+      vector: true,
+      nullable: true,
+      label: "Retraction Length",
+      min: 0,
+    });
+    expect(options.filament_z_hop_types).toMatchObject({
+      type: "enum",
+      vector: true,
+      nullable: true,
+      enum: ["Auto Lift", "Normal Lift"],
+    });
+    expect(options.filament_wipe).toMatchObject({ type: "bool", vector: true, nullable: true });
+    expect(options.filament_bridge_speed).toMatchObject({
+      type: "float",
+      vector: true,
+      nullable: true,
+      min: 0,
+    });
+  });
+
+  it("throws when an override's base option is missing from the parsed options", () => {
+    const options: Record<string, SchemaOption> = {};
+    expect(() => synthesizeFilamentOverrides(options, ["filament_ghost_key"], [])).toThrow(/ghost_key/);
+  });
+});
 
 describe("parsePrintConfig (smoke test)", () => {
   it("extracts key, type, vector flag, range, and enum values from definition blocks", async () => {

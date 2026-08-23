@@ -83,3 +83,37 @@ void PrintConfigDef::init_fff_params()
     def->nullable = true;
     def->set_default_value(new ConfigOptionFloatsNullable { 0.8 });
 }
+
+    def = this->add("retraction_length", coFloats);
+    def->label = L("Retraction Length");
+    def->min = 0;
+    def->set_default_value(new ConfigOptionFloats { 0.8 });
+
+    def = this->add("z_hop_types", coEnums);
+    def->label = L("Z Hop Type");
+    def->enum_values.push_back("Auto Lift");
+    def->enum_values.push_back("Normal Lift");
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionEnumsGenericNullable{ ZHopType::zhtSpiral });
+
+    def = this->add("wipe", coBools);
+    def->label = L("Wipe while retracting");
+    def->set_default_value(new ConfigOptionBools { false });
+
+    def = this->add("bridge_speed", coFloats);
+    def->label = L("Bridge");
+    def->min = 0;
+    def->nullable = true;
+    def->set_default_value(new ConfigOptionFloatsNullable{25});
+
+const std::vector<std::string> filament_extruder_override_keys = {
+    // floats
+    "filament_retraction_length",
+    "filament_z_hop_types",
+    // bools
+    "filament_wipe"
+};
+
+const std::vector<std::string> filament_overhang_override_keys = {
+    "filament_bridge_speed"
+};

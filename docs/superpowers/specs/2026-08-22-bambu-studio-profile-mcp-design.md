@@ -6,17 +6,23 @@ Bambu Studio process and filament profiles are JSON files that inherit from
 other JSON files; resolving a profile's active settings requires walking
 that inheritance chain, and writing a profile requires knowing the valid
 keys/types (Bambu Studio ships no formal schema for this). This MCP server
-exposes tools to resolve fully-merged process/filament settings and to
-create schema-validated profile files in a caller-chosen output directory.
+exposes tools to resolve fully-merged process/filament settings, to
+create schema-validated profile files in a caller-chosen output directory,
+and to install such files into (or remove them from) Bambu Studio's own
+user preset store.
 
-Out of scope: mapping JSON keys to their GUI display names, any
-"explain what a setting does" tool, and importing written profiles into
-Bambu Studio's own preset store (with its `.info` sidecars and cloud-sync
-metadata). All are deferred to later steps.
+Out of scope: any cloud-side call to Bambu Lab's servers (create, update,
+delete, or conflict resolution — these tools only ever touch the local
+filesystem); machine/printer profiles; bulk import/remove of multiple
+presets in one call; migrating presets between `userId` folders.
 
 ## Data sources
 
-All Bambu Studio directories are read-only for this server.
+Bambu Studio directories are read-only for this server, with one
+exception: `import_profile` and `remove_profile` write to and delete from
+`<userDataDir>/user/<userId>/{process,filament}` under the safety
+contracts in their tool sections. The system store
+(`<installDir>/resources/...`) is never written under any circumstance.
 
 - **`<installDir>/resources/profiles/<vendor>/{process,filament}`** — system
   presets shipped with Bambu Studio, organized per vendor (BBL and
@@ -34,8 +40,36 @@ A profile's `inherits` field may point to another user preset or to a
 system preset; the resolver must be able to cross from the user store back
 into `resources/profiles`.
 
-Written profiles go to an `outputDir` provided per write call — never into
-the Bambu Studio directories.
+Written profiles go to an `outputDir` provided per write call; installing
+one into the user preset store is a separate, explicit `import_profile`
+call.
+
+## User preset format
+
+Facts about Bambu Studio's user preset store (source-verified against
+BambuStudio v02.07.00.55 and real presets) that bind the import/remove
+tools:
+
+- A user preset JSON carries, beyond `name`/`inherits`/settings:
+  `"from": "User"`; `"version"` (a Bambu Studio version stamp);
+  `"print_settings_id": "<name>"` (process, scalar) or
+  `"filament_settings_id": ["<name>"]` (filament, one-element array).
+- Each preset may have a `<name>.info` sidecar: INI-style `key = value`
+  lines with CRLF line endings, fields in order `sync_info`, `user_id`,
+  `setting_id`, `base_id`, `updated_time` (Unix epoch seconds).
+- `setting_id`/`base_id` are cloud-assigned (via Bambu's closed network
+  plugin, requires login). This server never synthesizes them — they stay
+  empty on anything it writes.
+- `sync_info` values `create`/`update` mark a preset for cloud upload by
+  Bambu Studio's sync loop; empty means no pending sync. This server
+  always writes it empty, so imported presets are never auto-uploaded.
+- A preset JSON without a sidecar (or with an empty one) loads as an
+  ordinary local, unsynced preset. A preset JSON Bambu Studio cannot
+  parse is DELETED by Bambu Studio at startup, together with its sidecar
+  — pre-import validation is a data-safety requirement, not a courtesy.
+- Bambu Studio rescans the store only at startup and on login/logout; it
+  has no filesystem watcher. Imports and removals become visible after a
+  Bambu Studio restart.
 
 ## Value serialization
 
@@ -115,9 +149,9 @@ The resulting directory is per-project and gitignored (`.printing-profile-mcp/`)
   (`%APPDATA%\BambuStudio` on Windows).
 - `userId` — the `user/<userId>` directory resolution reads.
 
-There is no zero-config operation: until `config.json` exists,
-`resolve_*`/`write_*` calls fail with an error directing the caller to
-`init_config`. All three of `installDir`, `userDataDir`, and `userId` may
+There is no zero-config operation: until `config.json` exists, every
+tool call except `init_config` fails with an error directing the caller
+to `init_config`. All three of `installDir`, `userDataDir`, and `userId` may
 be omitted from the `init_config` call:
 
 - `installDir`/`userDataDir` are filled by best-effort per-OS
@@ -263,6 +297,110 @@ final key→value map excluding `name`/`inherits`.
 `remove` keys listed together; nothing to do when both `set` and `remove`
 are omitted; config missing (run `init_config` first).
 
+### `import_profile`
+
+Install a profile file previously written by `write_profile` into Bambu
+Studio's user preset store, `user/<userId>/<kind>/`.
+
+**Input**
+```json
+{
+  "kind": "process | filament",
+  "outputDir": "string",
+  "name": "string",
+  "overwrite": false
+}
+```
+`outputDir`/`name` locate the source file `<outputDir>/<name>.json`, the
+same addressing `update_profile` uses.
+
+**Behavior**
+
+1. Read the source file; re-validate every override key/value against
+   `schema/<kind>.schema.json` (same rules as `write_profile`, including
+   `"nil"` on nullable options). This guards against hand-edited files —
+   Bambu Studio deletes unparseable presets at startup.
+2. Resolve the file's `inherits` target via the same lookup as
+   `resolve_profile` (proves the chain is sound).
+3. Build the preset body: source content plus `from: "User"`, `version`
+   (the `version` key of the `inherits` target's resolved merged
+   settings — the most specific chain member that declares one; omitted
+   when the chain carries none), and
+   `print_settings_id`/`filament_settings_id` derived from `name` per the
+   kind's convention.
+4. Write `<userDataDir>/user/<userId>/<kind>/<name>.json` and a minimal
+   `<name>.info` sidecar: `sync_info`, `user_id`, `setting_id`, `base_id`
+   empty; `updated_time` = current epoch seconds; CRLF line endings.
+
+**Overwrite contract**
+
+- `overwrite: false` (default): an existing `<name>.json` in the target
+  store fails the call, naming the existing path; nothing is written.
+- `overwrite: true`: the existing JSON+`.info` pair is replaced. Before
+  replacing, the existing JSON's own `from` field must be `"User"` —
+  a target whose `from` differs is refused regardless of flags (hard
+  safety boundary). No backup is taken; imported content originates from
+  the caller's versioned `outputDir` files.
+- The system store is never touched.
+
+**Output**
+```json
+{
+  "kind": "process | filament",
+  "name": "string",
+  "path": "string",
+  "infoPath": "string",
+  "overwritten": false,
+  "note": "Bambu Studio picks this up after a restart."
+}
+```
+
+**Errors**: source `<outputDir>/<name>.json` missing or unparseable;
+schema violations listed per key (like `write_profile`); `inherits`
+target not found or unresolvable; target exists without `overwrite`;
+target exists but its `from` is not `"User"` (refusal, not bypassable);
+config missing (run `init_config` first). All problems found before any
+write are collected and reported together.
+
+### `remove_profile`
+
+Delete a user preset (JSON plus `.info` sidecar) from
+`user/<userId>/<kind>/`.
+
+**Input**
+```json
+{ "kind": "process | filament", "name": "string" }
+```
+
+**Behavior**
+
+1. Locate `<userDataDir>/user/<userId>/<kind>/<name>.json`; read it and
+   require `"from": "User"` — anything else is refused (hard safety
+   boundary, not bypassable).
+2. Read the `.info` sidecar when present: a non-empty `setting_id` means
+   a cloud record exists for this preset; the removal proceeds, and the
+   result carries `cloudRecord: true` with a warning that Bambu Studio's
+   sync may restore the preset.
+3. Delete the JSON and sidecar together. A missing sidecar is reported
+   in the result, not an error. A stray `.info` without its JSON is an
+   error naming both paths checked.
+
+**Output**
+```json
+{
+  "kind": "process | filament",
+  "name": "string",
+  "removedJson": "string",
+  "removedInfo": "string | null",
+  "cloudRecord": false,
+  "note": "Bambu Studio picks this up after a restart."
+}
+```
+
+**Errors**: `<name>.json` not found in the user store; found but `from`
+is not `"User"` (refusal); stray sidecar without JSON; config missing
+(run `init_config` first).
+
 ### `list_profiles`
 
 Discover profiles of the given `kind` in the user preset store and,
@@ -402,6 +540,9 @@ required for subsequent tool calls.
 - Circular `inherits` chains → detected and rejected before returning
   partial results.
 - Missing config → error naming `init_config` as the fix.
+- Safety refusals (`from` is not `"User"` on an import overwrite or a
+  removal target) are distinct from not-found errors: they name the file
+  and the reason, and no input flag bypasses them.
 
 ## Testing
 
@@ -416,6 +557,12 @@ required for subsequent tool calls.
   against a temp output directory.
 - Schema generator: light smoke test only, against a checked-in C++
   fixture snippet — not exhaustively tested.
+- Import: metadata synthesis (`from`, `version` from the resolved chain,
+  per-kind settings-id shape) and exact sidecar bytes (field order, CRLF)
+  against a temp user store; overwrite refusal without the flag; `from`
+  refusal even with the flag; nothing written on any validation failure.
+- Remove: pair deletion; `from` refusal; missing-sidecar reporting;
+  stray-sidecar error; `cloudRecord` flag driven by sidecar content.
 
 ## Tech stack
 

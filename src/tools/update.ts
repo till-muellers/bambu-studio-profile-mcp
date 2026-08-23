@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
+import { strings } from "../strings.js";
 import { writeProfileFile } from "../profile-store.js";
 import type { ProfileKind, RawProfile, Violation } from "../types.js";
 import { loadSchema, validateKvps } from "../validator.js";
@@ -35,27 +36,27 @@ export async function handleUpdate(
   const set = args.set ?? {};
   const remove = args.remove ?? [];
   if (Object.keys(set).length === 0 && remove.length === 0) {
-    throw new Error("Nothing to do: pass set and/or remove.");
+    throw new Error(strings.messages.nothingToDo);
   }
 
   const path = join(args.outputDir, `${args.name}.json`);
   if (!existsSync(path)) {
-    throw new Error(`Profile file '${path}' not found. write_profile creates profiles.`);
+    throw new Error(strings.messages.sourceNotFound(path));
   }
   let raw: string;
   try {
     raw = await readFile(path, "utf8");
   } catch {
-    throw new Error(`Profile file '${path}' could not be read. write_profile creates profiles.`);
+    throw new Error(strings.messages.sourceNotReadable(path));
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    throw new Error(`Profile file '${path}' is not valid JSON.`);
+    throw new Error(strings.messages.sourceNotJson(path));
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(`Profile file '${path}' does not contain a JSON object.`);
+    throw new Error(strings.messages.sourceNotObject(path));
   }
   const body = parsed as RawProfile;
 
@@ -64,14 +65,14 @@ export async function handleUpdate(
   const reservedInSet = RESERVED_KEYS.filter((key) => key in set);
   const reservedInRemove = RESERVED_KEYS.filter((key) => remove.includes(key));
   for (const key of [...reservedInSet, ...reservedInRemove]) {
-    violations.push({ key, reason: "reserved key: managed via write_profile's name/baseProfile arguments" });
+    violations.push({ key, reason: strings.violations.reservedKeyUpdate });
   }
 
   const overlapKeys = Object.keys(set).filter(
     (key) => remove.includes(key) && !reservedInSet.includes(key as (typeof RESERVED_KEYS)[number])
   );
   for (const key of overlapKeys) {
-    violations.push({ key, reason: "key appears in both set and remove; choose one" });
+    violations.push({ key, reason: strings.violations.bothSetAndRemove });
   }
 
   const setToValidate = Object.fromEntries(
@@ -83,7 +84,7 @@ export async function handleUpdate(
   const removeToCheck = remove.filter((key) => !reservedInRemove.includes(key as (typeof RESERVED_KEYS)[number]));
   for (const key of removeToCheck) {
     if (!(key in body) || key === "name" || key === "inherits") {
-      violations.push({ key, reason: "key not present in the profile file" });
+      violations.push({ key, reason: strings.violations.keyNotPresent });
     }
   }
 
@@ -108,40 +109,25 @@ export async function handleUpdate(
 }
 
 const updateInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Profile type; selects the validation schema"),
-  name: z.string().min(1).describe("Name of the existing profile file, <name>.json in outputDir"),
-  outputDir: z.string().min(1).describe("Directory containing the profile file"),
+  kind: z.enum(["process", "filament"]).describe(strings.tools.updateProfile.inputs.kind),
+  name: z.string().min(1).describe(strings.tools.updateProfile.inputs.name),
+  outputDir: z.string().min(1).describe(strings.tools.updateProfile.inputs.outputDir),
   set: z
     .record(z.unknown())
     .optional()
-    .describe(
-      "Object mapping option key to value, validated against schema/<kind>.schema.json. Scalar options " +
-        "take a single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array " +
-        "with one element per position of the base profile's variant list. \"nil\" as an element keeps the " +
-        "base value at that position and is valid only on options list_parameters marks nullable: true. " +
-        "Existing keys are overwritten, new keys are added. 'name' and 'inherits' are reserved."
-    ),
+    .describe(strings.tools.updateProfile.inputs.set),
   remove: z
     .array(z.string().min(1))
     .optional()
-    .describe("Override keys to delete from the file; each key must already exist in the file."),
+    .describe(strings.tools.updateProfile.inputs.remove),
 };
 
 export function registerUpdateTool(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "update_profile",
     {
-      title: "Update profile",
-      description:
-        "Incrementally edit a profile file previously created by write_profile: upsert the `set` keys and " +
-        "delete the `remove` keys in one atomic, validated step. Keys not mentioned stay unchanged. The " +
-        "file's name and inherits stay as they are.\n\n" +
-        "Returns: { name, kind, path, set (applied set keys), removed (applied remove keys), overrides " +
-        "(the file's final key->value map excluding name/inherits) }\n\n" +
-        "Errors: file not found in outputDir (create it with write_profile first); schema violations, " +
-        "reserved keys in set/remove, and unknown remove keys are all listed together; nothing to do when " +
-        "both set and remove are omitted; config missing (run init_config first).\n\n" +
-        "write_profile replaces a file wholesale; update_profile is the tool for incremental changes.",
+      title: strings.tools.updateProfile.title,
+      description: strings.tools.updateProfile.description,
       inputSchema: updateInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },

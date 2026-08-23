@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { join } from "node:path";
 import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
+import { strings } from "../strings.js";
 import { writeProfileFile } from "../profile-store.js";
 import { resolveProfile } from "../resolver.js";
 import type { ProfileKind } from "../types.js";
@@ -34,7 +35,7 @@ export async function handleWrite(
   const reservedKeys = (["inherits", "name"] as const).filter((key) => key in args.kvps);
   const reservedViolations = reservedKeys.map((key) => ({
     key,
-    reason: "reserved key: set via the 'name'/'baseProfile' argument, not kvps",
+    reason: strings.violations.reservedKeyWrite,
   }));
   const kvpsToValidate = Object.fromEntries(
     Object.entries(args.kvps).filter(([key]) => !reservedKeys.includes(key as "inherits" | "name"))
@@ -59,53 +60,28 @@ export async function handleWrite(
 }
 
 const writeInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Profile type to create"),
+  kind: z.enum(["process", "filament"]).describe(strings.tools.writeProfile.inputs.kind),
   vendor: z
     .string()
     .min(1)
-    .describe("Vendor id from list_vendors, e.g. 'BBL'; names the system store baseProfile is resolved against"),
-  name: z.string().min(1).describe("Name of the profile to create; also the output filename (<name>.json)"),
+    .describe(strings.tools.writeProfile.inputs.vendor),
+  name: z.string().min(1).describe(strings.tools.writeProfile.inputs.name),
   baseProfile: z
     .string()
     .min(1)
-    .describe("Exact name of the existing profile to inherit from, as returned by list_profiles"),
+    .describe(strings.tools.writeProfile.inputs.baseProfile),
   kvps: z
     .record(z.unknown())
-    .describe(
-      "Object mapping option key to value, validated against schema/<kind>.schema.json. Scalar options " +
-        "take a single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array " +
-        "with one element per position of the base profile's variant list — the " +
-        "print_extruder_variant/filament_extruder_variant array visible in resolve_profile's settings — " +
-        "like [\"200\",\"500\",\"500\"] for a 3-position profile. \"nil\" as an element keeps the base " +
-        "value at that position and is valid only on options list_parameters marks nullable: true. " +
-        "Example: {\"layer_height\": \"0.16\", \"outer_wall_speed\": [\"150\",\"400\",\"400\"]}. " +
-        "'name' and 'inherits' are reserved, set via the name/baseProfile arguments instead."
-    ),
-  outputDir: z.string().min(1).describe("Directory the profile file is written to; created if missing"),
+    .describe(strings.tools.writeProfile.inputs.kvps),
+  outputDir: z.string().min(1).describe(strings.tools.writeProfile.inputs.outputDir),
 };
 
 export function registerWriteTools(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "write_profile",
     {
-      title: "Write profile",
-      description:
-        "Create a Bambu Studio process or filament profile file: writes <outputDir>/<name>.json, " +
-        "inheriting from baseProfile and containing only the kvps overrides. Overwrites the file when it " +
-        "already exists; Bambu Studio's own directories stay untouched. Overwriting REPLACES the previous " +
-        "content wholesale — kvps is always the complete override set; use update_profile to change an " +
-        "existing file incrementally. Every kvps key and value is validated against the option schema " +
-        "before anything is written; all violations are reported together.\n\n" +
-        "Returns: { vendor, name, kind, created (false when an existing file was overwritten), path, " +
-        "inherits, overrides }\n\n" +
-        "Errors: baseProfile not found or unresolvable; schema violations listed per key; config " +
-        "missing (run init_config first).\n\n" +
-        "Typical flow to extend an existing profile: find it with list_profiles, inspect its effective " +
-        "settings with resolve_profile, look up valid option keys and value ranges with list_parameters, " +
-        "then call write_profile with only the changed keys as kvps. For a vector option, resolve the " +
-        "base profile first, copy the existing array for that key, modify only the positions you mean " +
-        "to change, and pass the full-length array back — a shorter array is accepted but Bambu Studio " +
-        "broadcast-resizes it (repeating the last value), which is rarely what you want.",
+      title: strings.tools.writeProfile.title,
+      description: strings.tools.writeProfile.description,
       inputSchema: writeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },

@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { join } from "node:path";
 import { z } from "zod";
+import { strings } from "../strings.js";
 import { listFilaments, listProfiles, listVendors, type ProfileListing } from "../profile-store.js";
 import type { ProfileKind, SchemaOption } from "../types.js";
 import { loadSchema } from "../validator.js";
@@ -64,18 +65,12 @@ function registerListProfiles(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "list_profiles",
     {
-      title: "List profiles",
-      description:
-        "Discover the process or filament profiles available in the user preset store and the vendors' " +
-        "system stores.\n\n" +
-        "Returns: { kind, profiles: [{ name, source: \"user\"|\"system\", vendor?, inherits? }] } — " +
-        "user presets carry no vendor field; inherits names a profile's parent.\n\n" +
-        "Errors: vendor not found (only when vendor is given); config missing (run init_config first).\n\n" +
-        "Results feed the vendor/name/baseProfile arguments of resolve_profile and write_profile.",
+      title: strings.tools.listProfiles.title,
+      description: strings.tools.listProfiles.description,
       inputSchema: {
-        kind: kindEnum.describe("Profile type to list"),
-        vendor: z.string().min(1).optional().describe("Vendor id from list_vendors, e.g. 'BBL'; omit to search every vendor"),
-        search: z.string().min(1).optional().describe("Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'"),
+        kind: kindEnum.describe(strings.tools.listProfiles.inputs.kind),
+        vendor: z.string().min(1).optional().describe(strings.tools.listProfiles.inputs.vendor),
+        search: z.string().min(1).optional().describe(strings.tools.listProfiles.inputs.search),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -97,13 +92,8 @@ function registerListVendors(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "list_vendors",
     {
-      title: "List vendors",
-      description:
-        "List the profile vendors shipped with Bambu Studio.\n\n" +
-        "Returns: { vendors: [{ id, name }] }, sorted by id — id (e.g. 'BBL') is the value the vendor " +
-        "arguments of resolve_profile, write_profile, and list_profiles expect; name is the display " +
-        "name (e.g. 'Bambulab').\n\n" +
-        "Errors: config missing (run init_config first).",
+      title: strings.tools.listVendors.title,
+      description: strings.tools.listVendors.description,
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -125,27 +115,15 @@ function registerListParameters(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "list_parameters",
     {
-      title: "List parameters",
-      description:
-        "Discover the option keys valid for process or filament profiles, with their value type, " +
-        "range/enum, default, and (where Bambu Studio provides them) the GUI label and description. " +
-        "Search by name or by what a setting does — the filter matches key, label, and description.\n\n" +
-        "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, " +
-        "description?, nullable? }] } — vector: true means the option takes a string array with one " +
-        "element per (extruder × hotend-variant) position of the target profile — see the profile's " +
-        "print_extruder_variant/filament_extruder_variant in resolve_profile's settings; vector: false " +
-        "a single value. Options marked nullable: true accept \"nil\" as an element (or as the whole " +
-        "value) to keep the base/printer value at that position.\n\n" +
-        "Errors: config missing (run init_config first).\n\n" +
-        "Results feed the kvps argument of write_profile: use key as the kvps key and respect " +
-        "type/vector/enum/min/max/nullable when choosing the value.",
+      title: strings.tools.listParameters.title,
+      description: strings.tools.listParameters.description,
       inputSchema: {
-        kind: kindEnum.describe("Profile type whose option schema to list"),
+        kind: kindEnum.describe(strings.tools.listParameters.inputs.kind),
         search: z
           .string()
           .min(1)
           .optional()
-          .describe("Case-insensitive substring matched against key, label, and description, e.g. 'seam' or 'temperature'"),
+          .describe(strings.tools.listParameters.inputs.search),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -167,15 +145,8 @@ function registerListFilaments(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "list_filaments",
     {
-      title: "List filaments",
-      description:
-        "List the distinct filament products known to Bambu Studio: every filament_id found across the " +
-        "user store and all vendors' filament profiles, with a display name.\n\n" +
-        "Returns: { filaments: [{ id, name }] }, sorted by id, deduplicated — id is the product code " +
-        "(e.g. 'GFB00'), name the human-readable filament name (e.g. 'Bambu ABS').\n\n" +
-        "Errors: config missing (run init_config first).\n\n" +
-        "Use it to see which filaments exist, then find their concrete profiles by name via " +
-        "list_profiles with kind 'filament'.",
+      title: strings.tools.listFilaments.title,
+      description: strings.tools.listFilaments.description,
       inputSchema: {},
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },

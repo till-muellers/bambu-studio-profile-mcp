@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ConfigManager, detectDefaultPaths, resolveConfigDir } from "./config.js";
+import { strings } from "./strings.js";
 import { FsProfileStore } from "./profile-store.js";
 import { type ToolDeps } from "./tools/deps.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
@@ -35,17 +36,12 @@ export function buildServer(deps: ToolDeps): McpServer {
 export async function warnIfUnconfigured(server: McpServer, deps: ToolDeps): Promise<void> {
   const cfg = await deps.config.load();
   if (cfg) return;
-  console.error(
-    "printing-profile-mcp: no configuration found for this project (.printing-profile-mcp/config.json) " +
-      "— call the init_config tool to get started."
-  );
+  console.error(strings.warnings.unconfiguredStderr);
   try {
     await server.server.sendLoggingMessage({
       level: "warning",
       logger: "printing-profile-mcp",
-      data:
-        "printing-profile-mcp has no configuration for this project (.printing-profile-mcp/config.json). " +
-        "Call the init_config tool to get started.",
+      data: strings.warnings.unconfiguredNotification,
     });
   } catch {
     // Best-effort only — no connected client, or the client hasn't negotiated logging.

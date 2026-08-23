@@ -1,6 +1,6 @@
 {
   "name": "bambu-studio-profile-mcp",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server for resolving, writing, and importing Bambu Studio process/filament printing profiles",
   "license": "AGPL-3.0-only",
   "author": "Till Müllers",

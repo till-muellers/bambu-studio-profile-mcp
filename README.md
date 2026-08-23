@@ -4,16 +4,16 @@
 [![license](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](package.json)
 
-An MCP (Model Context Protocol) server that lets AI agents read, create, edit, and install [Bambu Studio](https://bambulab.com/en/download/studio) printing profiles — process and filament presets — with every parameter validated against the slicer's own option schema.
+An MCP (Model Context Protocol) server for [Bambu Studio](https://bambulab.com/en/download/studio) printing profiles. Agents can inspect, write, edit, and install process and filament presets; parameters are validated against schemas generated from the Bambu Studio source.
 
 > Community project. Not affiliated with or endorsed by Bambu Lab.
 
 ## What it does
 
-- **Resolve** any profile's fully-merged settings by walking its `inherits` chain across system and user presets.
-- **Discover** profiles, vendors, filaments, and the tunable parameters (typed, ranged, and described for agents).
-- **Write and edit** profile files in your project, schema-validated on every change.
-- **Import** finished profiles into Bambu Studio's user preset store — and remove them again — under strict safety rules (only user presets are ever touched; Studio's own directories stay read-only otherwise).
+- Resolves a profile's effective settings across its `inherits` chain, over system and user presets.
+- Lists profiles, vendors, filaments, and the valid parameters with types, ranges, and descriptions.
+- Writes and edits profile files in your project.
+- Imports finished profiles into Bambu Studio's user preset store, and removes them again. Only user presets are touched; Studio's directories are otherwise read-only to the server.
 
 Requires Node.js 20+ and a local Bambu Studio installation.
 
@@ -193,4 +193,4 @@ claude mcp add bambu-profiles -- node <absolute-path-to-checkout>\dist\index.js
 
 ## License
 
-[AGPL-3.0](LICENSE), matching Bambu Studio's license. The option schemas in `schema/` are generated from the [Bambu Studio](https://github.com/bambulab/BambuStudio) source (AGPL-3.0, © Bambu Lab and contributors); the parameter description texts are original to this project.
+[AGPL-3.0](LICENSE). The option schemas in `schema/` are generated from the [Bambu Studio](https://github.com/bambulab/BambuStudio) source (AGPL-3.0).

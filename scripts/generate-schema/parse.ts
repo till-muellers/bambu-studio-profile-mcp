@@ -73,12 +73,12 @@ function decodeCppEscapes(text: string): string {
 /**
  * Extracts `def-><field> = L(...)` where the L(...) argument is one or more adjacent quoted
  * string literals (C++ string-literal concatenation, optionally spanning multiple lines), e.g.
- * `def->tooltip = L("part a " "part b")`. C++ adjacent string literals concatenate with NO
+ * `def->label = L("part a " "part b")`. C++ adjacent string literals concatenate with NO
  * implicit separator, so the literals' decoded contents are joined directly (any word-boundary
  * spacing must already be present inside the literals themselves, as it is in the source). Returns
  * `undefined` when the field is absent from `body`.
  */
-function extractLField(body: string, field: "label" | "tooltip"): string | undefined {
+function extractLField(body: string, field: "label"): string | undefined {
   const re = new RegExp(
     `def->${field}\\s*=\\s*L\\(\\s*((?:"(?:[^"\\\\]|\\\\.)*"\\s*)+)\\)`
   );
@@ -138,8 +138,6 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
     const label = extractLField(body, "label");
     if (label !== undefined) option.label = label;
-    const description = extractLField(body, "tooltip");
-    if (description !== undefined) option.description = description;
     if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     if (min) option.min = Number(min[1]);
@@ -167,6 +165,32 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     if (alias) aliasToKey[alias] = key;
   }
   return options;
+}
+
+/**
+ * Applies a description overlay (option key -> description text) onto a set of parsed schema
+ * options, mutating each matching option's `description` in place. Reports coverage: `applied` is
+ * the number of options that received a description, `missing` lists option keys with no overlay
+ * entry (in `options` iteration order), and `stale` lists overlay keys that matched no option (in
+ * overlay iteration order).
+ */
+export function applyDescriptions(
+  options: Record<string, SchemaOption>,
+  overlay: Record<string, string>
+): { applied: number; missing: string[]; stale: string[] } {
+  let applied = 0;
+  const missing: string[] = [];
+  for (const [key, option] of Object.entries(options)) {
+    const description = overlay[key];
+    if (description !== undefined) {
+      option.description = description;
+      applied++;
+    } else {
+      missing.push(key);
+    }
+  }
+  const stale = Object.keys(overlay).filter((key) => !(key in options));
+  return { applied, missing, stale };
 }
 
 /** Strips C++ `/* block *\/` and `// line` comments so commented-out keys are not extracted. */

@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { parseOptionList, parsePrintConfig } from "../scripts/generate-schema/parse.js";
+import { applyDescriptions, parseOptionList, parsePrintConfig } from "../scripts/generate-schema/parse.js";
+import type { SchemaOption } from "../src/types.js";
 
 const PRINT_CONFIG_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "print-config-snippet.cpp");
 const PRESET_FIXTURE = join(import.meta.dirname, "fixtures", "cpp", "preset-snippet.cpp");
@@ -70,38 +71,6 @@ describe("parsePrintConfig (smoke test)", () => {
     expect(options.wall_generator.label).toBeUndefined();
   });
 
-  it("extracts a single-line description from def->tooltip = L(\"...\")", async () => {
-    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
-    const options = parsePrintConfig(source);
-
-    expect(options.layer_height.description).toBe(
-      "Slicing height for each layer. Smaller layer height means more accurate and more printing time"
-    );
-  });
-
-  it("concatenates a multi-line adjacent-string-literal tooltip into one description", async () => {
-    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
-    const options = parsePrintConfig(source);
-
-    expect(options.nozzle_temperature.description).toBe(
-      "Nozzle temperature for layers except the initial one. Value 0 means the filament does not support to print on this nozzle"
-    );
-    expect(options.outer_wall_speed.description).toBe(
-      "Speed of outer wall which is outermost and visible. It's used to be slower than inner wall speed to get better quality."
-    );
-  });
-
-  it("decodes C++ \\n escapes to real newlines, and joins adjacent literals with no separator (faithful to C++ concatenation)", async () => {
-    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
-    const options = parsePrintConfig(source);
-
-    expect(options.enable_support.description).toBe(
-      "This is particularly helpful in the below scenarios:\n" +
-        "1. To avoid changes in shine when printing glossy filaments\n" +
-        "2. To avoid printing at speeds which cause VFAs on the external walls"
-    );
-  });
-
   it("omits label/description for options that declare neither", async () => {
     const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
     const options = parsePrintConfig(source);
@@ -155,5 +124,33 @@ describe("parseOptionList", () => {
     const source = await readFile(PRESET_FIXTURE, "utf8");
 
     expect(parseOptionList(source, "sla_print_options")).toEqual([]);
+  });
+});
+
+describe("description overlay", () => {
+  it("parsePrintConfig emits no tooltip-derived descriptions", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    for (const option of Object.values(options)) {
+      expect(option.description).toBeUndefined();
+    }
+    // labels still extracted
+    expect(options.layer_height.label).toBe("Layer height");
+  });
+
+  it("applyDescriptions sets overlay text and reports coverage", () => {
+    const options = {
+      layer_height: { type: "float", vector: false } as SchemaOption,
+      wall_loops: { type: "int", vector: false } as SchemaOption,
+    };
+    const result = applyDescriptions(options, {
+      layer_height: "Z height per layer.",
+      ghost_key: "no such option",
+    });
+    expect(options.layer_height.description).toBe("Z height per layer.");
+    expect(options.wall_loops.description).toBeUndefined();
+    expect(result.applied).toBe(1);
+    expect(result.missing).toEqual(["wall_loops"]);
+    expect(result.stale).toEqual(["ghost_key"]);
   });
 });

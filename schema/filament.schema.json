@@ -123,6 +123,36 @@
     "default": 0,
     "description": "Seconds to issue the fan speed command ahead of an overhang or bridge region so the fan physically spins up before the lines print. Raise (up to 5 s) for fans with slow response; 0 changes fan speed exactly at the feature."
   },
+  "overhang_fan_threshold": {
+    "type": "enum",
+    "vector": true,
+    "label": "Cooling overhang threshold",
+    "enum": [
+      "0%",
+      "10%",
+      "25%",
+      "50%",
+      "75%",
+      "95%"
+    ],
+    "default": "(int)Overhang_threshold_bridge",
+    "description": "Overhang ratio (per extruder position) above which the part-cooling fan is forced to its overhang speed. Expressed as line-width overhang percentage; 0% cools every line, 95% only near-bridges. Lower thresholds improve overhang surfaces on heat-sensitive materials like PLA; keep high for warp-prone ABS."
+  },
+  "overhang_threshold_participating_cooling": {
+    "type": "enum",
+    "vector": true,
+    "label": "Overhang threshold for participating cooling",
+    "enum": [
+      "0%",
+      "10%",
+      "25%",
+      "50%",
+      "75%",
+      "100%"
+    ],
+    "default": "(int) Overhang_threshold_participating_cooling_bridge",
+    "description": "Overhang ratio above which lines count toward layer-time cooling calculations (per extruder position). At 100% only bridges participate; lower values make overhanging lines trigger slowdown-for-cooling earlier. Tune together with overhang_fan_threshold."
+  },
   "compatible_printers": {
     "type": "string",
     "vector": true,
@@ -160,6 +190,17 @@
     "label": "Don't slow down outer walls",
     "default": false,
     "description": "Exempts outer walls from the automatic layer-time cooling slowdown. Keeps outer wall speed uniform so surface sheen stays consistent; risks sagging on small or short layers since cooling relies on fan alone. Off by default."
+  },
+  "cooling_slowdown_logic": {
+    "type": "enum",
+    "vector": true,
+    "label": "Cooling slowdown logic",
+    "enum": [
+      "uniform_cooling",
+      "consistent_surface"
+    ],
+    "default": "(int)cslUniformCooling",
+    "description": "Strategy used when layer time falls below the cooling threshold: 'uniform_cooling' slows the whole layer evenly, 'consistent_surface' preserves outer-wall speed for a uniform sheen and slows other features harder. Per extruder position."
   },
   "cooling_perimeter_transition_distance": {
     "type": "float",
@@ -414,6 +455,19 @@
     "default": 0,
     "description": "Developer field: integer class describing how the filament bonds to other materials. Consulted for multi-material pairing decisions such as support/interface suitability. Vendor-set; not user-tuned."
   },
+  "filament_metal_stickiness": {
+    "type": "enum",
+    "vector": true,
+    "label": "Metal stickiness",
+    "enum": [
+      "None",
+      "Low",
+      "Medium",
+      "High"
+    ],
+    "default": "fmsNone",
+    "description": "Stickiness class of a metal-fill material (None/Low/Medium/High), used to adapt handling of tacky metal-loaded filaments. Leave None for ordinary polymers."
+  },
   "filament_density": {
     "type": "float",
     "vector": true,
@@ -435,6 +489,18 @@
     "label": "Soluble material",
     "default": false,
     "description": "Marks this filament as dissolvable (PVA, BVOH). Slicer treats it as preferred support/interface material and allows zero interface gaps since it washes out instead of breaking away. Store dry; highly hygroscopic."
+  },
+  "filament_scarf_seam_type": {
+    "type": "enum",
+    "vector": true,
+    "label": "Scarf seam type",
+    "enum": [
+      "none",
+      "external",
+      "all"
+    ],
+    "default": 0,
+    "description": "Filament-level scarf seam preference: 'none' keeps ordinary seams, 'external' applies scarf joints to visible outer walls only, 'all' to every wall. Scarf seams ramp the seam over a distance to hide it; effective on glossy materials where seam bumps show most."
   },
   "filament_scarf_length": {
     "type": "float",
@@ -901,5 +967,178 @@
     "nullable": true,
     "default": false,
     "description": "Lets this filament impose its own overhang speeds instead of the process profile's. Useful for materials needing distinct overhang handling (e.g. TPU, high-temp filaments); off, process overhang speeds apply."
+  },
+  "filament_retraction_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Length",
+    "default": 0.8,
+    "nullable": true,
+    "description": "Per-extruder override of the printer profile's retraction length (mm) for this filament; a 'nil' element keeps the printer value. Flexible and oozy materials often need more than the printer default; direct-drive typically 0.4-1.2 mm, bowden 2-6 mm."
+  },
+  "filament_z_hop": {
+    "type": "float",
+    "vector": true,
+    "label": "Z hop when retract",
+    "min": 0,
+    "max": 5,
+    "default": 0.4,
+    "nullable": true,
+    "description": "Per-extruder override of the printer's Z hop height (mm, 0-5) during retracted travel for this filament; 'nil' keeps the printer value. Raising it fights stringing-prone materials dragging across the part; costs travel time."
+  },
+  "filament_z_hop_types": {
+    "type": "enum",
+    "vector": true,
+    "label": "Z Hop Type",
+    "enum": [
+      "Auto Lift",
+      "Normal Lift",
+      "Slope Lift",
+      "Spiral Lift"
+    ],
+    "default": "ZHopType::zhtSpiral",
+    "nullable": true,
+    "description": "Per-extruder override of the printer's Z hop trajectory for this filament ('Auto Lift', 'Normal Lift', 'Slope Lift', 'Spiral Lift'); 'nil' keeps the printer value. Slope/Spiral reduce stringing and ooze marks on sticky materials by moving diagonally while lifting."
+  },
+  "filament_retraction_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Retraction Speed",
+    "default": 30,
+    "nullable": true,
+    "description": "Per-extruder override of the printer's retraction speed (mm/s) for this filament; 'nil' keeps the printer value. Soft filaments (TPU) need slower retracts to avoid stretching and grinding; rigid materials tolerate fast retracts."
+  },
+  "filament_deretraction_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Deretraction Speed",
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of the speed for re-priming after retraction (mm/s) for this filament; 'nil' keeps the printer value, 0 means use retraction speed. Slower deretraction helps materials that swell in the melt zone re-prime without blobs."
+  },
+  "filament_retract_restart_extra": {
+    "type": "float",
+    "vector": true,
+    "label": "Extra length on restart",
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of extra filament (mm) extruded when restarting after retraction; 'nil' keeps the printer value. Positive compensates ooze losses on leaky materials; negative counters blobbing. Keep within a few tenths of a millimeter."
+  },
+  "filament_retraction_minimum_travel": {
+    "type": "float",
+    "vector": true,
+    "label": "Travel distance threshold",
+    "default": 2,
+    "nullable": true,
+    "description": "Per-extruder override of the minimum travel distance (mm) that triggers a retraction for this filament; 'nil' keeps the printer value. Raise for materials where frequent retracts cause grinding; lower for stringy materials needing retracts even on short hops."
+  },
+  "filament_wipe_distance": {
+    "type": "float",
+    "vector": true,
+    "label": "Wipe Distance",
+    "min": 0,
+    "default": 2,
+    "nullable": true,
+    "description": "Per-extruder override of the nozzle wipe distance (mm) for this filament; 'nil' keeps the printer value. Longer wipes shear off ooze from stringy materials before travel; too long scars the surface at the seam."
+  },
+  "filament_retract_when_changing_layer": {
+    "type": "bool",
+    "vector": true,
+    "label": "Retract when change layer",
+    "default": false,
+    "nullable": true,
+    "description": "Per-extruder override: force a retraction on layer change for this filament; 'nil' keeps the printer setting. Enable for materials that leave layer-change blobs; disable to save time with well-behaved filaments."
+  },
+  "filament_wipe": {
+    "type": "bool",
+    "vector": true,
+    "label": "Wipe while retracting",
+    "default": false,
+    "nullable": true,
+    "description": "Per-extruder override: wipe the nozzle along the last path while retracting for this filament; 'nil' keeps the printer setting. Effective against ooze marks with PETG and other tacky materials."
+  },
+  "filament_retract_before_wipe": {
+    "type": "percent",
+    "vector": true,
+    "label": "Retract amount before wipe",
+    "default": 100,
+    "nullable": true,
+    "description": "Per-extruder override of how much of the retraction (percent) happens before the wipe move for this filament; 'nil' keeps the printer value. Higher values reduce material available to smear during the wipe; 100% retracts fully first."
+  },
+  "filament_long_retractions_when_cut": {
+    "type": "bool",
+    "vector": true,
+    "label": "Long retraction when cut(experimental)",
+    "default": false,
+    "nullable": true,
+    "description": "Experimental, per-extruder override: pull the filament far back when the cutter severs it (multi-material), reducing degraded material left in the melt zone; 'nil' keeps the printer setting. Only for materials that tolerate re-melting after long dwell."
+  },
+  "filament_retraction_distances_when_cut": {
+    "type": "float",
+    "vector": true,
+    "label": "Retraction distance when cut",
+    "min": 10,
+    "max": 18,
+    "default": 18,
+    "nullable": true,
+    "description": "Per-extruder override of the long-retraction distance (10-18 mm) used when the filament is cut; 'nil' keeps the printer value. Must clear the melt zone without pulling soft filament into the extruder gears."
+  },
+  "filament_enable_overhang_speed": {
+    "type": "bool",
+    "vector": true,
+    "label": "Slow down for overhang",
+    "default": true,
+    "nullable": true,
+    "description": "Per-extruder override: apply overhang-ratio-based speed reduction for this filament; 'nil' keeps the process setting. Disable only for materials whose overhang quality is insensitive to speed (some engineering blends) to save time."
+  },
+  "filament_bridge_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Bridge",
+    "min": 0,
+    "default": 25,
+    "nullable": true,
+    "description": "Per-extruder override of bridge printing speed (mm/s) for this filament; 'nil' keeps the process value. Materials with poor bridging (PETG) want slower bridges with strong cooling; PLA tolerates faster. Typical 20-40 mm/s."
+  },
+  "filament_overhang_1_4_speed": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of print speed (mm/s) for lines overhanging up to 25% of their width; 'nil' or 0 keeps the process value. First tier of the four-step overhang slowdown ladder for this filament."
+  },
+  "filament_overhang_2_4_speed": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of print speed (mm/s) for 25-50% overhanging lines; 'nil' or 0 keeps the process value. Second tier of the overhang slowdown ladder for this filament."
+  },
+  "filament_overhang_3_4_speed": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of print speed (mm/s) for 50-75% overhanging lines; 'nil' or 0 keeps the process value. Third tier; heat-sensitive materials benefit most from slowing here."
+  },
+  "filament_overhang_4_4_speed": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": 0,
+    "nullable": true,
+    "description": "Per-extruder override of print speed (mm/s) for 75-100% overhanging lines; 'nil' or 0 keeps the process value. Steepest supported overhangs; slowest tier before bridging rules apply."
+  },
+  "filament_overhang_totally_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "100%",
+    "min": 0,
+    "default": 10,
+    "nullable": true,
+    "description": "Per-extruder override of print speed (mm/s) for fully unsupported (100% overhang) lines; 'nil' keeps the process value. Effectively near-bridge printing; keep slow (default 10) with maximum cooling."
   }
 }

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
@@ -8,6 +8,19 @@ import { ConfigMissingError } from "./errors.js";
 import type { ServerConfig } from "./types.js";
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * Resolve the per-project config directory (first match wins):
+ * 1. PRINTING_PROFILE_MCP_CONFIG_DIR — used verbatim, no subdirectory appended.
+ * 2. CLAUDE_PROJECT_DIR — Claude Code sets this for stdio MCP servers; config dir is
+ *    <CLAUDE_PROJECT_DIR>/.printing-profile-mcp.
+ * 3. cwd — fallback; config dir is <cwd>/.printing-profile-mcp.
+ */
+export function resolveConfigDir(env: NodeJS.ProcessEnv, cwd: string): string {
+  if (env.PRINTING_PROFILE_MCP_CONFIG_DIR) return env.PRINTING_PROFILE_MCP_CONFIG_DIR;
+  if (env.CLAUDE_PROJECT_DIR) return join(env.CLAUDE_PROJECT_DIR, ".printing-profile-mcp");
+  return join(cwd, ".printing-profile-mcp");
+}
 
 export type DetectedPaths = Partial<Pick<ServerConfig, "installDir" | "userDataDir">>;
 
@@ -113,6 +126,7 @@ export class ConfigManager {
   }
 
   async save(cfg: ServerConfig): Promise<string> {
+    await mkdir(dirname(this.configPath), { recursive: true });
     await writeFile(this.configPath, JSON.stringify(cfg, null, 2) + "\n", "utf8");
     return this.configPath;
   }

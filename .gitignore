@@ -1,4 +1,4 @@
 .superpowers/
 node_modules/
 dist/
-config.json
+.printing-profile-mcp/

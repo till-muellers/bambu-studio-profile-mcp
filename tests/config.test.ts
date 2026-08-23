@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigManager, validateConfigPaths } from "../src/config.js";
+import { ConfigManager, resolveConfigDir, validateConfigPaths } from "../src/config.js";
 import { ConfigMissingError } from "../src/errors.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -52,6 +52,34 @@ describe("ConfigManager.save", () => {
     expect(await mgr.save(VALID)).toBe(path);
     expect(JSON.parse(await readFile(path, "utf8"))).toEqual(VALID);
     expect(await mgr.load()).toEqual(VALID);
+  });
+
+  it("creates the parent directory when it does not exist yet", async () => {
+    const path = join(dir, ".printing-profile-mcp", "config.json");
+    const mgr = new ConfigManager(path);
+    expect(await mgr.save(VALID)).toBe(path);
+    expect(await mgr.load()).toEqual(VALID);
+  });
+});
+
+describe("resolveConfigDir", () => {
+  const cwd = join("C", "cwd-root");
+
+  it("uses PRINTING_PROFILE_MCP_CONFIG_DIR verbatim when set", () => {
+    const env = {
+      PRINTING_PROFILE_MCP_CONFIG_DIR: join("C", "explicit-dir"),
+      CLAUDE_PROJECT_DIR: join("C", "claude-project"),
+    };
+    expect(resolveConfigDir(env, cwd)).toBe(join("C", "explicit-dir"));
+  });
+
+  it("uses <CLAUDE_PROJECT_DIR>/.printing-profile-mcp when PRINTING_PROFILE_MCP_CONFIG_DIR is unset", () => {
+    const env = { CLAUDE_PROJECT_DIR: join("C", "claude-project") };
+    expect(resolveConfigDir(env, cwd)).toBe(join("C", "claude-project", ".printing-profile-mcp"));
+  });
+
+  it("falls back to <cwd>/.printing-profile-mcp when neither env var is set", () => {
+    expect(resolveConfigDir({}, cwd)).toBe(join(cwd, ".printing-profile-mcp"));
   });
 });
 

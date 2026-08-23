@@ -73,7 +73,9 @@ export function registerInitConfigTool(server: McpServer, deps: ToolDeps): void 
         `Required once before any other tool succeeds; on a machine with Bambu Studio installed, calling ` +
         `it with no arguments usually suffices — every value is auto-detected (userId from ` +
         `<userDataDir>\\BambuStudio.conf's app.preset_folder, the logged-in account's preset folder). ` +
-        `Takes effect immediately — no server restart needed.\n\n` +
+        `Takes effect immediately — no server restart needed. Configuration persists per project in ` +
+        `.printing-profile-mcp/config.json, resolved from CLAUDE_PROJECT_DIR under Claude Code, the ` +
+        `working directory otherwise, or the PRINTING_PROFILE_MCP_CONFIG_DIR override.\n\n` +
         `Returns: { installDir, userDataDir, userId, persistedTo }\n\n` +
         `Errors: each invalid or undetectable value is reported (including userId when BambuStudio.conf ` +
         `is missing, unparseable, or lacks app.preset_folder); nothing is persisted on failure.`,

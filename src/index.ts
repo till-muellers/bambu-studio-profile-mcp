@@ -3,7 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ConfigManager, detectDefaultPaths } from "./config.js";
+import { ConfigManager, detectDefaultPaths, resolveConfigDir } from "./config.js";
 import { FsProfileStore } from "./profile-store.js";
 import { type ToolDeps } from "./tools/deps.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
@@ -49,7 +49,7 @@ async function main(): Promise<void> {
   // Project root = one level above dist/ (this file compiles to dist/index.js).
   const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
   const deps: ToolDeps = {
-    config: new ConfigManager(join(projectRoot, "config.json")),
+    config: new ConfigManager(join(resolveConfigDir(process.env, process.cwd()), "config.json")),
     storeFactory: (cfg) => new FsProfileStore(cfg),
     schemaDir: join(projectRoot, "schema"),
     detectPaths: detectDefaultPaths,

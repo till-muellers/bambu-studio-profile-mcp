@@ -113,7 +113,7 @@ const updateInputShape = {
   name: z.string().min(1).describe(strings.tools.updateProfile.inputs.name),
   outputDir: z.string().min(1).describe(strings.tools.updateProfile.inputs.outputDir),
   set: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .optional()
     .describe(strings.tools.updateProfile.inputs.set),
   remove: z

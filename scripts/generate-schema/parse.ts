@@ -10,6 +10,7 @@ const TYPE_MAP: Record<string, { type: SchemaType; vector: boolean }> = {
   coString: { type: "string", vector: false },
   coStrings: { type: "string", vector: true },
   coEnum: { type: "enum", vector: false },
+  coEnums: { type: "enum", vector: true },
   coPercent: { type: "percent", vector: false },
   coPercents: { type: "percent", vector: true },
 };
@@ -189,6 +190,49 @@ export function applyDescriptions(
   }
   const stale = Object.keys(overlay).filter((key) => !(key in options));
   return { applied, missing, stale };
+}
+
+/** Extracts the quoted keys of a `const std::vector<std::string> <name> = { ... };` declaration. */
+export function parseStringVector(cppSource: string, name: string): string[] {
+  const decl = cppSource.match(new RegExp(`std::vector<std::string>\\s+${name}\\s*=?\\s*\\{([\\s\\S]*?)\\}\\s*;`));
+  if (!decl) return [];
+  return [...stripComments(decl[1]).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+/**
+ * Mirrors PrintConfig.cpp's filament-override synthesis loops: each `filament_<base>` key in the
+ * two override vectors is added as a clone of its base option's facts (type, vector, label,
+ * min/max, enum values, default). Extruder-override clones are always nullable (`add_nullable`);
+ * overhang-override clones take the base option's own nullable flag. Throws when a base option is
+ * absent from `options` (the C++ loops assert the same).
+ */
+export function synthesizeFilamentOverrides(
+  options: Record<string, SchemaOption>,
+  extruderOverrideKeys: string[],
+  overhangOverrideKeys: string[]
+): void {
+  const clone = (key: string): SchemaOption => {
+    const base = options[key.replace(/^filament_/, "")];
+    if (!base) {
+      throw new Error(`Override option '${key}' has no parsed base option to clone from.`);
+    }
+    const out: SchemaOption = { type: base.type, vector: base.vector };
+    if (base.label !== undefined) out.label = base.label;
+    if (base.min !== undefined) out.min = base.min;
+    if (base.max !== undefined) out.max = base.max;
+    if (base.enum !== undefined) out.enum = [...base.enum];
+    if (base.default !== undefined) out.default = base.default;
+    return out;
+  };
+  for (const key of extruderOverrideKeys) {
+    options[key] = { ...clone(key), nullable: true };
+  }
+  for (const key of overhangOverrideKeys) {
+    const base = options[key.replace(/^filament_/, "")];
+    const cloned = clone(key);
+    if (base?.nullable) cloned.nullable = true;
+    options[key] = cloned;
+  }
 }
 
 /** Strips C++ `/* block *\/` and `// line` comments so commented-out keys are not extracted. */

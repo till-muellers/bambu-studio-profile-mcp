@@ -171,12 +171,14 @@ export const strings = {
     importProfile: {
       title: "Import profile",
       description:
-        "Install a profile file written by write_profile into Bambu Studio's user preset store " +
-        "(user/<userId>/<kind>/), synthesizing the metadata Bambu Studio expects (from, version, " +
-        "settings id) and a minimal .info sidecar. The source is fully re-validated against the " +
-        "option schema first and its inherits chain is resolved; nothing is installed when any " +
-        "check fails. Replacing an existing preset requires overwrite: true and only ever replaces " +
-        "presets whose own 'from' field is \"User\".\n\n" +
+        "Install a profile file into Bambu Studio's user preset store (user/<userId>/<kind>/), " +
+        "synthesizing the metadata Bambu Studio expects (from, version, settings id) and a minimal " +
+        ".info sidecar. Sources written by write_profile and Studio-shaped preset files both work: " +
+        "metadata keys already present in the source (from, version, settings id) are ignored and " +
+        "regenerated. The source's remaining keys are fully re-validated against the option schema " +
+        "first and its inherits chain is resolved; nothing is installed when any check fails. " +
+        "Replacing an existing preset requires overwrite: true and only ever replaces presets whose " +
+        "own 'from' field is \"User\".\n\n" +
         "Returns: { kind, name, path, infoPath, overwritten, note } — note states that Bambu Studio " +
         "sees the preset after a restart.\n\n" +
         "Errors: source missing or unparseable; schema violations listed per key; vendor or inherits " +
@@ -280,6 +282,8 @@ export const strings = {
     importSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
     importSourceNotObject: (path: string): string => `Source profile '${path}' does not contain a JSON object.`,
     importSourceMissingInherits: (path: string): string => `Source profile '${path}' has no 'inherits' field.`,
+    importMetadataRegenerated: (keys: string[]): string =>
+      `Metadata keys in the source file were ignored and regenerated: ${keys.join(", ")}.`,
     importTargetExists: (path: string): string => `Target preset '${path}' already exists. Pass overwrite: true to replace it.`,
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,

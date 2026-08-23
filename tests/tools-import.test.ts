@@ -96,6 +96,48 @@ describe("handleImport", () => {
     expect(onDisk).not.toHaveProperty("print_settings_id");
   });
 
+  it("ignores and regenerates Studio metadata keys in the source", async () => {
+    await writeSource("Repo Preset", {
+      name: "Repo Preset",
+      inherits: "0.20mm Standard @BBL X1C",
+      from: "system",
+      version: "9.9.9.9",
+      print_settings_id: "Stale Id",
+      layer_height: "0.16",
+    });
+    const result = await handleImport(deps(), "process", { ...PROCESS_ARGS, outputDir: outDir, name: "Repo Preset" });
+    const onDisk = JSON.parse(await readFile(result.path, "utf8"));
+    expect(onDisk.from).toBe("User");
+    expect(onDisk.version).toBe("2.7.0.8");
+    expect(onDisk.print_settings_id).toBe("Repo Preset");
+    expect(onDisk.layer_height).toBe("0.16");
+    expect(result.note).toMatch(/regenerated/);
+    expect(result.note).toContain("from");
+    expect(result.note).toContain("version");
+    expect(result.note).toContain("print_settings_id");
+  });
+
+  it("regenerates a stale filament_settings_id and keeps the note silent without metadata", async () => {
+    await writeSource("Fresh PLA", {
+      name: "Fresh PLA",
+      inherits: "Generic PLA @BBL X1C",
+      filament_settings_id: ["Old Name"],
+      nozzle_temperature: ["230"],
+    });
+    const result = await handleImport(deps(), "filament", { vendor: "BBL", outputDir: outDir, name: "Fresh PLA" });
+    const onDisk = JSON.parse(await readFile(result.path, "utf8"));
+    expect(onDisk.filament_settings_id).toEqual(["Fresh PLA"]);
+    expect(result.note).toMatch(/regenerated/);
+
+    await writeSource("Plain PLA", {
+      name: "Plain PLA",
+      inherits: "Generic PLA @BBL X1C",
+      nozzle_temperature: ["230"],
+    });
+    const plain = await handleImport(deps(), "filament", { vendor: "BBL", outputDir: outDir, name: "Plain PLA" });
+    expect(plain.note).not.toMatch(/regenerated/);
+  });
+
   it("rejects invalid source kvps and writes nothing", async () => {
     await writeSource("Broken", { name: "Broken", inherits: "fdm_process_common", bogus_key: "1" });
     await expect(

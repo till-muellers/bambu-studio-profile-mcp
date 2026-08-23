@@ -33,13 +33,13 @@ profile-workspace-init first when it is missing); `init_config` once per session
    and refuse unknown keys; metadata (`from`, `version`, settings ids) is synthesized at
    import time and never written by hand.
 5. **Verify mechanically** before installing — these rules hold only when checked.
-   `resolve_profile` reads the installed stores, so a file not yet installed is verified
-   against its parent:
-   - `resolve_profile` on the file's `inherits` target: that chain contains only presets
-     scoped to the target printer (or `fdm_*`/`@base` roots). The file's chain is that
-     chain plus the file itself.
-   - No override in the file equals the parent's resolved effective value for the same
-     key — such a pin is dead weight; drop it.
+   `resolve_from_file` resolves the file itself, uninstalled, through its `inherits`
+   chain:
+   - Its `chain` contains only presets scoped to the target printer (or `fdm_*`/`@base`
+     roots), ending with the file.
+   - No override in the file equals the value the chain already supplies for that key —
+     compare the file's keys against `resolve_profile` on its `inherits` target; such a
+     pin is dead weight, so drop it.
    - Each vector key's column count matches the workspace section; `compatible_printers`
      names only the workspace's machine presets.
    - Every override has a recorded rationale, and every recorded rationale has its

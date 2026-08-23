@@ -2,3 +2,5 @@
 node_modules/
 dist/
 .printing-profile-mcp/
+.claude/
+.serena/

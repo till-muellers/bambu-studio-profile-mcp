@@ -1,0 +1,2310 @@
+{
+  "elefant_foot_compensation": {
+    "type": "float",
+    "vector": false,
+    "label": "Elephant foot compensation",
+    "min": 0,
+    "default": 0,
+    "description": "Shrinks first-layer perimeters inward by this many mm to cancel the squish bulge (elephant foot). Restores bottom-edge dimensional accuracy and part fit. Too much undercuts the base and weakens bed adhesion. Typical 0-0.2 mm."
+  },
+  "layer_height": {
+    "type": "float",
+    "vector": false,
+    "label": "Layer height",
+    "min": 0,
+    "default": 0.2,
+    "description": "Height of each printed layer, in mm. Lower means finer detail and smoother curves but longer prints; higher means faster with visible stepping. Keep within 25-80% of nozzle diameter; 0.2 standard for 0.4 nozzle."
+  },
+  "reduce_crossing_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Avoid crossing wall",
+    "default": false,
+    "description": "Routes travel moves around perimeters instead of across them. Reduces stringing and surface scars from ooze without extra retraction; increases travel length and slicing time. Useful for oozy materials (PETG); off keeps travels direct and fast."
+  },
+  "z_direction_outwall_speed_continuous": {
+    "type": "bool",
+    "vector": false,
+    "label": "Smoothing wall speed along Z(experimental)",
+    "default": false,
+    "description": "Experimental. Smooths outer wall speed changes between adjacent layers along Z so overhang-driven slowdowns ramp gradually instead of jumping, reducing visible banding at speed boundaries. Slightly longer print time. Default off."
+  },
+  "avoid_crossing_wall_includes_support": {
+    "type": "bool",
+    "vector": false,
+    "label": "Avoid crossing wall - Includes support",
+    "default": false,
+    "description": "Extends avoid-crossing-wall travel routing to treat support structures as obstacles too. Reduces stringing and scars across supports at the cost of longer travel moves and slicing time. Only relevant when avoid crossing walls is on."
+  },
+  "bottom_shell_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Bottom shell layers",
+    "min": 0,
+    "default": 3,
+    "description": "Solid layers closing the part underside. More = stronger, more watertight bottom, more material/time; 0 leaves infill exposed. Effective thickness is max of this and bottom_shell_thickness. 3-4 typical."
+  },
+  "bottom_shell_thickness": {
+    "type": "float",
+    "vector": false,
+    "label": "Bottom shell thickness",
+    "min": 0,
+    "default": 0,
+    "description": "Minimum bottom solid thickness in mm; slicer adds bottom layers beyond bottom_shell_layers until this is met. Keeps bottom strength constant across layer heights. 0 = layer count alone governs."
+  },
+  "bridge_angle": {
+    "type": "float",
+    "vector": false,
+    "label": "Bridge direction",
+    "min": 0,
+    "default": 0,
+    "description": "Forces bridging line direction in degrees; 0 = automatic per-bridge detection. Set manually when auto direction picks long unsupported spans; lines should run the shortest distance between anchored edges. Rarely changed from 0."
+  },
+  "bridge_flow": {
+    "type": "float",
+    "vector": false,
+    "label": "Bridge flow",
+    "min": 0,
+    "max": 2,
+    "default": 1,
+    "description": "Extrusion flow multiplier for bridge lines (0-2, default 1). Below 1 thins and tensions strands, reducing sag on unsupported spans; too low causes gaps and weak bridges. 0.8-0.95 common tuning range."
+  },
+  "top_solid_infill_flow_ratio": {
+    "type": "float",
+    "vector": true,
+    "label": "Top surface flow ratio",
+    "min": 0,
+    "max": 2,
+    "default": 1,
+    "description": "Flow multiplier applied only to top surface lines. Slightly below 1 (e.g. 0.95-0.98) reduces over-extrusion ridges for a smoother top; too low opens gaps between lines. Tune after calibrating overall flow, not instead of it."
+  },
+  "initial_layer_flow_ratio": {
+    "type": "float",
+    "vector": false,
+    "label": "Initial layer flow ratio",
+    "min": 0,
+    "max": 2,
+    "default": 1,
+    "description": "Extrusion flow multiplier for the first layer only. Slightly above 1 squishes lines together over uneven beds, closing gaps and boosting adhesion; too high causes ridges the nozzle plows through. 0.9-1.1 typical."
+  },
+  "top_one_wall_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Only one wall on top surfaces",
+    "enum": [
+      "not apply",
+      "all top",
+      "topmost"
+    ],
+    "default": "TopOneWallType::Alltop",
+    "description": "Uses a single wall on top surfaces so solid infill reaches closer to the edge, improving top finish. not apply: disabled; all top: every layer with top surface; topmost: final layer only. Single wall slightly weakens edges."
+  },
+  "top_area_threshold": {
+    "type": "percent",
+    "vector": false,
+    "label": "Top area threshold",
+    "min": 0,
+    "max": 500,
+    "default": 200,
+    "description": "Area-ratio threshold (%) governing which upward-facing regions qualify as top surfaces receiving top solid infill. Exact direction of effect undocumented. Default 200%; rarely changed."
+  },
+  "only_one_wall_first_layer": {
+    "type": "bool",
+    "vector": false,
+    "label": "Only one wall on first layer",
+    "default": false,
+    "description": "Prints a single wall loop on the first layer instead of the full wall count. Gives bottom surface fill more area for a more uniform underside and can ease elephant foot; slightly reduces first-layer edge strength."
+  },
+  "enable_overhang_speed": {
+    "type": "bool",
+    "vector": true,
+    "label": "Slow down for overhang",
+    "nullable": true,
+    "default": true,
+    "description": "Slows wall printing by overhang degree using the tiered overhang speed values; requires detect_overhang_wall. Less sag and curling on overhangs at a print-time cost. Nullable per extruder; keep on."
+  },
+  "overhang_1_4_speed": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Wall speed (mm/s) for slight overhangs, 10-25% of line width unsupported. 0 keeps normal wall speed. Lower improves overhang surface; rarely needs slowing at this small a degree."
+  },
+  "overhang_2_4_speed": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Wall speed (mm/s) for moderate overhangs, 25-50% of line width unsupported. 0 keeps normal wall speed. Slowing here gives cooling time and reduces curling on the overhang edge."
+  },
+  "overhang_3_4_speed": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Wall speed (mm/s) for steep overhangs, 50-75% of line width unsupported. 0 keeps normal wall speed. Slow markedly (e.g. 10-25 mm/s) to prevent sag and curl; pair with raised overhang fan speed."
+  },
+  "overhang_4_4_speed": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Wall speed (mm/s) for extreme overhangs, 75-100% of line width unsupported. 0 keeps normal wall speed. Slowest overhang tier before fully floating lines; typically 10 mm/s territory with maximum part cooling."
+  },
+  "overhang_totally_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "100%",
+    "nullable": true,
+    "min": 0,
+    "default": 10,
+    "description": "Print speed (mm/s) for 100% unsupported (fully floating) overhang walls. Very slow so extruded lines can solidify mid-air; raising risks sagging and dropped loops. Default 10. Applies past the 75-100% overhang tier."
+  },
+  "enable_height_slowdown": {
+    "type": "bool",
+    "vector": true,
+    "label": "Slow down by height",
+    "nullable": true,
+    "default": false,
+    "description": "Ramps print speed down across a Z range defined by the slowdown start/end height and speed keys. Counters tall-part wobble and resonance on slender models. Nullable per extruder; default off."
+  },
+  "slowdown_start_height": {
+    "type": "float",
+    "vector": true,
+    "label": "Starting height",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Z height (mm) where the slow-down-by-height ramp begins. Below it the starting speed/acceleration caps apply; between start and end height the caps interpolate linearly. Default 0 (ramp starts at the bed)."
+  },
+  "slowdown_start_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Speed at starting height",
+    "nullable": true,
+    "min": 0,
+    "default": 1000,
+    "description": "Speed cap (mm/s) at slowdown_start_height. With slowdown_end_speed defines a linear speed limit over Z, e.g. progressively slowing tall thin parts as height and sway grow. 1000 = effectively no cap."
+  },
+  "slowdown_start_acc": {
+    "type": "float",
+    "vector": true,
+    "label": "Acceleration at starting height",
+    "nullable": true,
+    "min": 0,
+    "default": 100000,
+    "description": "Acceleration cap (mm/s2) at slowdown_start_height for the slow-down-by-height ramp; interpolated toward the ending-height acceleration as Z rises. Lower to tame ringing/wobble on tall prints. 100000 = effectively uncapped."
+  },
+  "slowdown_end_height": {
+    "type": "float",
+    "vector": true,
+    "label": "Ending height",
+    "nullable": true,
+    "min": 0,
+    "default": 400,
+    "description": "Upper end (mm) of the slow-down-by-height ramp. Speed/acceleration caps interpolate linearly from the starting-height values to the ending-height values between the two heights; above this Z the end values hold. Default 400."
+  },
+  "slowdown_end_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Speed at ending height",
+    "nullable": true,
+    "min": 0,
+    "default": 1000,
+    "description": "Speed cap (mm/s) applied at slowdown_end_height. The ramp interpolates from slowdown_start_speed to this value; lower it to keep tall narrow prints slow near the top against wobble. 1000 = effectively no cap (feature off)."
+  },
+  "slowdown_end_acc": {
+    "type": "float",
+    "vector": true,
+    "label": "Acceleration at ending height",
+    "nullable": true,
+    "min": 0,
+    "default": 100000,
+    "description": "Acceleration limit (mm/s²) at the ending height of the height-range slowdown; interpolated from the start-height value as the print rises. Lower reduces ringing/wobble on tall slender prints. Default 100000 = effectively no limit."
+  },
+  "bridge_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Bridge",
+    "nullable": true,
+    "min": 0,
+    "default": 25,
+    "description": "Print speed for bridge lines, mm/s. Slow speeds let strands cool and anchor before sagging; too slow can increase drooping with some materials. 20-30 mm/s typical. Pair with high fan and reduced bridge_flow."
+  },
+  "brim_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Brim width",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Brim width in mm (0-100), used when brim_type is not auto. Wider brim = more bed grip against warping and tipping, more material and cleanup. 3-8 mm covers most cases; tall thin parts benefit from more."
+  },
+  "brim_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Brim type",
+    "enum": [
+      "auto_brim",
+      "brim_ears",
+      "outer_only",
+      "inner_only",
+      "outer_and_inner",
+      "no_brim"
+    ],
+    "default": "btAutoBrim",
+    "description": "Brim placement. auto_brim: slicer decides per object based on adhesion risk; brim_ears: small discs at sharp corners only; outer_only: brim outside the outline (most common manual choice); inner_only: inside holes only; outer_and_inner: both sides; no_brim: none. Outer brims fight warping; inner brims consume hole clearance."
+  },
+  "brim_object_gap": {
+    "type": "float",
+    "vector": false,
+    "label": "Brim-object gap",
+    "min": 0,
+    "max": 2,
+    "default": 0,
+    "description": "Clearance between brim and part outline, mm (0-2). Larger gap = easier brim removal, weaker adhesion aid; 0 fuses brim to part for maximum hold but harder cleanup. 0.1 mm is a common compromise."
+  },
+  "compatible_printers": {
+    "type": "string",
+    "vector": true,
+    "label": "Compatible machine",
+    "description": "List of printer profile names this preset applies to. Empty = compatible with all. Metadata for preset filtering, not print behavior."
+  },
+  "compatible_printers_condition": {
+    "type": "string",
+    "vector": false,
+    "label": "Compatible machine condition",
+    "description": "Boolean expression over printer config values (e.g. nozzle_diameter, printer_model) gating whether this preset is offered for a printer. Empty = always compatible. Metadata, no print effect."
+  },
+  "print_sequence": {
+    "type": "enum",
+    "vector": false,
+    "label": "Print sequence",
+    "enum": [
+      "by layer",
+      "by object"
+    ],
+    "default": "PrintSequence::ByLayer",
+    "description": "Order for multiple objects. by layer: all objects advance together each layer — fastest, travels between objects can string. by object: finish each object before the next — cleaner parts, needs toolhead/gantry clearance around objects."
+  },
+  "default_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Normal printing",
+    "nullable": true,
+    "min": 0,
+    "default": 500,
+    "description": "Acceleration, mm/s2, for print moves without a feature-specific override. Higher = shorter prints, more ringing/ghosting; lower = cleaner corners. 500 is conservative; modern CoreXY machines run thousands."
+  },
+  "travel_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Travel",
+    "nullable": true,
+    "min": 0,
+    "default": 500,
+    "description": "Acceleration (mm/s^2) for non-printing travel moves. Higher shortens travel time and reduces oozing/stringing windows; limited by machine rigidity, not print quality, since nothing is extruded. Often several thousand on CoreXY machines."
+  },
+  "travel_short_distance_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Short travel",
+    "nullable": true,
+    "min": 0,
+    "default": 250,
+    "description": "Acceleration (mm/s^2) for short travel hops, e.g. between nearby infill lines. Lower than full travel acceleration cuts vibration and noise from rapid start-stop moves at negligible time cost. Null falls back to travel acceleration."
+  },
+  "initial_layer_travel_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Initial layer travel",
+    "nullable": true,
+    "min": 0,
+    "default": 500,
+    "description": "Travel-move acceleration on the first layer, in mm/s². Lower reduces jolts that can shift a freshly laid layer or knock loose curled edges. Per-extruder vector. Typical 500-1000, below normal travel acceleration."
+  },
+  "bridge_no_support": {
+    "type": "bool",
+    "vector": false,
+    "label": "Don't support bridges",
+    "default": false,
+    "description": "Suppresses support generation under detected bridge regions, trusting bridging settings to span them. Saves material and post-processing; risky for spans beyond the filament's bridging ability. Only matters when supports are enabled."
+  },
+  "thick_bridges": {
+    "type": "bool",
+    "vector": false,
+    "label": "Thick bridges",
+    "default": false,
+    "description": "Prints bridges as thick round-profile lines at increased flow instead of thin flat lines. Spans long gaps more reliably but leaves a rougher underside; off gives neater bottoms on short bridges. Interacts with bridge speed and flow."
+  },
+  "max_bridge_length": {
+    "type": "float",
+    "vector": false,
+    "label": "Max bridge length",
+    "min": 0,
+    "default": 10,
+    "description": "Maximum unsupported internal bridge length, in mm. Internal gaps wider than this get support/dense infill treatment instead of being bridged; raising trusts bridging more and saves material, lowering yields cleaner surfaces over infill. Default 10."
+  },
+  "ensure_vertical_shell_thickness": {
+    "type": "enum",
+    "vector": false,
+    "label": "Ensure vertical shell thickness",
+    "enum": [
+      "disabled",
+      "partial",
+      "enabled"
+    ],
+    "default": "EnsureVerticalThicknessLevel::evtEnabled",
+    "description": "Adds solid infill near sloped surfaces to guarantee the configured shell thickness. enabled: full enforcement, watertight, more material/time; partial: reinforces only critical areas; disabled: fastest, risks gaps or pinholes on slopes."
+  },
+  "detect_floating_vertical_shell": {
+    "type": "bool",
+    "vector": false,
+    "label": "Detect floating vertical shells",
+    "default": true,
+    "description": "Scans vertical shell (wall) paths for segments printed over air and drops them to bridge speed. Prevents wall sag above sparse infill or internal voids. Disable only when the slowdown is unacceptable on known-safe geometry."
+  },
+  "internal_bridge_support_thickness": {
+    "type": "float",
+    "vector": false,
+    "label": "Internal bridge support thickness",
+    "min": 0,
+    "max": 2,
+    "default": 0,
+    "description": "Thickness, in mm, of extra dense support layers printed inside sparse infill directly under internal bridges. Raising firms up bridge anchoring and top surfaces over low-density infill at some material cost; 0 disables. Use multiples of layer height, e.g. 0.2."
+  },
+  "top_surface_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Top surface pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "monotonic",
+      "monotonicline",
+      "alignedrectilinear",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral"
+    ],
+    "default": "ipRectilinear",
+    "description": "Top solid surface pattern. monotonic: one sweep direction, uniform sheen, best default; zig-zag: rectilinear, can show joins; monotonicline: monotonic with connected ends; alignedrectilinear: same angle every layer; concentric: outline rings, suits round parts; hilbertcurve / archimedeanchords / octagramspiral: decorative, slower."
+  },
+  "top_surface_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Top surface density",
+    "min": 0,
+    "max": 100,
+    "default": 100,
+    "description": "Line density (%) of top solid surface fill. 100% gives a closed, watertight-looking top; below 100 leaves intentional gaps between lines (rarely wanted except for texture effects or flexible parts). Keep 100 for normal prints."
+  },
+  "monotonic_travel_into_wall": {
+    "type": "percent",
+    "vector": false,
+    "label": "Monotonic line travel extend",
+    "min": 0,
+    "max": 200,
+    "default": 0,
+    "description": "Extends monotonic top/bottom surface lines into the adjacent wall, as percent of line width. Raising closes hairline gaps between surface fill and walls; too high causes overextrusion marks at wall junctions. 0 disables."
+  },
+  "bottom_surface_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Bottom surface pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "monotonic",
+      "monotonicline",
+      "alignedrectilinear",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral"
+    ],
+    "default": "ipRectilinear",
+    "description": "Pattern for bottom solid surfaces. concentric: contour rings; zig-zag: fast lines; monotonic: single sweep direction, best for visible undersides; monotonicline: monotonic, connected ends; alignedrectilinear: fixed line angle; hilbertcurve/archimedeanchords/octagramspiral: decorative."
+  },
+  "bottom_surface_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Bottom surface density",
+    "min": 10,
+    "max": 100,
+    "default": 100,
+    "description": "Fill density of bottom solid surfaces, percent. Below 100% leaves micro-gaps: saves material and can improve bridging over infill, but sacrifices watertightness and finish. Keep 100 unless deliberately lightening hidden undersides. 10-100%."
+  },
+  "internal_solid_infill_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Internal solid infill pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "monotonic",
+      "monotonicline",
+      "alignedrectilinear",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral"
+    ],
+    "default": "ipRectilinear",
+    "description": "Pattern for hidden internal solid layers; cosmetics irrelevant. zig-zag/monotonic/monotonicline: fast rectilinear variants; alignedrectilinear: same direction every layer; concentric: follows perimeters; hilbertcurve/archimedeanchords/octagramspiral: slow curves. zig-zag typical."
+  },
+  "outer_wall_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Outer wall",
+    "min": 0,
+    "default": 0,
+    "description": "Line width (mm) for the outermost wall. 0 derives from the default line width. Narrower than inner walls sharpens detail and dimensional accuracy; wider improves strength and overhangs. Usually ~100-105% of nozzle diameter."
+  },
+  "outer_wall_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Outer wall",
+    "nullable": true,
+    "min": 0,
+    "default": 60,
+    "description": "Print speed (mm/s) for the outermost wall — the visible surface. Slowest of the wall speeds; lower improves surface finish and dimensional accuracy, higher saves time at cosmetic cost. Commonly 40-60% of inner wall speed."
+  },
+  "small_perimeter_threshold": {
+    "type": "float",
+    "vector": true,
+    "label": "Small perimeter threshold",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Size threshold (mm) below which a wall loop counts as a small perimeter and prints at small perimeter speed. Raise to slow more small loops (holes, pins, bosses) for roundness and cooling; 0 disables the classification."
+  },
+  "wall_sequence": {
+    "type": "enum",
+    "vector": false,
+    "label": "Order of walls",
+    "enum": [
+      "inner wall/outer wall",
+      "outer wall/inner wall",
+      "inner-outer-inner wall"
+    ],
+    "default": "WallSequence::InnerOuter",
+    "description": "Print order of wall loops. inner wall/outer wall: inner first, supports overhangs (default); outer wall/inner wall: best accuracy and surface, worse overhangs; inner-outer-inner wall: one inner, then outer, then rest — accuracy plus overhang support, needs 3+ loops."
+  },
+  "is_infill_first": {
+    "type": "bool",
+    "vector": false,
+    "label": "Print infill first",
+    "default": false,
+    "description": "Prints sparse infill before walls on each layer. Infill-first gives walls an anchor, improving overhang quality; walls-first gives cleaner, more accurate outer surfaces since infill can't push through. Off (walls first) is the usual choice for appearance."
+  },
+  "print_flow_ratio": {
+    "type": "float",
+    "vector": false,
+    "label": "Object flow ratio",
+    "min": 0.01,
+    "max": 2,
+    "default": 1,
+    "description": "Object-level flow multiplier stacked on the filament's flow ratio. >1 extrudes more (fills gaps, risks over-extrusion ridges); <1 less (cleaner surfaces, risks under-fill). 1 = neutral. Use for per-object tuning without editing the filament profile."
+  },
+  "process_notes": {
+    "type": "string",
+    "vector": false,
+    "label": "Process notes",
+    "default": "",
+    "description": "Free-text notes stored with the process profile. No effect on slicing or output."
+  },
+  "line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Default",
+    "min": 0,
+    "max": 10,
+    "default": 0.4,
+    "description": "Default extrusion line width, in mm, used by any feature without its own width override. Wider improves strength and flow stability; narrower resolves finer detail but risks underextrusion. Typical 100-120% of nozzle diameter."
+  },
+  "enable_tower_interface_features": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable tower interface features",
+    "default": false,
+    "description": "Applies dedicated temperature, pre-extrusion, and purge settings to prime tower interface layers where different materials meet, improving multi-material tool-change quality. Developer-mode; default off."
+  },
+  "infill_direction": {
+    "type": "float",
+    "vector": false,
+    "label": "Infill direction",
+    "min": 0,
+    "max": 360,
+    "default": 45,
+    "description": "Angle in degrees of sparse infill lines relative to X. Most patterns alternate around this base angle per layer. 45 default spreads directional strength; align with expected load for anisotropic parts."
+  },
+  "sparse_infill_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Sparse infill density",
+    "min": 0,
+    "max": 100,
+    "default": 20,
+    "description": "Percent fill of the interior. Higher = stronger, stiffer, heavier, slower, more material; strength gains diminish above ~40% — extra walls are usually more effective. 0 = hollow, 100 = solid. Typical 10-25% decorative, 30-50% functional."
+  },
+  "fill_multiline": {
+    "type": "int",
+    "vector": false,
+    "label": "Fill multiline",
+    "min": 1,
+    "max": 5,
+    "default": 1,
+    "description": "Number of parallel lines drawn per sparse infill path (1-5). Values >1 print each infill trace as adjacent multi-line bundles, boosting strength/rigidity at the same density pattern with more material and time. 1 = standard single lines."
+  },
+  "sparse_infill_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Sparse infill pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "grid",
+      "line",
+      "cubic",
+      "triangles",
+      "tri-hexagon",
+      "gyroid",
+      "honeycomb",
+      "adaptivecubic",
+      "alignedrectilinear",
+      "3dhoneycomb",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral",
+      "supportcubic",
+      "lightning",
+      "crosshatch",
+      "zigzag",
+      "crosszag",
+      "lockedzag",
+      "2dlattice"
+    ],
+    "default": "ipCubic",
+    "description": "Interior fill geometry. cubic/adaptivecubic/supportcubic: all-round strength, latter two densify near top only; grid/triangles/tri-hexagon: strong; gyroid/crosshatch: isotropic, flexible-friendly; honeycomb/3dhoneycomb: strong, slow; lightning: minimal, props top only; line/zig-zag/zigzag/alignedrectilinear: cheap directional; crosszag/lockedzag: zigzag variants; concentric: follows walls; hilbertcurve/archimedeanchords/octagramspiral: decorative; 2dlattice: struts per lattice angles. Default cubic."
+  },
+  "locked_skin_infill_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Skin infill pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "grid",
+      "line",
+      "cubic",
+      "triangles",
+      "tri-hexagon",
+      "gyroid",
+      "honeycomb",
+      "alignedrectilinear",
+      "3dhoneycomb",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral",
+      "crosshatch",
+      "zigzag",
+      "crosszag"
+    ],
+    "default": "ipCrossZag",
+    "description": "Pattern for the outer (skin) zone adjacent to walls when sparse infill uses the Locked Zag pattern. Skin zone anchors infill to walls; crosszag default improves wall bonding, other values as with normal sparse infill. Ignored for other infill patterns."
+  },
+  "locked_skeleton_infill_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Skeleton infill pattern",
+    "enum": [
+      "concentric",
+      "zig-zag",
+      "grid",
+      "line",
+      "cubic",
+      "triangles",
+      "tri-hexagon",
+      "gyroid",
+      "honeycomb",
+      "alignedrectilinear",
+      "3dhoneycomb",
+      "hilbertcurve",
+      "archimedeanchords",
+      "octagramspiral",
+      "crosshatch",
+      "zigzag",
+      "crosszag"
+    ],
+    "default": "ipZigZag",
+    "description": "Pattern for the interior (skeleton) zone when sparse infill uses the Locked Zag pattern. Skeleton bears the load: zig-zag/grid/cubic/gyroid etc. as with normal sparse infill; crosshatch/crosszag suit flexibles. Zig-zag default. Ignored for other infill patterns."
+  },
+  "top_surface_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Top surface",
+    "nullable": true,
+    "min": 0,
+    "default": 500,
+    "description": "Acceleration (mm/s^2) for top surface extrusions. Lower than general print acceleration reduces ringing and corner bulges on the visible top; too low costs time. 500-2000 typical; null falls back to default acceleration."
+  },
+  "outer_wall_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Outer wall",
+    "nullable": true,
+    "min": 0,
+    "default": 500,
+    "description": "Acceleration (mm/s²) for outer wall lines. Lower reduces ringing/ghosting and corner artifacts on the visible surface at some time cost; raise for speed where cosmetics matter less. Typically the lowest acceleration in a profile."
+  },
+  "inner_wall_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Inner wall",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Acceleration for inner wall extrusions, in mm/s². 0 falls back to default acceleration. Can run higher than outer wall acceleration since inner walls are hidden; raising cuts print time with little visible cost. Per-extruder vector."
+  },
+  "initial_layer_acceleration": {
+    "type": "float",
+    "vector": true,
+    "label": "Initial layer",
+    "nullable": true,
+    "min": 0,
+    "default": 300,
+    "description": "Acceleration in mm/s2 for all first-layer moves. Low values place lines gently and precisely, improving bed adhesion; high values risk dragging fresh lines loose. Nullable per-extruder vector. ~300-500 typical."
+  },
+  "accel_to_decel_enable": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable accel_to_decel",
+    "default": false,
+    "description": "Enables a firmware cap on deceleration relative to acceleration (Klipper-style accel_to_decel). Smooths velocity changes on short moves, reducing vibration and ringing at slight cost to print time. Cap value set by accel_to_decel_factor."
+  },
+  "accel_to_decel_factor": {
+    "type": "percent",
+    "vector": false,
+    "label": "accel_to_decel",
+    "min": 1,
+    "max": 100,
+    "default": 50,
+    "description": "Deceleration cap as percent of print acceleration; active only with accel_to_decel_enable. Lower percent = gentler decelerations, less ringing on short zigzag moves, slower prints. 50% typical; 1-100%."
+  },
+  "default_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Default",
+    "min": 0,
+    "default": 0,
+    "description": "Default jerk (instantaneous velocity change) limit, mm/s, for moves lacking a feature-specific jerk. Higher = quicker direction changes and shorter prints but more vibration and corner artifacts; 0 defers to feature/machine values."
+  },
+  "outer_wall_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Outer wall",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk / instantaneous speed-change limit (mm/s) for outer walls. Lower smooths direction changes, cutting ringing and corner bulge on visible surfaces; higher shortens print time. Typical 7-9; only applies when jerk control is active."
+  },
+  "inner_wall_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Inner wall",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk (instantaneous speed change) for inner wall moves, in mm/s. Higher keeps speed through corners, saving time; lower reduces ringing and mechanical load. Only applies when jerk control is active in the machine profile. Typical 7-12."
+  },
+  "infill_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Infill",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk limit in mm/s for infill moves, the allowed instantaneous speed change at direction reversals. Higher keeps speed through zigzags but excites ringing; effective only when jerk/junction control is active. ~9 typical."
+  },
+  "top_surface_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Top surface",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk / junction deviation speed (mm/s) for top surface moves. Lower reduces ringing artifacts on the visible top at direction changes; too low causes blobbing at corners from deceleration dwell. Around 9 mm/s typical."
+  },
+  "initial_layer_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "First layer",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk limit in mm/s for first-layer moves. Low values avoid abrupt direction changes that can shear freshly laid lines off the bed; effective only when jerk control is active. ~9 typical."
+  },
+  "travel_jerk": {
+    "type": "float",
+    "vector": false,
+    "label": "Travel",
+    "min": 0,
+    "default": 9,
+    "description": "Jerk / junction deviation speed (mm/s) for travel moves. Higher keeps travels fast through direction changes; excessive values cause skipped steps or frame resonance. Can exceed print jerk since no extrusion quality is at stake."
+  },
+  "initial_layer_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Initial layer",
+    "min": 0,
+    "default": 0.4,
+    "description": "Line width for the first layer, in mm. Wider lines press more plastic onto the plate, improving bed adhesion and tolerance to plate unevenness. Typically 100-150% of nozzle diameter; 0.4-0.5 for a 0.4 nozzle."
+  },
+  "initial_layer_print_height": {
+    "type": "float",
+    "vector": false,
+    "label": "Initial layer height",
+    "min": 0,
+    "default": 0.2,
+    "description": "Height of the first layer, in mm. Thicker first layer absorbs bed unevenness and boosts adhesion; thinner sharpens bottom detail but demands better tramming. Independent of layer_height. Typical 0.2, often thicker than remaining layers."
+  },
+  "initial_layer_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Initial layer",
+    "nullable": true,
+    "min": 0,
+    "default": 30,
+    "description": "Print speed for all first-layer extrusions except supports, in mm/s. Slower improves squish and bed adhesion; too fast causes detachment and warping. Per-extruder vector; nil entries fall back to defaults. Typical 20-50."
+  },
+  "initial_layer_infill_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Initial layer infill",
+    "nullable": true,
+    "min": 1,
+    "default": 60,
+    "description": "Speed in mm/s for infill areas on the first layer. Can exceed first-layer outline speed since adhesion of interior fill is less critical, but keep moderate to avoid detaching lines. Nullable per-extruder vector. ~60 typical."
+  },
+  "fuzzy_skin": {
+    "type": "enum",
+    "vector": false,
+    "label": "Fuzzy Skin",
+    "enum": [
+      "none",
+      "external",
+      "all",
+      "allwalls",
+      "disabled_fuzzy"
+    ],
+    "default": "FuzzySkinType::None",
+    "description": "Where random wall jitter (rough texture) is applied. none: off, painting still allowed; external: outer contour only, holes stay smooth; all: contour and holes; allwalls: inner walls too; disabled_fuzzy: force off in this region, overriding object setting."
+  },
+  "fuzzy_skin_thickness": {
+    "type": "float",
+    "vector": false,
+    "label": "Fuzzy skin thickness",
+    "min": 0,
+    "max": 1,
+    "default": 0.3,
+    "description": "Maximum jitter amplitude in mm, the depth of the rough texture. Larger is rougher but hurts dimensional accuracy of outer walls; keep below outer wall line width. extrusion/combined modes require <= line width. 0.3 typical."
+  },
+  "fuzzy_skin_point_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Fuzzy skin point distance",
+    "min": 0,
+    "max": 5,
+    "default": 0.8,
+    "description": "Spacing in mm between jitter points inserted along the wall path. Smaller gives finer grain but much larger G-code and slower printing; larger gives coarse facets. Keep near fuzzy_skin_thickness; 0.8 default."
+  },
+  "fuzzy_skin_first_layer": {
+    "type": "bool",
+    "vector": false,
+    "label": "Apply fuzzy skin to first layer",
+    "default": false,
+    "description": "Extends fuzzy skin texture onto layer 1. Off keeps the bottom face flat for full bed contact; on gives a uniform texture on all faces but reduces adhesion area."
+  },
+  "fuzzy_skin_noise_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Fuzzy skin noise type",
+    "enum": [
+      "classic",
+      "perlin",
+      "billow",
+      "ridgedmulti",
+      "voronoi"
+    ],
+    "default": "NoiseType::Classic",
+    "description": "Texture noise source. classic: uniform random grain; perlin: smooth coherent texture; billow: perlin-like but clumpy/puffy; ridgedmulti: sharp ridges, marble-like; voronoi: surface split into cells, each offset randomly, patchwork look."
+  },
+  "fuzzy_skin_scale": {
+    "type": "float",
+    "vector": false,
+    "label": "Fuzzy skin feature size",
+    "min": 0.1,
+    "max": 500,
+    "default": 1,
+    "description": "Base feature size in mm for coherent noise types. Larger values stretch the texture into broad bumps; small values give tight grain. No effect with classic noise."
+  },
+  "fuzzy_skin_octaves": {
+    "type": "int",
+    "vector": false,
+    "label": "Fuzzy skin noise octaves",
+    "min": 1,
+    "max": 10,
+    "default": 4,
+    "description": "Detail layers for coherent noise (perlin, billow, ridgedmulti). More octaves add finer texture detail and slicing time; classic random noise ignores it. 3-5 typical."
+  },
+  "fuzzy_skin_persistence": {
+    "type": "float",
+    "vector": false,
+    "label": "Fuzzy skin noise persistence",
+    "min": 0.01,
+    "max": 1,
+    "default": 0.5,
+    "description": "Amplitude carried into each successive noise octave (0.01-1). Higher keeps fine octaves strong for a rougher, busier texture; lower yields smooth broad features. 0.5 typical."
+  },
+  "fuzzy_skin_mode": {
+    "type": "enum",
+    "vector": false,
+    "label": "Fuzzy skin generator mode",
+    "enum": [
+      "displacement",
+      "extrusion",
+      "combined"
+    ],
+    "default": "FuzzySkinMode::Displacement",
+    "description": "How texture is produced. displacement: nozzle path jitters sideways; extrusion: path stays straight, flow varies — better dimensional accuracy; combined: both, fills gaps between perimeters. extrusion/combined require fuzzy_skin_thickness <= line width."
+  },
+  "filter_out_gap_fill": {
+    "type": "float",
+    "vector": false,
+    "label": "Filter out tiny gaps",
+    "default": 0,
+    "description": "Minimum gap-fill length in mm; shorter gap-fill extrusions are dropped. Raise to suppress stringy micro-fills between walls for cleaner surfaces at slight cost to thin-section strength. 0 keeps all gap fill."
+  },
+  "precise_outer_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Precise wall",
+    "default": false,
+    "description": "Reduces overlap between outer wall and its inner neighbor so the outer wall's printed width stays exact. Improves XY dimensional accuracy and seam consistency; slightly weakens outer-to-inner wall bonding and adds a little print time."
+  },
+  "gap_infill_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Gap infill",
+    "nullable": true,
+    "min": 0,
+    "default": 30,
+    "description": "Print speed in mm/s for gap fill between walls. These are short zigzag lines; lower speed reduces vibration and blobbing on small features. Nullable per-extruder vector. ~30 mm/s typical."
+  },
+  "precise_z_height": {
+    "type": "bool",
+    "vector": false,
+    "label": "Precise Z height",
+    "default": false,
+    "description": "Adjusts the top layers' heights so total part height matches the model exactly instead of rounding to a layer-height multiple. Enable for parts with tight Z tolerances; final layers may print marginally thinner."
+  },
+  "enable_arc_fitting": {
+    "type": "bool",
+    "vector": false,
+    "label": "Arc fitting",
+    "default": false,
+    "description": "Converts segmented toolpaths into G2/G3 arc moves. Smaller G-code and smoother curved motion; introduces a tiny geometric approximation. Requires firmware arc support. Default off."
+  },
+  "gcode_add_line_number": {
+    "type": "bool",
+    "vector": false,
+    "label": "Add line number",
+    "default": false,
+    "description": "Prefixes every G-code line with an Nx line number. Debugging and serial-protocol use only; inflates file size, no print effect."
+  },
+  "enable_wrapping_detection": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable clumping detection",
+    "default": false,
+    "description": "Enables filament clumping detection (material wrapping around the nozzle) for the print, sized by wrapping_detection_layers. Lets the printer catch clumps early and stop before damage. Requires supporting hardware; default off."
+  },
+  "exclude_object": {
+    "type": "bool",
+    "vector": false,
+    "label": "Exclude objects",
+    "default": true,
+    "description": "Writes per-object markers into the G-code so a failed object can be skipped on the printer mid-print while the rest continue. Needs firmware/printer support; minor G-code size increase. Keep on for multi-object plates."
+  },
+  "infill_combination": {
+    "type": "bool",
+    "vector": false,
+    "label": "Infill combination",
+    "default": false,
+    "description": "Prints sparse infill only every few layers at multiplied thickness while walls stay per-layer. Saves significant time; combined height limited by nozzle capability. Best with sturdy patterns; can leave thicker infill visible under thin tops."
+  },
+  "infill_shift_step": {
+    "type": "float",
+    "vector": false,
+    "label": "Infill shift step",
+    "min": 0,
+    "max": 10,
+    "default": 0.4,
+    "description": "Lateral offset in mm applied to the infill pattern each layer, weaving zig-zag family patterns into a cross texture across layers. Larger steps coarsen the texture. Default 0.4; 0 stacks lines vertically."
+  },
+  "infill_rotate_step": {
+    "type": "float",
+    "vector": false,
+    "label": "Infill rotate step",
+    "min": 0,
+    "max": 360,
+    "default": 0,
+    "description": "Additional rotation in degrees applied to the infill angle on each successive layer. Nonzero builds a cross-hatched, more isotropic core; 0 keeps the standard fixed/alternating direction. Only some patterns honor it."
+  },
+  "skeleton_infill_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Skeleton infill density",
+    "min": 0,
+    "max": 100,
+    "default": 15,
+    "description": "Fill density of the skeleton (deep interior) zone when using a skin/skeleton-zoned sparse infill pattern. Lower saves material and time in the core; skin zone keeps its own density near surfaces. 15% typical."
+  },
+  "skin_infill_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Skin infill density",
+    "min": 0,
+    "max": 100,
+    "default": 15,
+    "description": "Fill density of the skin zone — infill adjacent to walls/surfaces — in skin/skeleton-zoned sparse infill patterns. Higher improves top-surface support and near-surface solidity without densifying the whole part. 15% default."
+  },
+  "skin_infill_depth": {
+    "type": "float",
+    "vector": false,
+    "label": "Skin infill depth",
+    "min": 0,
+    "max": 100,
+    "default": 2,
+    "description": "Thickness (mm) of the skin infill zone measured inward from the model surface; interior beyond it becomes skeleton zone. Deeper = more of the part at skin density — stronger near surfaces, more material. Default 2 mm."
+  },
+  "infill_lock_depth": {
+    "type": "float",
+    "vector": false,
+    "label": "Infill lock depth",
+    "min": 0,
+    "max": 100,
+    "default": 1,
+    "description": "Overlap depth in mm where skin and skeleton zones of locked-zag infill interlock. Deeper lock bonds the dense skin layer to the sparse core more strongly at slight material cost. Only meaningful with the locked-zag pattern."
+  },
+  "skin_infill_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Skin line width",
+    "min": 0,
+    "default": 0.4,
+    "description": "Extrusion width (mm) for skin-zone infill lines in skin/skeleton-zoned patterns. Wider = fewer, stronger lines near surfaces; narrower = finer support under top surfaces. Keep near nozzle diameter (0.4 typical)."
+  },
+  "skeleton_infill_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Skeleton line width",
+    "min": 0,
+    "default": 0.4,
+    "description": "Extrusion width (mm) for skeleton-zone infill lines in skin/skeleton-zoned patterns. Wider = stronger, faster core deposition with more material; keep near nozzle diameter (0.4 typical for 0.4 mm nozzle)."
+  },
+  "symmetric_infill_y_axis": {
+    "type": "bool",
+    "vector": false,
+    "label": "Symmetric infill y axis",
+    "default": false,
+    "description": "Mirrors sparse infill toolpaths across the Y axis. Keeps infill patterns identical between a part and its mirrored copy, giving symmetric strength and appearance in paired parts. No effect on solid surfaces; off by default."
+  },
+  "sparse_infill_lattice_angle_1": {
+    "type": "float",
+    "vector": false,
+    "label": "Lattice angle 1",
+    "min": -75,
+    "max": 75,
+    "default": -45,
+    "description": "First strut direction (degrees, -75 to 75) of the 2dlattice sparse infill pattern; default -45. Together with lattice angle 2 sets the crossing-strut geometry of lightweight wing/aero-style interiors. No effect with other patterns."
+  },
+  "sparse_infill_lattice_angle_2": {
+    "type": "float",
+    "vector": false,
+    "label": "Lattice angle 2",
+    "min": -75,
+    "max": 75,
+    "default": 45,
+    "description": "Second strut direction (degrees, -75 to 75) of the 2dlattice sparse infill pattern; default 45. Spread relative to lattice angle 1 controls cell shape; symmetric +/-45 is typical. No effect with other patterns."
+  },
+  "sparse_infill_filament": {
+    "type": "int",
+    "vector": false,
+    "label": "Sparse infill filament",
+    "min": 0,
+    "default": 0,
+    "description": "1-based filament index for sparse infill; 0 = object's default. Interior is hidden, so a cheap filament works on multi-filament machines, but per-layer filament changes cost purge material and time."
+  },
+  "sparse_infill_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Sparse infill",
+    "min": 0,
+    "default": 0.4,
+    "description": "Extrusion width (mm) of sparse infill lines. Wider = fewer, thicker, stronger lines at the same density and steadier flow; narrower = finer lattice. Typically nozzle diameter up to ~125% of it; 0.4-0.45 for a 0.4 nozzle."
+  },
+  "infill_wall_overlap": {
+    "type": "percent",
+    "vector": false,
+    "label": "Infill/Wall overlap",
+    "default": 15,
+    "description": "Overlap of sparse infill into the innermost wall, as % of infill line width. More overlap bonds infill to walls, raising strength; excess causes over-extrusion that can show through outer walls. 10-25% typical."
+  },
+  "sparse_infill_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Sparse infill",
+    "nullable": true,
+    "min": 0,
+    "default": 100,
+    "description": "Print speed (mm/s) for sparse infill. Interior is invisible, so usually the fastest feature; real limit is the filament's volumetric flow. Lower if infill lines break, rattle, or bond poorly to walls. Default 100."
+  },
+  "inherits": {
+    "type": "string",
+    "vector": false,
+    "label": "Inherits profile",
+    "description": "Name of the parent system preset this profile derives from. Profile stores only keys that differ; unset keys follow the parent, including after parent updates. Empty means a standalone full profile."
+  },
+  "interface_shells": {
+    "type": "bool",
+    "vector": false,
+    "label": "Interface shells",
+    "default": false,
+    "description": "Forces separate, non-merged shells where different filaments touch in multi-material prints. Improves separation of soluble or breakaway interfaces and keeps translucent materials clean; adds walls, time, and material. Off for ordinary prints."
+  },
+  "mmu_segmented_region_max_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Maximum width of a segmented region",
+    "min": 0,
+    "default": 0,
+    "description": "Caps the width (mm) of a single color-segmentation zone per layer in multi-material painting; wider painted areas split so color boundaries stay geometrically bounded. 0 disables the cap."
+  },
+  "mmu_segmented_region_interlocking_depth": {
+    "type": "float",
+    "vector": false,
+    "label": "Interlocking depth of a segmented region",
+    "min": 0,
+    "default": 0,
+    "description": "Depth, in mm, that painted/segmented multi-material regions interleave into each other at their boundary, keying poorly bonding filament pairs together. 0 disables. Deepening strengthens the join but blurs the color boundary inside the part."
+  },
+  "interlocking_beam": {
+    "type": "bool",
+    "vector": false,
+    "label": "Use beam interlocking",
+    "default": false,
+    "description": "Generates an interlocking beam structure at boundaries between filaments in multi-material prints, mechanically keying materials that bond poorly (e.g. PLA/PETG). Adds slicing time; beam geometry set by the other interlocking_* keys. Off by default."
+  },
+  "interlocking_beam_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Interlocking beam width",
+    "min": 0.01,
+    "default": 0.8,
+    "description": "Width of each interlocking beam, in mm. Wider beams key materials more strongly but coarsen the boundary zone; narrower beams may be too weak to grip. Only used with interlocking_beam enabled. Typical about 2x line width, e.g. 0.8."
+  },
+  "interlocking_orientation": {
+    "type": "float",
+    "vector": false,
+    "label": "Interlocking direction",
+    "min": 0,
+    "max": 360,
+    "default": 22.5,
+    "description": "Rotation angle of the interlocking beam structure in the XY plane, in degrees (0-360). Change to avoid beams aligning with model walls or filament boundaries, which weakens the interlock. Only used with interlocking_beam. Default 22.5."
+  },
+  "interlocking_beam_layer_count": {
+    "type": "int",
+    "vector": false,
+    "label": "Interlocking beam layers",
+    "min": 1,
+    "default": 2,
+    "description": "Layers per interlocking beam before the beam direction alternates. More layers make coarser, stronger interlocks; fewer make a finer mesh with more material switches. Only used with interlocking_beam enabled. Typical 2."
+  },
+  "interlocking_depth": {
+    "type": "int",
+    "vector": false,
+    "label": "Interlocking depth",
+    "min": 1,
+    "default": 2,
+    "description": "Distance, in beam widths, that interlocking beams from each material reach into the other. Deeper interlock grips harder but thickens the mixed boundary region. Only used with interlocking_beam enabled. Typical 2."
+  },
+  "interlocking_boundary_avoidance": {
+    "type": "int",
+    "vector": false,
+    "label": "Interlocking boundary avoidance",
+    "min": 0,
+    "default": 2,
+    "description": "Distance from the model's outer surface, in beam widths, kept free of interlocking structure so beams never show through walls. Larger values hide the structure better but shrink the interlocked zone. Only used with interlocking_beam. Typical 2."
+  },
+  "ironing_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Ironing Type",
+    "enum": [
+      "no ironing",
+      "top",
+      "topmost",
+      "solid"
+    ],
+    "default": "IroningType::NoIroning",
+    "description": "Where the hot nozzle re-traverses surfaces to melt them smooth. no ironing: off; top: all upward-facing surfaces; topmost: only each object's highest surface, saving time; solid: every solid layer, mainly to strengthen layer bonding. Adds significant print time."
+  },
+  "ironing_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Ironing Pattern",
+    "enum": [
+      "concentric",
+      "zig-zag"
+    ],
+    "default": "ipRectilinear",
+    "description": "Toolpath pattern for ironing passes. zig-zag: parallel back-and-forth lines, fast, standard choice; concentric: follows the surface outline inward, suits round tops and avoids directional sheen. Only used when ironing is enabled."
+  },
+  "ironing_flow": {
+    "type": "percent",
+    "vector": false,
+    "label": "Ironing flow",
+    "min": 0,
+    "max": 100,
+    "default": 10,
+    "description": "Extrusion flow during ironing passes, as percent of a normal layer's flow. The small trickle fills scars between top lines; too high piles up ridges and nozzle drag marks, too low leaves lines unsmoothed. Typical 8-15%."
+  },
+  "ironing_spacing": {
+    "type": "float",
+    "vector": false,
+    "label": "Ironing line spacing",
+    "min": 0,
+    "max": 1,
+    "default": 0.1,
+    "description": "Spacing between adjacent ironing passes, in mm. Tighter spacing smooths more thoroughly at heavy time cost; wider leaves faint ridges. Typical 0.1-0.2; well below line width so passes overlap."
+  },
+  "ironing_inset": {
+    "type": "float",
+    "vector": false,
+    "label": "Ironing inset",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Distance, in mm, that ironing stays away from the edge of the top surface. Larger inset avoids nozzle rubbing on perimeters and edge blobs but leaves an unironed border. 0 irons up to the wall. Typical 0-0.5."
+  },
+  "ironing_speed": {
+    "type": "float",
+    "vector": false,
+    "label": "Ironing speed",
+    "min": 0,
+    "default": 20,
+    "description": "Speed of ironing passes, in mm/s. Slower gives the nozzle time to reflow and flatten the surface; faster saves time but smooths less and can skip. Typical 15-30."
+  },
+  "ironing_direction": {
+    "type": "float",
+    "vector": false,
+    "label": "ironing direction",
+    "min": 0,
+    "max": 360,
+    "default": 45,
+    "description": "Angle of ironing passes in the XY plane, in degrees (0-360). Rotating relative to top infill direction can hide line artifacts; align with the surface's long axis for fewer turnarounds. Only used when ironing_type enables ironing. Default 45."
+  },
+  "max_volumetric_extrusion_rate_slope_positive": {
+    "type": "float",
+    "vector": false,
+    "label": "Max volumetric slope positive",
+    "min": 0,
+    "default": 0,
+    "description": "Limits how fast volumetric flow may increase, in mm³/s². Ramps speed up gradually so nozzle pressure can build, reducing underextrusion after slow sections. 0 disables. Rarely needed on printers with pressure advance."
+  },
+  "max_volumetric_extrusion_rate_slope_negative": {
+    "type": "float",
+    "vector": false,
+    "label": "Max volumetric slope negative",
+    "min": 0,
+    "default": 0,
+    "description": "Limits how fast volumetric flow may decrease, in mm³/s². Smooths abrupt speed drops so pressure in the nozzle bleeds off gradually, reducing blobs at decelerations. 0 disables. Rarely needed on printers with pressure advance."
+  },
+  "reduce_infill_retraction_mode": {
+    "type": "enum",
+    "vector": false,
+    "label": "Reduce infill retraction",
+    "enum": [
+      "Disabled",
+      "Auto",
+      "Enabled"
+    ],
+    "default": "rirAuto",
+    "description": "Retraction policy for travels inside sparse infill, where ooze stays hidden. Disabled: always retract. Enabled: skip retraction there — faster, less extruder wear, minor internal blobbing. Auto: slicer decides. Saves time on infill-heavy prints."
+  },
+  "ooze_prevention": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable",
+    "default": false,
+    "description": "For multi-extruder printers: drops the idle extruder to a standby temperature so it oozes less while parked. Reduces blobs and color contamination; adds heat-up wait at each toolchange. Irrelevant on single-extruder machines."
+  },
+  "filename_format": {
+    "type": "string",
+    "vector": false,
+    "label": "Filename format",
+    "default": "[input_filename_base].gcode",
+    "description": "Template for exported G-code/3MF filenames. Placeholders in brackets expand at export, e.g. [input_filename_base], plus profile and print-stat variables. No print effect; adjust for organized output naming."
+  },
+  "detect_overhang_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Detect overhang wall",
+    "default": true,
+    "description": "Classifies wall segments by overhang degree so degree-tiered overhang speeds can apply. Prerequisite for enable_overhang_speed to act. Better overhang surfaces at some speed cost; keep on."
+  },
+  "smooth_speed_discontinuity_area": {
+    "type": "bool",
+    "vector": false,
+    "label": "Smooth speed discontinuity area",
+    "default": true,
+    "description": "Ramps outer-wall speed gradually where print speed would jump (e.g. entering overhang slowdown) instead of switching abruptly. Reduces gloss banding on curved surfaces; adds print time. No effect in spiral mode. Length set by smooth_coefficient."
+  },
+  "smooth_coefficient": {
+    "type": "float",
+    "vector": false,
+    "label": "Smooth coefficient",
+    "min": 0,
+    "default": 80,
+    "description": "Transition-length control for smooth_speed_discontinuity_area. Lower value = longer, gentler speed ramps between wall regions, less banding on curved/overhang surfaces; higher = shorter, more abrupt transitions. Useful range ~1-200; default 80."
+  },
+  "wall_filament": {
+    "type": "int",
+    "vector": false,
+    "label": "Walls",
+    "min": 0,
+    "default": 0,
+    "description": "Filament/extruder index used to print inner and outer walls in multi-material setups. 0 = follow the object's default filament. Match to infill_filament when hiding color changes matters."
+  },
+  "inner_wall_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Inner wall",
+    "min": 0,
+    "default": 0.4,
+    "description": "Line width for inner walls, in mm. Wider walls add strength and reduce wall count needed for a given thickness; narrower improves dimensional fit of thin features. Commonly equal to or slightly above nozzle diameter, e.g. 0.4-0.45 for 0.4 nozzle."
+  },
+  "inner_wall_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Inner wall",
+    "nullable": true,
+    "min": 0,
+    "default": 60,
+    "description": "Print speed for inner walls, in mm/s. Can exceed outer wall speed since surface finish is hidden; excessive values weaken wall bonding. Per-extruder vector; nil entries fall back to defaults. Typical 1.5-2x outer wall speed."
+  },
+  "wall_loops": {
+    "type": "int",
+    "vector": false,
+    "label": "Wall loops",
+    "min": 0,
+    "max": 1000,
+    "default": 2,
+    "description": "Number of perimeter loops per layer. More loops = stronger, more watertight, slower, more material; strength gains beat raising infill density. 2 default; 3-4 for functional parts; combine with detect_thin_wall or Arachne for narrow features."
+  },
+  "embedding_wall_into_infill": {
+    "type": "bool",
+    "vector": false,
+    "label": "Embedding the wall into the infill",
+    "default": false,
+    "description": "In spots where a wall loop cannot fit, sinks the wall into the adjacent infill region so shell and infill join without a gap. Improves bonding and strength in thin cross-sections. Default off."
+  },
+  "post_process": {
+    "type": "string",
+    "vector": true,
+    "label": "Post-processing Scripts",
+    "description": "Shell commands run on the generated G-code after slicing, each receiving the G-code file path as final argument; scripts may modify the file in place. One command per entry; runs on the host machine at export time."
+  },
+  "raft_contact_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Raft contact Z distance",
+    "min": 0,
+    "default": 0.1,
+    "description": "Z gap between raft top and the object's first layer. Larger = easier raft removal but rougher object bottom; 0 fuses raft to part. ~0.1 mm typical for PLA; only relevant when raft_layers > 0."
+  },
+  "raft_expansion": {
+    "type": "float",
+    "vector": false,
+    "label": "Raft expansion",
+    "min": 0,
+    "default": 1.5,
+    "description": "Horizontal distance the raft extends beyond the object footprint (mm). More = larger adhesion area and stability against warping, at extra material and bed area. Default 1.5 mm."
+  },
+  "raft_first_layer_density": {
+    "type": "percent",
+    "vector": false,
+    "label": "Initial layer density",
+    "min": 10,
+    "max": 100,
+    "default": 90,
+    "description": "Fill density of the raft's first (bed-contact) layer. Higher = stronger bed grip and stiffer base; lower = less material, faster. 90% typical; drop only if raft is hard to remove from the bed."
+  },
+  "raft_first_layer_expansion": {
+    "type": "float",
+    "vector": false,
+    "label": "Initial layer expansion",
+    "min": -1,
+    "default": -1,
+    "description": "Extra horizontal expansion applied only to the raft's first layer beyond the raft outline (mm), enlarging bed contact against warping. -1 = auto (slicer-chosen). More = better adhesion, more material and bed area."
+  },
+  "raft_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Raft layers",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Number of raft layers under the object; 0 disables. Raft decouples part from bed — helps adhesion for warping materials and uneven beds, at cost of time, material, and bottom finish. Pair with raft_contact_distance for removability."
+  },
+  "resolution": {
+    "type": "float",
+    "vector": false,
+    "label": "Resolution",
+    "min": 0,
+    "default": 0.01,
+    "description": "Path simplification tolerance in mm; geometry deviations below it are merged. Lower = more faithful curves but larger G-code and possible motion-planner stutter; higher = smaller files, visible faceting. 0.01 mm default rarely needs changing."
+  },
+  "print_extruder_id": {
+    "type": "int",
+    "vector": true,
+    "default": 1,
+    "description": "Internal mapping of the print/process to a physical extruder (1-based), one entry per assignment. Managed by the slicer and object settings on multi-extruder machines; not normally hand-edited."
+  },
+  "print_extruder_variant": {
+    "type": "string",
+    "vector": true,
+    "default": "Direct Drive Standard",
+    "description": "Extruder/hotend variant tag the process profile targets, per extruder (e.g. 'Direct Drive Standard'). Selects which entry of variant-indexed vector settings applies. Profile-compatibility metadata; normally left as inherited, not hand-edited."
+  },
+  "seam_position": {
+    "type": "enum",
+    "vector": false,
+    "label": "Seam position",
+    "enum": [
+      "nearest",
+      "aligned",
+      "back",
+      "random"
+    ],
+    "default": "spAligned",
+    "description": "Perimeter seam placement. nearest: closest point to previous loop — fastest. aligned: seams stacked into one vertical line — easy to hide or sand. back: at the model's rear (Y max). random: scattered per layer — no seam line, pinpricks all over."
+  },
+  "seam_placement_away_from_overhangs": {
+    "type": "bool",
+    "vector": false,
+    "label": "Seam placement away from overhangs(experimental)",
+    "default": false,
+    "description": "Shifts seams off overhang regions, where seam blobs curl and worsen surface defects. Experimental; can override the preferred seam position locally, making the seam line less consistent. Enable on overhang-heavy visual parts."
+  },
+  "seam_gap": {
+    "type": "percent",
+    "vector": false,
+    "label": "Seam gap",
+    "min": 0,
+    "default": 15,
+    "description": "Gap left at the end of a perimeter loop before the seam, as % of nozzle diameter. Larger = smaller seam blob but possible visible gap/weak spot; smaller = tighter joint, more bulge. 15% typical; reduce for dimension-critical or watertight parts."
+  },
+  "seam_slope_conditional": {
+    "type": "bool",
+    "vector": false,
+    "label": "Smart scarf seam application",
+    "default": true,
+    "description": "Applies scarf seams only on smooth contours where a normal seam would show; sharp corners keep a regular seam that hides in the corner. Uses scarf_angle_threshold as the smoothness cutoff. Saves time versus scarfing everything."
+  },
+  "scarf_angle_threshold": {
+    "type": "int",
+    "vector": false,
+    "label": "Scarf application angle threshold",
+    "min": 0,
+    "max": 180,
+    "default": 155,
+    "description": "Corner angle (deg) above which a contour counts as smooth for smart scarf application. Scarf applied only on smoother contours; sharper corners keep a normal seam hidden in the corner. Lower = scarf used more often. Default 155."
+  },
+  "seam_slope_entire_loop": {
+    "type": "bool",
+    "vector": false,
+    "label": "Scarf around entire wall",
+    "default": false,
+    "description": "Extends the scarf ramp around the entire perimeter loop instead of a short segment. Maximum seam concealment on round/organic shapes; adds print time and can soften Z dimensional crispness. Leave off for typical parts."
+  },
+  "seam_slope_steps": {
+    "type": "int",
+    "vector": false,
+    "label": "Scarf steps",
+    "min": 1,
+    "default": 10,
+    "description": "Number of discrete height steps in the scarf ramp. More steps = smoother slope and better seam blending, more G-code segments. Default 10; raising past ~10 gives diminishing returns."
+  },
+  "seam_slope_inner_walls": {
+    "type": "bool",
+    "vector": false,
+    "label": "Scarf joint for inner walls",
+    "default": true,
+    "description": "Applies scarf joints to inner walls as well as outer. Improves inter-wall consistency and can help strength/watertightness at seams; adds print time. Cosmetic-only goals need only external scarfs."
+  },
+  "override_filament_scarf_seam_setting": {
+    "type": "bool",
+    "vector": false,
+    "label": "Override filament scarf seam setting",
+    "default": false,
+    "description": "Lets the process profile's scarf seam parameters replace those stored in the filament profile. Enable when tuning scarf seams per print regardless of filament defaults; off, filament-level scarf settings win."
+  },
+  "seam_slope_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Scarf seam type",
+    "enum": [
+      "none",
+      "external",
+      "all"
+    ],
+    "default": "SeamScarfType::None",
+    "description": "Enables scarf joint seams: loop start/end ramp in Z so the seam overlaps gradually instead of butting. none: regular seams. external: outer walls only — hides visible seams. all: outer and inner walls. Costs time; tuned via seam_slope_* settings."
+  },
+  "seam_slope_min_length": {
+    "type": "float",
+    "vector": false,
+    "label": "Scarf length",
+    "min": 0,
+    "default": 10,
+    "description": "Length (mm) of the scarf seam ramp along the perimeter. Longer spreads the seam transition over more distance — less visible seam, slightly longer print. Default 10 mm; shorter on small perimeters where 10 mm would wrap too far."
+  },
+  "wipe_speed": {
+    "type": "percent",
+    "vector": false,
+    "label": "Wipe speed",
+    "min": 0.01,
+    "default": 80,
+    "description": "Speed of the nozzle wipe move during retraction, as % of travel speed (or absolute mm/s). Higher wipes faster with less ooze time but can smear; lower is gentler on soft surfaces. Only relevant with wipe enabled. Default 80%."
+  },
+  "role_base_wipe_speed": {
+    "type": "bool",
+    "vector": false,
+    "label": "Role-based wipe speed",
+    "default": true,
+    "description": "Wipe move runs at the speed of the extrusion role it follows (outer wall wipe at outer-wall speed, etc.). Disable to control wipe speed independently via the wipe speed setting. Enabled default gives consistent seam wiping across features."
+  },
+  "skirt_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Skirt distance",
+    "min": 0,
+    "max": 55,
+    "default": 2,
+    "description": "Gap (mm) between the skirt and the object outline. Larger keeps skirt clear of brims and easy to remove; smaller acts closer to a draft shield. Default 2 mm."
+  },
+  "skirt_height": {
+    "type": "int",
+    "vector": false,
+    "label": "Skirt height",
+    "max": 10000,
+    "default": 1,
+    "description": "Skirt height in layers. 1 = normal priming skirt. Many layers builds a wall that blocks drafts around the part (draft-shield effect) — helps warp-prone materials without enclosure, costs material and time."
+  },
+  "draft_shield": {
+    "type": "enum",
+    "vector": false,
+    "label": "Draft shield",
+    "enum": [
+      "disabled",
+      "limited",
+      "enabled"
+    ],
+    "default": "dsDisabled",
+    "description": "Prints a wall around the model to block drafts and trap heat, reducing warping of high-shrinkage materials. disabled: none; limited: shield only up to skirt height; enabled: full object height. Costs material, time, and plate area."
+  },
+  "skirt_loops": {
+    "type": "int",
+    "vector": false,
+    "label": "Skirt loops",
+    "min": 0,
+    "max": 10,
+    "default": 1,
+    "description": "Number of skirt loops around the print. Primes the nozzle to steady flow and previews bed adhesion/leveling before the part starts. 0 disables; 1-3 typical; more loops for small parts needing extra priming."
+  },
+  "minimum_sparse_infill_area": {
+    "type": "float",
+    "vector": false,
+    "label": "Minimum sparse infill threshold",
+    "min": 0,
+    "default": 15,
+    "description": "Infill regions smaller than this area, in mm², are filled solid instead of sparse. Solid fill in small pockets is stronger and often faster than fiddly sparse paths; raising uses more material. Default 15."
+  },
+  "solid_infill_filament": {
+    "type": "int",
+    "vector": false,
+    "label": "Solid infill",
+    "min": 0,
+    "default": 0,
+    "description": "1-based filament index used for internal solid infill; 0 = object's default filament. Only relevant on multi-filament setups; choosing a filament different from walls adds filament changes and purge waste every layer."
+  },
+  "internal_solid_infill_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Internal solid infill",
+    "min": 0,
+    "default": 0.4,
+    "description": "Line width for internal solid infill (solid layers below top/above bottom surfaces), in mm. Wider fills faster and bonds shells better; narrower reduces overextrusion artifacts pushing into top surfaces. Typically equal to nozzle diameter or slightly above."
+  },
+  "internal_solid_infill_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Internal solid infill",
+    "nullable": true,
+    "min": 0,
+    "default": 100,
+    "description": "Print speed for internal solid infill, in mm/s. Hidden surfaces tolerate high speeds; too fast causes underextrusion gaps that weaken solid shells. Per-extruder vector; nil entries fall back to defaults. Usually near or above sparse infill speed; default 100."
+  },
+  "spiral_mode": {
+    "type": "bool",
+    "vector": false,
+    "label": "Spiral vase",
+    "default": false,
+    "description": "Vase mode: prints the outline as one continuous single wall while Z rises steadily — no layer seam. Forces 1 wall, 0 top layers, no infill or support above the solid bottom layers. Only for single non-overlapping vase-like solids."
+  },
+  "spiral_mode_smooth": {
+    "type": "bool",
+    "vector": false,
+    "label": "Smooth Spiral",
+    "default": false,
+    "description": "In spiral mode, additionally blends XY and Z over the loop start to erase the residual transition scar where the spiral begins, giving a fully seamless wall. Slight dimensional accuracy cost. Only active with spiral_mode."
+  },
+  "timelapse_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Timelapse",
+    "enum": [
+      "0",
+      "1"
+    ],
+    "default": "tlTraditional",
+    "description": "Timelapse capture mode. 0 (traditional): photos during normal printing, no extra moves, toolhead may appear in frame; 1 (smooth): toolhead parks each layer before the photo, clean frames, adds time, needs a prime tower for the extra extrusion."
+  },
+  "standby_temperature_delta": {
+    "type": "int",
+    "vector": false,
+    "label": "Temperature variation",
+    "default": -5,
+    "description": "Temperature offset (degC) applied to a filament's nozzle while it is inactive during multi-filament printing. Negative cools the idle extruder to cut oozing and stringing; larger drops add reheat wait on each swap back. Default -5."
+  },
+  "wipe_tower_no_sparse_layers": {
+    "type": "bool",
+    "vector": false,
+    "label": "No sparse layers (EXPERIMENTAL)",
+    "default": false,
+    "description": "Experimental. Skips printing prime tower layers that contain no tool change; the tower resumes at the next change instead of adding sparse filler layers. Saves material and time; can destabilize tall towers and confuse Z alignment. Default off."
+  },
+  "slice_closing_radius": {
+    "type": "float",
+    "vector": false,
+    "label": "Slice gap closing radius",
+    "min": 0,
+    "default": 0.049,
+    "description": "Radius (mm) used to close cracks and pinholes in the mesh during slicing. Larger fixes leakier, non-manifold models but can seal intentional gaps and erase details smaller than the radius. Default 0.049 mm; raise only for broken meshes."
+  },
+  "slicing_mode": {
+    "type": "enum",
+    "vector": false,
+    "label": "Slicing Mode",
+    "enum": [
+      "regular",
+      "even_odd",
+      "close_holes"
+    ],
+    "default": "SlicingMode::Regular",
+    "description": "Mesh interpretation. regular: inside/outside from face orientation. even_odd: even-odd fill rule — overlapping shells alternate solid/hollow (e.g. 3DLabPrint planes). close_holes: fills all enclosed cavities solid."
+  },
+  "enable_support": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable support",
+    "default": false,
+    "description": "Master switch for support generation. Style (normal/tree), threshold angle, and interface behavior come from the other support keys. Enables overhangs beyond self-supporting angle; costs material, time, and supported-surface finish."
+  },
+  "support_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Type",
+    "enum": [
+      "normal(auto)",
+      "tree(auto)",
+      "normal(manual)",
+      "tree(manual)"
+    ],
+    "default": "stNormalAuto",
+    "description": "Support generation mode. normal(auto): pillar supports wherever support_threshold_angle triggers; tree(auto): branching supports, less material and contact, suits organic shapes; normal(manual) / tree(manual): only where enforcers are painted or placed."
+  },
+  "support_object_xy_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Support/object xy distance",
+    "min": 0,
+    "max": 10,
+    "default": 0.35,
+    "description": "Horizontal clearance (mm) between support walls and the object. Larger = easier removal, cleaner walls, weaker overhang edges; smaller = better support, more scarring. 0.35 mm typical; top_z_overrides_xy_distance can shrink it on slopes."
+  },
+  "support_object_first_layer_gap": {
+    "type": "float",
+    "vector": false,
+    "label": "Support/object first layer gap",
+    "min": 0,
+    "max": 10,
+    "default": 0.2,
+    "description": "Horizontal gap (mm) between support and object on the first layer only. Prevents support fusing to the part where both squish into the bed. Raise if first-layer supports weld to the model; 0.2 mm typical."
+  },
+  "support_angle": {
+    "type": "float",
+    "vector": false,
+    "label": "Pattern angle",
+    "min": 0,
+    "max": 359,
+    "default": 0,
+    "description": "XY rotation (degrees, 0-359) of the support base pattern lines. Orient lines across the supported edge for sturdier support, or along the intended breakaway direction for easier removal. Default 0."
+  },
+  "support_on_build_plate_only": {
+    "type": "bool",
+    "vector": false,
+    "label": "On build plate only",
+    "default": false,
+    "description": "Restricts support generation to structures rooted on the build plate; no supports standing on model surfaces. Avoids scars on the part but leaves internal or stacked overhangs unsupported. Useful with tree supports around organic shapes."
+  },
+  "support_critical_regions_only": {
+    "type": "bool",
+    "vector": false,
+    "label": "Support critical regions only",
+    "default": false,
+    "description": "Limits automatic supports to critical regions — slender overhang islands and cantilevers that would otherwise fail — skipping ordinary shallow overhangs. Saves material/time and cleanup; unsupported overhangs may droop slightly."
+  },
+  "support_remove_small_overhang": {
+    "type": "bool",
+    "vector": false,
+    "label": "Remove small overhangs",
+    "default": true,
+    "description": "Skips support for tiny overhang patches that print acceptably unsupported. Saves material and removal work; disable when every small overhang matters (e.g., mechanical faces, small horizontal holes needing support)."
+  },
+  "support_top_z_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Top Z distance",
+    "min": 0,
+    "default": 0.2,
+    "description": "Vertical gap (mm) between support interface and object underside. Larger = easier removal, rougher overhang bottom; smaller = smoother underside, fusing risk. Usually one layer height (0.2 mm); 0 for soluble interface filament."
+  },
+  "support_bottom_z_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Bottom Z distance",
+    "default": 0.2,
+    "description": "Vertical gap (mm) between a model top surface and support standing on it. Larger = easier removal, rougher contact patch on that surface; smaller = firmer stance, harder release. Usually ~1 layer height; default 0.2."
+  },
+  "enforce_support_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Enforce support for the first",
+    "min": 0,
+    "max": 5000,
+    "default": 0,
+    "description": "Forces support generation on the first N layers regardless of overhang angle, even with enable_support off. Rescue for parts with tiny bed contact or slight base overhangs. 0 disables; small values (2-5) typical."
+  },
+  "support_filament": {
+    "type": "int",
+    "vector": false,
+    "label": "Support/raft base",
+    "min": 0,
+    "default": 0,
+    "description": "1-based filament index for support body and raft; 0 = current/default filament. Use a cheap filament here; reserve dedicated support material for interface layers via support_interface_filament with support_interface_not_for_body on."
+  },
+  "support_interface_not_for_body": {
+    "type": "bool",
+    "vector": false,
+    "label": "Avoid interface filament for base",
+    "default": true,
+    "description": "Keeps the interface filament out of the support body: base prints with support_filament, only interface layers use the dedicated material. Saves expensive soluble/support filament. Disable to print whole supports with interface filament. Default on."
+  },
+  "support_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Support",
+    "min": 0,
+    "default": 0.4,
+    "description": "Extrusion width (mm) for support structures. Wider = stronger supports, harder removal; narrower = easier removal, less material, weaker towers. Near or slightly below nozzle diameter; 0 falls back to default line width."
+  },
+  "support_interface_loop_pattern": {
+    "type": "bool",
+    "vector": false,
+    "label": "Interface use loop pattern",
+    "default": false,
+    "description": "Prints the topmost support interface layer as concentric loops instead of straight lines. Loops can follow curved contact outlines more continuously; straight lines (off, default) usually peel away more easily."
+  },
+  "support_interface_filament": {
+    "type": "int",
+    "vector": false,
+    "label": "Support/raft interface",
+    "min": 0,
+    "default": 0,
+    "description": "1-based filament index for support interface layers; 0 = default. Dedicated support material (PVA, Support for PLA) permits zero top Z distance and near-perfect undersides; with normal filament, release relies on the Z gap."
+  },
+  "support_interface_top_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Top interface layers",
+    "min": 0,
+    "default": 3,
+    "description": "Count of dense interface layers between support and the overhanging model surface. More layers = smoother underside but harder removal; 0 disables the interface entirely (rough surface, easy removal). Typical 2-3; default 3."
+  },
+  "support_interface_bottom_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Bottom interface layers",
+    "min": -1,
+    "default": 0,
+    "description": "Count of dense interface layers where support stands on the model. 0 = none (default), -1 = same as top interface count. Add 1-2 to protect the model's upward surfaces under supports, at some removal difficulty."
+  },
+  "support_interface_spacing": {
+    "type": "float",
+    "vector": false,
+    "label": "Top interface spacing",
+    "min": 0,
+    "default": 0.5,
+    "description": "Line spacing (mm) of top interface layers. 0 = solid interface, smoothest supported underside; wider spacing saves material and eases removal at surface-quality cost. Default 0.5."
+  },
+  "enable_support_ironing": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable ironing support interface",
+    "default": false,
+    "description": "Irons the top of support interface layers so the model surface resting on supports comes out flatter and smoother. Adds print time; only matters where supports contact visible undersides. Default off."
+  },
+  "support_ironing_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Support ironing pattern",
+    "enum": [
+      "concentric",
+      "zig-zag"
+    ],
+    "default": "ipRectilinear",
+    "description": "Toolpath pattern for ironing passes over support tops. concentric: follows region outline inward, good for curved areas; zig-zag: parallel back-and-forth lines, faster and fine for flat pads. Only active when ironing is applied to supports."
+  },
+  "support_ironing_flow": {
+    "type": "percent",
+    "vector": false,
+    "label": "Support ironing flow",
+    "min": 0,
+    "max": 100,
+    "default": 10,
+    "description": "Extrusion flow during support ironing, percent of a normal layer. Just enough to fill grooves in the top interface and flatten the platform the model prints on; too high builds ridges instead of polish. Default 10."
+  },
+  "support_ironing_spacing": {
+    "type": "float",
+    "vector": false,
+    "label": "Support ironing line spacing",
+    "min": 0,
+    "max": 1,
+    "default": 0.1,
+    "description": "Line spacing (mm) between ironing passes on support top surfaces. Smaller = smoother, flatter support interface and better overhang undersides, but longer print time. Typical 0.1 mm; rarely above 0.2."
+  },
+  "support_ironing_inset": {
+    "type": "float",
+    "vector": false,
+    "label": "Support ironing inset",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Margin (mm) kept from the interface edges during support ironing passes. Larger inset avoids dragging material over edges (blob risk) but leaves an unpolished rim near the boundary. Default 0."
+  },
+  "support_ironing_speed": {
+    "type": "float",
+    "vector": false,
+    "label": "Support ironing speed",
+    "min": 0,
+    "default": 20,
+    "description": "Speed (mm/s) of ironing passes over support tops. Slower gives the nozzle more time to flatten plastic for a smoother interface; faster saves time but irons less effectively. Typical 15-30 mm/s."
+  },
+  "support_ironing_direction": {
+    "type": "float",
+    "vector": false,
+    "label": "Support ironing direction",
+    "min": 0,
+    "max": 360,
+    "default": 0,
+    "description": "Angle (degrees, 0-360) of ironing passes over the top support interface when support ironing is enabled. Set relative to the interface line direction to control the polished texture the model prints onto. Default 0."
+  },
+  "support_bottom_interface_spacing": {
+    "type": "float",
+    "vector": false,
+    "label": "Bottom interface spacing",
+    "min": 0,
+    "default": 0.5,
+    "description": "Line spacing (mm) of bottom interface layers, where support stands on the model. 0 = solid interface. Wider spacing eases separating support from the model's upward-facing surfaces beneath it. Default 0.5."
+  },
+  "support_interface_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Support interface",
+    "nullable": true,
+    "min": 1,
+    "default": 80,
+    "description": "Print speed (mm/s) for support interface layers. Slower than the support body gives denser, more precise interfaces and smoother supported surfaces. Default 80."
+  },
+  "support_base_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Base pattern",
+    "enum": [
+      "default",
+      "rectilinear",
+      "rectilinear-grid",
+      "honeycomb",
+      "lightning",
+      "hollow"
+    ],
+    "default": "smpDefault",
+    "description": "Fill pattern of the normal-support body. default: slicer picks per support style; rectilinear: parallel lines, easy removal; rectilinear-grid: crossing lines, stronger, harder to remove; honeycomb: strong, more material; lightning: sparse branching, fastest and leanest; hollow: perimeter only, no fill."
+  },
+  "support_interface_pattern": {
+    "type": "enum",
+    "vector": false,
+    "label": "Interface pattern",
+    "enum": [
+      "auto",
+      "rectilinear",
+      "concentric",
+      "rectilinear_interlaced",
+      "grid"
+    ],
+    "default": "smipAuto",
+    "description": "Pattern of support interface layers. auto: slicer chooses per support type; rectilinear: parallel lines; concentric: loops following the contact outline; rectilinear_interlaced: line phase alternates between layers for denser coverage; grid: crossing lines, stronger but harder to remove."
+  },
+  "support_base_pattern_spacing": {
+    "type": "float",
+    "vector": false,
+    "label": "Base pattern spacing",
+    "min": 0,
+    "default": 2.5,
+    "description": "Line spacing (mm) of the support base pattern. Smaller = denser, sturdier support and better backing for interface layers, but more material/time and harder removal; 0 = solid. Default 2.5."
+  },
+  "support_expansion": {
+    "type": "float",
+    "vector": false,
+    "label": "Normal Support expansion",
+    "default": 0,
+    "description": "Horizontal offset (mm) applied to normal support outlines. Positive merges nearby regions and widens footprints for stability; negative shrinks contact away from adjacent walls to protect surfaces and ease removal. Default 0."
+  },
+  "support_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Support",
+    "nullable": true,
+    "min": 0,
+    "default": 80,
+    "description": "Print speed (mm/s) for support bodies. Supports tolerate high speed since surface quality is irrelevant; raising cuts print time. Keep interface layers governed by their own speed. Typical 80-150 mm/s depending on machine."
+  },
+  "support_style": {
+    "type": "enum",
+    "vector": false,
+    "label": "Style",
+    "enum": [
+      "default",
+      "grid",
+      "snug",
+      "tree_slim",
+      "tree_strong",
+      "tree_hybrid",
+      "tree_organic"
+    ],
+    "default": "smsDefault",
+    "description": "Structure style. Normal supports: default = slicer picks; grid = rectilinear lattice, sturdy, harder removal; snug = hugs model outline, less material. Tree: tree_slim = thin branches, minimal contact; tree_strong = thick stable branches; tree_hybrid = trunks plus normal tops for flat overhangs; tree_organic = smooth curved branches."
+  },
+  "top_z_overrides_xy_distance": {
+    "type": "bool",
+    "vector": false,
+    "label": "Z overrides X/Y",
+    "default": false,
+    "description": "Where support Z and XY distances conflict on sloped faces, honors top Z distance and lets the horizontal gap shrink below support_object_xy_distance. Better support of shallow slopes; possible side-wall scarring."
+  },
+  "independent_support_layer_height": {
+    "type": "bool",
+    "vector": false,
+    "label": "Independent support layer height",
+    "default": true,
+    "description": "Lets supports slice at their own layer heights, decoupled from object layers, enabling custom Z gaps and shorter print time. Invalid when the prime tower is enabled. Disable when interface layers must align exactly with the object."
+  },
+  "support_threshold_angle": {
+    "type": "int",
+    "vector": false,
+    "label": "Threshold angle",
+    "min": 1,
+    "max": 90,
+    "default": 30,
+    "description": "Overhang angle (deg from vertical wall) below which faces get support; larger value supports more geometry. 30 deg default; well-tuned printers often manage 45+ unsupported. Only applies to auto support types."
+  },
+  "tree_support_branch_angle": {
+    "type": "float",
+    "vector": false,
+    "label": "Branch angle",
+    "min": 0,
+    "max": 60,
+    "default": 40,
+    "description": "Maximum tilt (deg from vertical) of tree support branches. Larger lets branches reach farther and root on the plate; slanted branches are weaker and can sag or break mid-print. 40 deg default; reduce for tall thin trees."
+  },
+  "tree_support_branch_distance": {
+    "type": "float",
+    "vector": false,
+    "label": "Branch distance",
+    "min": 1,
+    "max": 10,
+    "default": 5,
+    "description": "Spacing (mm) between tree support branch contact points along supported overhangs. Lower = denser tips, better overhang surface, harder removal and more material; higher = sparser, easier removal, risk of sagging. Default 5."
+  },
+  "tree_support_branch_diameter": {
+    "type": "float",
+    "vector": false,
+    "label": "Branch diameter",
+    "min": 1,
+    "max": 10,
+    "default": 5,
+    "description": "Diameter (mm) of tree support branches at the tip region. Thicker = sturdier, carries more overhang, more material; thinner removes cleaner. 5 mm default; branches thicken toward the base per branch diameter angle."
+  },
+  "tree_support_branch_diameter_angle": {
+    "type": "float",
+    "vector": false,
+    "label": "Branch diameter angle",
+    "min": 0,
+    "max": 15,
+    "default": 5,
+    "description": "Taper angle (deg) by which tree branches widen from tip toward base. Larger angle gives fatter, more stable trunks for tall supports at higher material cost; 0 keeps branches cylindrical. 5 deg default."
+  },
+  "tree_support_wall_count": {
+    "type": "int",
+    "vector": false,
+    "label": "Support wall loops",
+    "min": -1,
+    "max": 2,
+    "default": -1,
+    "description": "Number of perimeter walls around tree support branches. -1 = auto (slicer picks per branch size); 0 = interface-less hollow branches, weakest; 1-2 = sturdier branches, slower and more material. Default -1."
+  },
+  "detect_thin_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Detect thin wall",
+    "default": false,
+    "description": "Detects walls too narrow for two line widths and prints them as a single extrusion instead of omitting them. Preserves thin features (text, fins); slower slicing, single-line walls are weaker. Default off."
+  },
+  "top_surface_line_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Top surface",
+    "min": 0,
+    "default": 0.4,
+    "description": "Extrusion width (mm) for top solid surface lines. Narrower lines pack tighter for a finer, smoother top finish; wider fills faster with a coarser texture. Often set slightly below default line width, e.g. 0.4 mm with a 0.4 nozzle."
+  },
+  "top_surface_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Top surface",
+    "nullable": true,
+    "min": 0,
+    "default": 100,
+    "description": "Print speed (mm/s) for top solid surfaces. Slower than internal solid infill gives cleaner, glossier tops with fewer gaps; the last visible layer rewards patience. 50-120 mm/s typical; nullable entries fall back to default speed."
+  },
+  "top_shell_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Top shell layers",
+    "min": 0,
+    "default": 4,
+    "description": "Solid layers closing the top of the part. More hide infill show-through and pinholes, add strength and time; fewer save material. The stricter of this and top_shell_thickness wins. 4-5 layers typical at 0.2 mm."
+  },
+  "top_shell_thickness": {
+    "type": "float",
+    "vector": false,
+    "label": "Top shell thickness",
+    "min": 0,
+    "default": 0.6,
+    "description": "Minimum top solid thickness (mm). Slicer adds top layers beyond top_shell_layers until this thickness is met, keeping tops sound at small layer heights. 0 disables the thickness rule and only the layer count applies. 0.6-1.0 mm typical."
+  },
+  "top_color_penetration_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Top paint penetration layers",
+    "min": 1,
+    "default": 4,
+    "description": "Layers a color painted on a top surface extends downward. More layers keep color solid through sanding or translucent filament but add filament changes. Default 4; multi-color prints only."
+  },
+  "bottom_color_penetration_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Bottom paint penetration layers",
+    "min": 1,
+    "default": 3,
+    "description": "For multi-color painted models: number of layers the bottom-surface paint color extends upward into the part. More layers keep color visible after sanding or with translucent filament but raise filament change count. 3 typical."
+  },
+  "infill_instead_top_bottom_surfaces": {
+    "type": "bool",
+    "vector": false,
+    "label": "Use infill instead of top and bottom surfaces",
+    "default": false,
+    "description": "Replaces solid top and bottom shells with sparse infill, producing open/porous faces. For filters, lampshades, lightweight cores. Exterior finish and water-tightness are lost."
+  },
+  "travel_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Travel",
+    "nullable": true,
+    "min": 1,
+    "default": 120,
+    "description": "Speed (mm/s) of non-printing moves. Faster reduces print time and stringing (less ooze time over the part); limited by motion system, not quality. 120-500 mm/s depending on machine; nullable per-extruder entries fall back to default."
+  },
+  "travel_speed_z": {
+    "type": "float",
+    "vector": true,
+    "label": "Z travel",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Speed (mm/s) of pure Z-axis travel moves (layer changes, z-hop). 0 uses the machine default / normal travel logic. Lead-screw Z axes need modest values (10-20 mm/s); too fast can stall Z steppers."
+  },
+  "enable_mixed_color_sublayer": {
+    "type": "bool",
+    "vector": false,
+    "label": "Mixed color sublayer",
+    "default": false,
+    "description": "Splits layers containing mixed-color (blended) filaments into sub-layers so alternating deposits produce the color-mixing effect. Multi-color prints only; markedly more filament changes and print time. Default off."
+  },
+  "enable_prime_tower": {
+    "type": "bool",
+    "vector": false,
+    "label": "Enable",
+    "default": false,
+    "description": "Prints a purge/wipe tower to clean the nozzle and restabilize melt pressure after filament changes; prevents color bleed and blobs in multi-material prints. Costs material, time, plate space. Usually unnecessary single-filament."
+  },
+  "prime_tower_enable_framework": {
+    "type": "bool",
+    "vector": false,
+    "label": "Internal ribs",
+    "default": false,
+    "description": "Adds internal rib structure inside the prime tower. Stiffens tall towers against wobble and collapse during fast purge moves; uses extra filament. Enable for tall prints with many filament changes."
+  },
+  "enable_circle_compensation": {
+    "type": "bool",
+    "vector": false,
+    "label": "Auto circle contour-hole compensation",
+    "default": false,
+    "description": "Experimental correction of circular hole and contour diameters for shrinkage, up to the filament's diameter_limit (~50 mm). Only certain filaments supported (PLA Basic/CF, PET CF, PETG CF/HF); manual offset key biases fit tighter/looser."
+  },
+  "circle_compensation_manual_offset": {
+    "type": "float",
+    "vector": false,
+    "label": "User Customized Offset",
+    "default": 0,
+    "description": "Extra user diameter offset, mm, added on top of automatic circular hole compensation. Positive enlarges compensated holes, negative shrinks. Use after measuring printed test holes; 0 leaves the model-based compensation unchanged."
+  },
+  "apply_scarf_seam_on_circles": {
+    "type": "bool",
+    "vector": false,
+    "label": "Scarf Seam On Compensation Circles",
+    "default": true,
+    "description": "Applies scarf (gradually blended) seams on circular contours handled by circle compensation, hiding the seam bump on holes and cylinders. Disable only if scarf seams cause artifacts; requires scarf seam mode active."
+  },
+  "prime_tower_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Width",
+    "min": 2,
+    "default": 35,
+    "description": "Side length (mm) of the prime tower. Wider towers are more stable and absorb larger purge volumes per layer but consume plate space and filament. Min 2, default 35; increase for tall prints or many color changes."
+  },
+  "prime_tower_max_speed": {
+    "type": "float",
+    "vector": false,
+    "label": "Max speed",
+    "min": 10,
+    "default": 90,
+    "description": "Speed cap (mm/s) for printing the prime tower. Lower improves purge line adhesion on the tower — important for flexibles and slippery materials; higher saves time on multi-color prints. Default 90."
+  },
+  "prime_tower_lift_speed": {
+    "type": "float",
+    "vector": false,
+    "default": 90,
+    "description": "Speed (mm/s) of the Z-lift move when traveling to the prime tower. Higher shortens the hop time but needs Z-axis speed headroom; the machine's Z limit caps it. Default 90."
+  },
+  "prime_tower_lift_height": {
+    "type": "float",
+    "vector": false,
+    "default": -1,
+    "description": "Z-lift (mm) applied when the nozzle travels to the prime tower, avoiding drag across the print. -1 disables the extra lift. Raise if travels to the tower scar the part or hit curled edges."
+  },
+  "prime_tower_brim_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Brim width",
+    "min": -1,
+    "default": 3,
+    "description": "Brim width (mm) around the prime tower for bed adhesion. Larger resists knock-over on tall multi-color prints at cost of material and plate space; -1 lets the slicer choose automatically. Default 3."
+  },
+  "prime_tower_extra_rib_length": {
+    "type": "float",
+    "vector": false,
+    "label": "Extra rib length",
+    "max": 300,
+    "default": 0,
+    "description": "Extends prime tower rib walls beyond the tower body (mm) for extra footprint and stability. Longer ribs resist tipping on tall towers; consume more filament and plate space. 0 keeps ribs flush. Requires rib wall enabled."
+  },
+  "prime_tower_rib_width": {
+    "type": "float",
+    "vector": false,
+    "label": "Rib width",
+    "min": 0,
+    "max": 300,
+    "default": 8,
+    "description": "Width (mm) of the prime tower's rib walls. Wider ribs give a broader, more stable base for tall towers at cost of filament and plate space. Default 8. Only relevant with rib wall enabled."
+  },
+  "prime_tower_skip_points": {
+    "type": "bool",
+    "vector": false,
+    "label": "Skip points",
+    "default": true,
+    "description": "Omits the sharp rib tip points on the prime tower wall, trimming rib ends for cleaner, more reliable tower walls. Default on; disable only if full-length ribs are needed for maximum footprint."
+  },
+  "prime_tower_flat_ironing": {
+    "type": "bool",
+    "vector": false,
+    "default": false,
+    "description": "Applies a flattening/ironing pass on the prime tower surface so its top stays level despite uneven purge volumes. Keeps subsequent tower layers reliable; adds a little time per tower layer."
+  },
+  "prime_tower_rib_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Rib wall",
+    "default": true,
+    "description": "Builds the prime tower wall with protruding ribs instead of a plain perimeter. Ribs widen the footprint and stiffen the tower against tipping; slightly more filament and plate space. Default on; pair with rib width/extra length."
+  },
+  "prime_tower_fillet_wall": {
+    "type": "bool",
+    "vector": false,
+    "label": "Fillet wall",
+    "default": true,
+    "description": "Rounds the prime tower wall corners with fillets. Smoother corners keep tower printing stable at speed and reduce corner ringing on the tower; negligible cost. Default on."
+  },
+  "prime_tower_infill_gap": {
+    "type": "percent",
+    "vector": false,
+    "label": "Infill gap",
+    "min": 100,
+    "default": 150,
+    "description": "Gap between prime tower infill lines as percent of line width (min 100 = touching). Larger gap saves filament and speeds purging but weakens the tower; keep near default 150 for tall towers."
+  },
+  "flush_into_infill": {
+    "type": "bool",
+    "vector": false,
+    "label": "Flush into objects' infill",
+    "default": false,
+    "description": "Purges filament-change waste into sparse infill printed after the change instead of the prime tower. Cuts flush waste; mixed color hidden inside the part. Needs infill still unprinted on that layer to absorb the purge."
+  },
+  "flush_into_support": {
+    "type": "bool",
+    "vector": false,
+    "label": "Flush into objects' support",
+    "default": true,
+    "description": "Purges filament-change waste into support structures. Default on; supports are discarded, so mixed color costs nothing. Reduces prime tower size and flush volume."
+  },
+  "flush_into_objects": {
+    "type": "bool",
+    "vector": false,
+    "label": "Flush into this object",
+    "default": false,
+    "description": "Purges filament-change waste into the entire body of this object, walls included. Largest waste saving, but color contamination is visible on surfaces; only for parts where appearance is irrelevant."
+  },
+  "xy_hole_compensation": {
+    "type": "float",
+    "vector": false,
+    "label": "X-Y hole compensation",
+    "default": 0,
+    "description": "Uniform XY offset (mm) applied to holes. Positive enlarges hole diameter to counter the typical FDM hole shrinkage from corner cutting and squish; negative tightens. Independent of xy_contour_compensation. Typical values 0.05-0.2 mm for accurate bores. Default 0."
+  },
+  "xy_contour_compensation": {
+    "type": "float",
+    "vector": false,
+    "label": "X-Y contour compensation",
+    "default": 0,
+    "description": "Uniform XY offset (mm) applied to outer contours of each part. Positive grows parts, negative shrinks; use to correct measured dimensional error from extrusion squish. Holes are handled separately by xy_hole_compensation. Typical corrections within +/-0.1 mm. Default 0."
+  },
+  "wall_generator": {
+    "type": "enum",
+    "vector": false,
+    "label": "Wall generator",
+    "enum": [
+      "classic",
+      "arachne"
+    ],
+    "default": "PerimeterGeneratorType::Arachne",
+    "description": "Perimeter engine. classic: fixed-width loops, predictable flow, may leave gaps in thin features; arachne: variable-width loops that fill thin walls and gaps cleanly, fewer tiny gap-fill moves. Arachne default; classic if width variation causes artifacts."
+  },
+  "wall_transition_length": {
+    "type": "percent",
+    "vector": false,
+    "label": "Wall transition length",
+    "min": 0,
+    "default": 100,
+    "description": "Arachne only. Length (% of nozzle diameter) over which the print blends when wall count changes in narrowing features. Longer = smoother flow ramp, less blobbing at transitions; shorter = crisper but more abrupt flow change. Default 100%."
+  },
+  "wall_transition_filter_deviation": {
+    "type": "percent",
+    "vector": false,
+    "label": "Wall transitioning filter margin",
+    "min": 0,
+    "default": 25,
+    "description": "Arachne only. Allowed extrusion-width deviation (% of nozzle diameter) before switching wall count, preventing rapid toggling between counts in slowly narrowing features. Higher = fewer transitions, steadier print, more width variation. Default 25%."
+  },
+  "wall_transition_angle": {
+    "type": "float",
+    "vector": false,
+    "label": "Wall transitioning threshold angle",
+    "min": 1,
+    "max": 59,
+    "default": 10,
+    "description": "Arachne only. Geometric taper angle (deg) of a narrowing feature at which wall-count transitions stop being inserted; wedges sharper than this get no transition zone. Lower = fewer transitions, cleaner walls, possible tiny gaps in sharp tips. Default 10."
+  },
+  "wall_distribution_count": {
+    "type": "int",
+    "vector": false,
+    "label": "Wall distribution count",
+    "min": 1,
+    "default": 1,
+    "description": "Arachne only. Number of walls, counted from the innermost, over which variable extrusion width is spread. 1 keeps outer walls at uniform width for best surface finish; higher values share width changes across more loops. Default 1."
+  },
+  "min_feature_size": {
+    "type": "percent",
+    "vector": false,
+    "label": "Minimum feature size",
+    "min": 0,
+    "default": 25,
+    "description": "Smallest model feature the Arachne wall generator will print at all, as percent of nozzle diameter. Features thinner than this are dropped; those between this and min_bead_width widen to a single bead. Lower keeps more fine detail. Default 25%."
+  },
+  "min_bead_width": {
+    "type": "percent",
+    "vector": false,
+    "label": "Minimum wall width",
+    "min": 0,
+    "default": 85,
+    "description": "Narrowest wall line the Arachne wall generator will emit, as percent of nozzle diameter. Thin geometry below this prints as a single line of at least this width. Lower captures finer walls but risks underextrusion; higher skips fragile beads. Default 85%."
+  },
+  "detect_narrow_internal_solid_infill": {
+    "type": "bool",
+    "vector": false,
+    "label": "Detect narrow internal solid infill",
+    "default": true,
+    "description": "Auto-detects narrow internal solid infill regions and fills them concentrically instead of rectilinear. Fewer direction reversals in tight areas: less shaking, slightly faster. Rarely worth disabling."
+  }
+}

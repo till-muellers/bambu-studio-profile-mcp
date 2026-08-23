@@ -1,0 +1,905 @@
+{
+  "supertack_plate_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "min": 0,
+    "max": 120,
+    "default": 35,
+    "description": "Bed temperature (degC) after the first layer on the Bambu Cool Plate SuperTack, per filament. The plate grips at low temperatures: ~35 for PLA; 0 disables heating. Too hot causes elephant foot and over-adhesion; plate unsuited to high-temp materials."
+  },
+  "cool_plate_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "min": 0,
+    "max": 120,
+    "default": 35,
+    "description": "Bed temperature, C, for layers after the first on the Cool Plate build surface. Plate-specific counterpart to hot/textured/engineering plate temps. 35 C typical for PLA; exceeding the plate's rating degrades its coating."
+  },
+  "eng_plate_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "Bed temperature (deg C) for layers after the first when the Engineering Plate is selected. Per filament. Higher resists warping; too high softens lower layers and worsens elephant foot. 0 disables bed heating for those layers."
+  },
+  "hot_plate_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "Bed temperature in C for layers after the first when printing on the Smooth PEI / High Temp plate. Material-dependent: ~45-60 PLA, ~65-80 PETG, ~90-110 ABS/ASA. Too high softens lower layers; too low risks warping. Per-filament."
+  },
+  "textured_plate_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "Bed temperature (deg C) on the Textured PEI plate for layers after the first, per filament. Higher improves adhesion but can soften lower layers; lower eases release. Textured plates often need ~5-10 deg more than smooth plates."
+  },
+  "supertack_plate_temp_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "min": 0,
+    "max": 120,
+    "default": 35,
+    "description": "First-layer bed temperature (degC) on the Bambu Cool Plate SuperTack, per filament. Usually equal to or slightly above the later-layer temperature; ~35 for PLA; 0 disables heating. Plate unsuited to high-temp materials."
+  },
+  "cool_plate_temp_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "min": 0,
+    "max": 120,
+    "default": 35,
+    "description": "First-layer bed temperature, C, on the Cool Plate surface. Slightly higher than later layers can aid adhesion; Cool Plate is designed for low-temp printing (PLA), so values stay near 35 C."
+  },
+  "eng_plate_temp_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "First-layer bed temperature (deg C) on the Engineering Plate. Governs initial adhesion; vendor profiles often match the other-layers plate temp. 0 disables heating for the first layer."
+  },
+  "hot_plate_temp_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "First-layer bed temperature in C on the Smooth PEI / High Temp plate. Often equal to or 5 C above later layers to maximize adhesion. Per-filament."
+  },
+  "textured_plate_temp_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "min": 0,
+    "max": 120,
+    "default": 45,
+    "description": "Bed temperature (deg C) on the Textured PEI plate for the first layer, per filament. Slightly higher than later layers aids initial adhesion into the texture; too high causes glossy squish and elephant foot. PLA ~45-65, PETG ~65-80 typical."
+  },
+  "enable_overhang_bridge_fan": {
+    "type": "bool",
+    "vector": true,
+    "label": "Force cooling for overhang and bridge",
+    "default": true,
+    "description": "Forces the part-cooling fan to the overhang fan speed on overhangs and bridges, bypassing layer-time fan logic. Firms up sagging-prone extrusions. Disable for filaments where extra cooling breaks layer adhesion (ABS/ASA/PC)."
+  },
+  "overhang_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed for overhang",
+    "min": 0,
+    "max": 100,
+    "default": 100,
+    "description": "Part-cooling fan speed (%) forced on overhang walls and bridges, overriding the normal min/max fan range. Higher freezes overhang lines faster, reducing sag and curl; for warp-prone high-temp materials (ABS) keep moderate. Default 100."
+  },
+  "ironing_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Ironing fan speed",
+    "min": -1,
+    "max": 100,
+    "default": -1,
+    "description": "Part cooling fan speed during ironing, percent (0-100). Lower keeps the surface molten longer for better smoothing; higher prevents heat buildup on small tops. -1 leaves fan at the normal setting for the layer. Per-filament vector."
+  },
+  "pre_start_fan_time": {
+    "type": "float",
+    "vector": true,
+    "label": "Pre start fan time",
+    "min": 0,
+    "max": 5,
+    "default": 0,
+    "description": "Seconds to issue the fan speed command ahead of an overhang or bridge region so the fan physically spins up before the lines print. Raise (up to 5 s) for fans with slow response; 0 changes fan speed exactly at the feature."
+  },
+  "compatible_printers": {
+    "type": "string",
+    "vector": true,
+    "label": "Compatible machine",
+    "description": "List of printer profile names this preset applies to. Empty = compatible with all. Metadata for preset filtering, not print behavior."
+  },
+  "compatible_printers_condition": {
+    "type": "string",
+    "vector": false,
+    "label": "Compatible machine condition",
+    "description": "Boolean expression over printer config values (e.g. nozzle_diameter, printer_model) gating whether this preset is offered for a printer. Empty = always compatible. Metadata, no print effect."
+  },
+  "compatible_prints": {
+    "type": "string",
+    "vector": true,
+    "label": "Compatible process profiles",
+    "description": "List of process (print) profile names this filament preset applies to. Empty = all. Metadata for preset filtering."
+  },
+  "compatible_prints_condition": {
+    "type": "string",
+    "vector": false,
+    "label": "Compatible process profiles condition",
+    "description": "Boolean expression over process config values gating whether this filament preset is offered with a given process profile. Empty = always. Metadata, no print effect."
+  },
+  "slow_down_for_layer_cooling": {
+    "type": "bool",
+    "vector": true,
+    "label": "Slow printing down for better layer cooling",
+    "default": true,
+    "description": "Enables automatic slowdown on layers finishing faster than slow_down_layer_time, letting each layer solidify before the next. Per filament. Essential for small parts in PLA/PETG; disable when slowdown causes heat soak or timing matters more."
+  },
+  "no_slow_down_for_cooling_on_outwalls": {
+    "type": "bool",
+    "vector": true,
+    "label": "Don't slow down outer walls",
+    "default": false,
+    "description": "Exempts outer walls from the automatic layer-time cooling slowdown. Keeps outer wall speed uniform so surface sheen stays consistent; risks sagging on small or short layers since cooling relies on fan alone. Off by default."
+  },
+  "cooling_perimeter_transition_distance": {
+    "type": "float",
+    "vector": true,
+    "label": "Perimeter transition distance",
+    "min": 0,
+    "max": 50,
+    "default": 10,
+    "description": "Distance, mm, over which fan speed blends when perimeters enter/leave regions needing different cooling (e.g. overhangs). Longer = smoother fan ramps, fewer surface marks; shorter = more responsive overhang cooling. 10 mm default."
+  },
+  "activate_air_filtration": {
+    "type": "bool",
+    "vector": true,
+    "label": "Activate air filtration",
+    "default": false,
+    "description": "Per-filament switch for chamber exhaust/air filtration during printing. Enable for fume-emitting materials (ABS, ASA); off for PLA-types where exhaust airflow cools the chamber. Fan level via during_print_exhaust_fan_speed."
+  },
+  "during_print_exhaust_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 60,
+    "description": "Exhaust/air-filtration fan speed (%) while printing; overrides speeds set in filament custom G-code. Raise to extract fumes (ABS/ASA); high values drop chamber temperature, so keep low for warp-prone high-temp materials. Default 60."
+  },
+  "complete_print_exhaust_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 80,
+    "description": "Exhaust fan speed, percent, run after the print finishes to purge chamber fumes. Higher clears VOCs faster; mainly for ABS/ASA and other fume-heavy materials. Needs air filtration hardware. 80 typical."
+  },
+  "close_additional_fan_first_x_layers": {
+    "type": "int",
+    "vector": true,
+    "label": "For the first",
+    "min": 0,
+    "max": 1000,
+    "default": 1,
+    "description": "Number of initial layers with the auxiliary cooling fan forced off. Protects first-layer adhesion and reduces warping at the base. 1-3 typical; raise for warp-prone materials."
+  },
+  "additional_fan_full_speed_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Full fan speed at layer",
+    "min": 0,
+    "max": 1000,
+    "default": 0,
+    "description": "Layer index at which the auxiliary cooling fan reaches its configured speed; below it the fan ramps up or stays off to protect first-layer adhesion. 0 disables the delay. Works alongside close_additional_fan_first_x_layers."
+  },
+  "close_fan_the_first_x_layers": {
+    "type": "int",
+    "vector": true,
+    "label": "For the first",
+    "min": 0,
+    "max": 1000,
+    "default": 1,
+    "description": "Number of initial layers with the part cooling fan forced off. Ensures hot, well-bonded first layers on the bed; too many fanless layers can hurt small overhangs near the base. 1 typical for PLA, 3+ for ABS/ASA."
+  },
+  "first_x_layer_part_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Part cooling fan speed in % during the initial layers; window set by close_fan_the_first_x_layers. 0 disables part cooling there, improving bed adhesion; raise only for severe overhangs starting at layer 1. Per-filament."
+  },
+  "first_x_layer_fan_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Auxiliary (chamber-side) cooling fan speed in % applied only during the initial layers. Keep at 0 so early layers cool slowly and bond to the bed. Per-filament vector."
+  },
+  "filament_end_gcode": {
+    "type": "string",
+    "vector": true,
+    "label": "End G-code",
+    "default": " ",
+    "description": "G-code emitted when this filament is unloaded or its use ends (per-filament, runs at tool change and print end). Typical uses: reset temperatures, fans, or material-specific machine state. Runs before the next filament's start G-code."
+  },
+  "filament_flow_ratio": {
+    "type": "float",
+    "vector": true,
+    "label": "Flow ratio",
+    "nullable": true,
+    "max": 2,
+    "default": 1,
+    "description": "Extrusion multiplier applied to all moves with this filament. Raise for gaps/under-extrusion, lower for blobs, bulging seams, rough top surfaces. Calibrate per material; typical 0.92-1.02 (PLA ~0.98, PETG ~0.95). Max 2."
+  },
+  "enable_pressure_advance": {
+    "type": "bool",
+    "vector": true,
+    "label": "Enable pressure advance",
+    "default": false,
+    "description": "Applies the filament's pressure_advance value (linear advance). Sharper corners, less bulge/gap at speed transitions. Manual value replaces the printer's automatic flow-dynamics calibration; calibrate per filament first."
+  },
+  "pressure_advance": {
+    "type": "float",
+    "vector": true,
+    "label": "Pressure advance",
+    "max": 2,
+    "default": 0.02,
+    "description": "Pressure advance coefficient for nozzle pressure lag: cuts corner bulge, seam blobs, gaps after travels. Typical 0.02-0.06 direct drive, higher for bowden or flexibles. Only active when pressure advance is enabled; calibrate per filament."
+  },
+  "filament_notes": {
+    "type": "string",
+    "vector": false,
+    "label": "Filament notes",
+    "default": "",
+    "description": "Free-text notes stored with the filament profile. No effect on slicing. Use for calibration results (flow, K-factor), drying history, vendor batch info."
+  },
+  "reduce_fan_stop_start_freq": {
+    "type": "bool",
+    "vector": true,
+    "label": "Keep fan always on",
+    "default": false,
+    "description": "Keeps the part-cooling fan spinning at low speed instead of fully stopping during brief fan-off spans. Avoids on/off cycling whose spin-up lag cools unevenly. Off for warp-prone materials needing zero fan."
+  },
+  "fan_cooling_layer_time": {
+    "type": "int",
+    "vector": true,
+    "label": "Layer time",
+    "min": 0,
+    "max": 1000,
+    "default": 60,
+    "description": "Layer-time threshold (s) for cooling control: layers faster than this get fan speed interpolated from fan_min_speed up toward fan_max_speed; slower layers stay at fan_min_speed. Larger value = fan ramps up on more layers. Default 60."
+  },
+  "default_filament_colour": {
+    "type": "string",
+    "vector": true,
+    "label": "Default color",
+    "default": "",
+    "description": "Display color assigned to this filament in the UI and multi-color previews (hex string). Cosmetic and for AMS slot matching; no effect on toolpaths."
+  },
+  "required_nozzle_HRC": {
+    "type": "int",
+    "vector": true,
+    "label": "Required nozzle HRC",
+    "min": 0,
+    "max": 500,
+    "default": 0,
+    "description": "Minimum nozzle hardness (Rockwell C) the filament demands, per filament. Nonzero for abrasives (carbon/glass fiber, glow) so the slicer can warn when the installed nozzle is softer, e.g. brass ~HRC 20 vs hardened steel ~HRC 55+. 0 = no requirement."
+  },
+  "filament_flush_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Flush temperature",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Nozzle temperature (C) used while flushing this filament on the prime/wipe tower during color change. 0 = use normal print temperature. Lower can reduce stringing of oozy materials; must stay high enough to keep flow reliable."
+  },
+  "filament_flush_volumetric_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Flush volumetric speed",
+    "nullable": true,
+    "min": 0,
+    "max": 200,
+    "default": 0,
+    "description": "Volumetric rate (mm3/s) for purging this filament during flush on the wipe tower. 0 = use filament max volumetric speed. Lower if flushing causes grinding or clicking; higher shortens multi-color change time."
+  },
+  "filament_max_volumetric_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Max volumetric speed",
+    "nullable": true,
+    "min": 0,
+    "max": 200,
+    "default": 2,
+    "description": "Hard cap on extrusion flow (mm3/s); slicer slows any move that would exceed it. Primary speed limiter per material: too high causes under-extrusion at speed, too low wastes time. Typical: PLA 12-21, PETG 8-14, TPU 3-6, high-flow higher."
+  },
+  "filament_ramming_volumetric_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Extruder change",
+    "nullable": true,
+    "min": -1,
+    "max": 200,
+    "default": -1,
+    "description": "Extrusion rate (mm3/s) for ramming before an extruder change: rapid push shaping a clean filament tip prior to retraction. -1 = automatic (derived from max volumetric speed). Too high grinds filament; too low leaves stringy tips."
+  },
+  "filament_ramming_volumetric_speed_nc": {
+    "type": "float",
+    "vector": true,
+    "label": "Hotend change",
+    "nullable": true,
+    "min": -1,
+    "max": 200,
+    "default": -1,
+    "description": "Extrusion rate (mm3/s) for ramming before a hotend change on dual-nozzle machines. Shapes the filament tip so the retiring hotend retracts cleanly. -1 = automatic from max volumetric speed. Lower if ramming skips or grinds."
+  },
+  "filament_minimal_purge_on_wipe_tower": {
+    "type": "float",
+    "vector": true,
+    "label": "Minimal purge on wipe tower",
+    "min": 0,
+    "default": 15,
+    "description": "Minimum volume (mm3) purged on the wipe tower when switching TO this filament, regardless of computed flush volume. Guards against undersized flush matrices leaving old color/material in the nozzle. Default 15."
+  },
+  "filament_diameter": {
+    "type": "float",
+    "vector": true,
+    "label": "Diameter",
+    "min": 0,
+    "default": 1.75,
+    "description": "Nominal filament diameter (mm) used to convert extrusion lengths to volume. Wrong value scales all extrusion: too small causes over-extrusion, too large under-extrusion. Measure stock if flow is off. Standard 1.75; some machines 2.85."
+  },
+  "filament_adaptive_volumetric_speed": {
+    "type": "bool",
+    "vector": true,
+    "label": "Adaptive volumetric speed",
+    "nullable": true,
+    "default": false,
+    "description": "Limits extrusion flow to the smaller of a fitted value (from line width and layer height via the volumetric speed coefficients) and the fixed max volumetric speed. Off: fixed max only. Evens quality across mixed line widths."
+  },
+  "volumetric_speed_coefficients": {
+    "type": "string",
+    "vector": true,
+    "label": "Max volumetric speed multinomial coefficients",
+    "default": "",
+    "description": "Per-filament polynomial coefficients modeling max volumetric flow as a function of nozzle temperature. Filled automatically by flow-dynamics calibration; leave empty to use the flat filament_max_volumetric_speed limit. Not hand-edited."
+  },
+  "filament_shrink": {
+    "type": "percent",
+    "vector": true,
+    "label": "Shrinkage",
+    "min": 10,
+    "default": 100,
+    "description": "Material shrinkage compensation (%). 100 = no shrinkage; below 100 the slicer scales XY up so cooled parts hit nominal size (e.g. ABS ~99.5, ASA/PA lower). Measure a calibration cube to derive. Affects dimensional accuracy only."
+  },
+  "filament_velocity_adaptation_factor": {
+    "type": "float",
+    "vector": true,
+    "label": "Velocity Adaptation Factor",
+    "min": 0,
+    "default": 1,
+    "description": "Scales how aggressively print velocity adapts for this filament when speed-modulating features engage. 1 = default; lower damps speed changes for materials sensitive to flow transients (TPU, CF-filled)."
+  },
+  "filament_adhesiveness_category": {
+    "type": "int",
+    "vector": true,
+    "label": "Adhesiveness Category",
+    "min": 0,
+    "default": 0,
+    "description": "Developer field: integer class describing how the filament bonds to other materials. Consulted for multi-material pairing decisions such as support/interface suitability. Vendor-set; not user-tuned."
+  },
+  "filament_density": {
+    "type": "float",
+    "vector": true,
+    "label": "Density",
+    "min": 0,
+    "default": 0,
+    "description": "Material density in g/cm3. Used for weight and cost estimates in the slice summary; no effect on toolpaths. Typical: PLA ~1.24, PETG ~1.27, ABS ~1.04."
+  },
+  "filament_type": {
+    "type": "string",
+    "vector": true,
+    "label": "Type",
+    "default": "PLA",
+    "description": "Material class string (PLA, PETG, ABS, TPU, PA, PC, PVA...). Drives compatibility checks, flush volume matrix, drying and chamber logic, and default limits. Must match the actual material; not just a label."
+  },
+  "filament_soluble": {
+    "type": "bool",
+    "vector": true,
+    "label": "Soluble material",
+    "default": false,
+    "description": "Marks this filament as dissolvable (PVA, BVOH). Slicer treats it as preferred support/interface material and allows zero interface gaps since it washes out instead of breaking away. Store dry; highly hygroscopic."
+  },
+  "filament_scarf_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Scarf length",
+    "min": 0,
+    "default": 10,
+    "description": "Length (mm) of the scarf joint seam ramp for this filament when scarf seams are enabled. Longer spreads the seam transition, hiding it better on glossy materials; shorter keeps the seam compact. Default 10."
+  },
+  "filament_change_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Extruder change",
+    "min": 0,
+    "default": 10,
+    "description": "Filament length (mm) extruded from the outgoing extruder during an extruder change to relieve melt pressure and reduce oozing before the swap. Dual-extruder machines. Default 10; raise if change points leave strings or blobs."
+  },
+  "filament_change_length_nc": {
+    "type": "float",
+    "vector": true,
+    "label": "Hotend change",
+    "min": 0,
+    "default": 10,
+    "description": "Filament length (mm) extruded from the outgoing nozzle during a hotend change, so the parked hotend oozes less. Hotend-swap counterpart of filament_change_length. Default 10 mm."
+  },
+  "filament_is_support": {
+    "type": "bool",
+    "vector": true,
+    "label": "Support material",
+    "default": false,
+    "description": "Marks this filament as dedicated support material (e.g. Bambu Support W/G, PVA). Slicer then prefers it for support interfaces/body and excludes it from model walls. Enables clean separation without tuning interface gaps."
+  },
+  "filament_printable": {
+    "type": "int",
+    "vector": true,
+    "label": "Filament printable",
+    "default": 3,
+    "description": "Bitmask of extruders allowed to print this filament on multi-extruder machines: bit N set = extruder index N permitted; 3 = both. Restrict when a material needs a specific hotend, e.g. hardened nozzle for CF-filled."
+  },
+  "filament_extruder_compatibility": {
+    "type": "int",
+    "vector": true,
+    "label": "Filament-extruder compatibility",
+    "default": 0,
+    "description": "Restricts which extruder may print this filament on dual-extruder machines (H2D-class). Encoded as int: 0 = no restriction, otherwise limits assignment to the compatible unit, e.g. abrasive or high-temp materials on the hardened side."
+  },
+  "filament_prime_volume": {
+    "type": "float",
+    "vector": true,
+    "label": "Filament change",
+    "min": 1,
+    "default": 45,
+    "description": "Volume (mm3) primed on the wipe tower after a filament change to restore steady flow before printing resumes. Raise if first extrusions after a swap are thin or discolored; lower to save material. Default 45."
+  },
+  "filament_prime_volume_nc": {
+    "type": "float",
+    "vector": true,
+    "label": "Hotend change",
+    "min": 1,
+    "default": 60,
+    "description": "Volume (mm3) primed on the wipe tower after a hotend change (dual-nozzle machines) before the incoming nozzle prints on the model. More than a plain filament change since the whole melt zone restarts. Default 60."
+  },
+  "filament_preheat_temperature_delta": {
+    "type": "float",
+    "vector": true,
+    "label": "Preheat temperature delta",
+    "nullable": true,
+    "default": 0,
+    "description": "Offset (C) applied when preheating this filament's nozzle ahead of a toolchange on dual-extruder machines. Negative holds the waiting nozzle cooler to limit ooze/degradation; 0 preheats straight to print temperature."
+  },
+  "filament_cooling_before_tower": {
+    "type": "float",
+    "vector": true,
+    "label": "Wipe tower cooling",
+    "nullable": true,
+    "default": 10,
+    "description": "Nozzle temperature drop (deg C) allowed before printing on the prime tower after a filament change; cooler entry reduces sag and stringing of purged material. Developer-mode, per filament, default 10."
+  },
+  "filament_tower_interface_pre_extrusion_dist": {
+    "type": "float",
+    "vector": true,
+    "label": "Interface layer pre-extrusion distance",
+    "min": 0,
+    "default": 10,
+    "description": "Travel distance (mm) covered while pre-extruding before printing a prime tower interface layer with this filament. Spreads the priming line so flow is stable when the interface starts. Works with the pre-extrusion length. Default 10."
+  },
+  "filament_tower_interface_pre_extrusion_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Interface layer pre-extrusion length",
+    "min": 0,
+    "default": 0,
+    "description": "Filament length (mm) pre-extruded before a prime tower interface layer. Primes the nozzle so the interface bonds instead of starting under-extruded; helps towers mixing very different-viscosity materials. 0 disables."
+  },
+  "filament_tower_ironing_area": {
+    "type": "float",
+    "vector": true,
+    "label": "Tower ironing area",
+    "min": 0,
+    "default": 4,
+    "description": "Ironing area (mm2) applied on prime tower surfaces for this filament. Flattens the tower top so the next material bonds and the tower stays stable. 0 disables flat ironing (line ironing may remain), improving stability for some materials."
+  },
+  "filament_tower_interface_purge_volume": {
+    "type": "float",
+    "vector": true,
+    "label": "Interface layer purge length",
+    "min": 0,
+    "default": 20,
+    "description": "Purge volume (mm3) flushed when printing a prime tower interface layer with this filament. Ensures the interface is pure material for reliable adhesion between tower sections. Default 20; raise if interfaces delaminate."
+  },
+  "filament_tower_interface_print_temp": {
+    "type": "int",
+    "vector": true,
+    "label": "Interface layer print temperature",
+    "min": -1,
+    "default": -1,
+    "description": "Nozzle temperature (C) for printing prime tower interface layers with this filament. -1 = use normal print temperature. Dedicated interface temp improves layer bonding between dissimilar materials and reduces tower collapse."
+  },
+  "temperature_vitrification": {
+    "type": "int",
+    "vector": true,
+    "label": "Softening temperature",
+    "default": 100,
+    "description": "Softening (glass transition) temperature (deg C) of the filament. Informational limit: parts deform above it, spools in a hot chamber or AMS can soften and jam. Drives chamber-temperature warnings, not a print control."
+  },
+  "filament_ramming_travel_time": {
+    "type": "float",
+    "vector": true,
+    "label": "Extruder change",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Travel dwell (s) after ramming, before an extruder change, letting the filament tip ooze away from the print. 0 disables. Values >0 force wipe-tower ramming line spacing to 2x line width to absorb the overflow. Dual-extruder machines."
+  },
+  "filament_ramming_travel_time_nc": {
+    "type": "float",
+    "vector": true,
+    "label": "Hotend change",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Travel dwell (s) after ramming, before a hotend change, giving the retiring nozzle time to ooze off the model. 0 disables. Values >0 widen wipe-tower ramming line spacing to 2x line width. Dual-nozzle machines."
+  },
+  "filament_pre_cooling_temperature": {
+    "type": "int",
+    "vector": true,
+    "label": "Extruder change",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Target nozzle temperature (C) to start cooling toward during ramming before an extruder change (dual-extruder machines). Issues cool command plus fan only; target not guaranteed. 0 disables. Reduces ooze from the parked tool."
+  },
+  "filament_pre_cooling_temperature_nc": {
+    "type": "int",
+    "vector": true,
+    "label": "Hotend change",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Target nozzle temperature (C) to start cooling toward during ramming before a hotend change (dual-nozzle machines). Cooling command plus fan only; target may not be reached before the switch. 0 disables. Cuts ooze from the idle hotend."
+  },
+  "filament_cost": {
+    "type": "float",
+    "vector": true,
+    "label": "Price",
+    "min": 0,
+    "default": 0,
+    "description": "Filament price per kilogram. Feeds only the cost estimate shown after slicing; no effect on toolpaths or print behavior."
+  },
+  "filament_vendor": {
+    "type": "string",
+    "vector": true,
+    "label": "Vendor",
+    "default": "(Undefined)",
+    "description": "Manufacturer name stored in the profile. Identification/metadata only; no slicing effect. Used for profile organization and matching to vendor presets."
+  },
+  "nozzle_temperature_initial_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Initial layer",
+    "nullable": true,
+    "min": 0,
+    "default": 200,
+    "description": "Nozzle temperature (°C) for the first layer only. A common tuning pattern raises it slightly above other layers for bed adhesion; default equals the other-layer temp. Works with bed temperature and first-layer speed."
+  },
+  "full_fan_speed_layer": {
+    "type": "int",
+    "vector": true,
+    "label": "Full fan speed at layer",
+    "min": 0,
+    "max": 1000,
+    "default": 0,
+    "description": "Layer at which part cooling fan reaches its target speed; ramps linearly from zero starting after the close_fan_the_first_x_layers window. If set at or below that window, fan jumps straight to full speed. 0 disables the ramp."
+  },
+  "inherits": {
+    "type": "string",
+    "vector": false,
+    "label": "Inherits profile",
+    "description": "Name of the parent system preset this profile derives from. Profile stores only keys that differ; unset keys follow the parent, including after parent updates. Empty means a standalone full profile."
+  },
+  "fan_max_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 100,
+    "description": "Part-cooling fan ceiling (%) applied as layer times approach zero; interpolation target above fan_min_speed per fan_cooling_layer_time. High (80-100) for PLA/PETG detail; low for ABS/ASA to protect layer bonding. Per filament."
+  },
+  "fan_min_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 20,
+    "description": "Baseline part-cooling fan speed (%) used on layers longer than fan_cooling_layer_time; effectively the filament's always-on fan level. Moderate for PLA; near 0 for warp-prone ABS/ASA/PC. Per filament."
+  },
+  "additional_cooling_fan_speed": {
+    "type": "int",
+    "vector": true,
+    "label": "Fan speed",
+    "min": 0,
+    "max": 100,
+    "default": 0,
+    "description": "Auxiliary (side) part cooling fan speed, percent. Bulk airflow beyond the hotend fan; helps high-speed PLA/PETG cooling and small features. Keep 0 for warp-prone materials (ABS/ASA/PA) needing a warm chamber. Per-filament."
+  },
+  "slow_down_min_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Min print speed",
+    "min": 0,
+    "default": 10,
+    "description": "Speed floor (mm/s) for cooling slowdown, per filament. Layer-time slowdown never drops below this, preventing crawl speeds that cause heat soak, blobbing, and nozzle dwell marks. Default 10 mm/s; raise for heat-sensitive materials like PETG."
+  },
+  "long_retractions_when_ec": {
+    "type": "bool",
+    "vector": true,
+    "label": "Long retraction when extruder change",
+    "nullable": true,
+    "default": false,
+    "description": "Enables an extra-long retraction when the extruder/filament changes, pulling filament far back to cut oozing and cross-contamination during the swap. Slightly slows changes; grinding risk with soft filaments. Per-filament vector; nil falls back to defaults."
+  },
+  "retraction_distances_when_ec": {
+    "type": "float",
+    "vector": true,
+    "label": "Retraction distance when extruder change",
+    "nullable": true,
+    "min": 0,
+    "max": 10,
+    "default": 10,
+    "description": "Retraction length (mm) when this filament is parked during an extruder change, per filament. Longer pulls filament further from the melt zone — less ooze while idle, but jam/slow-reprime risk if excessive. Multi-extruder machines only."
+  },
+  "filament_extruder_variant": {
+    "type": "string",
+    "vector": true,
+    "default": "Direct Drive Standard",
+    "description": "Names the extruder/hotend hardware variant each vector entry of this filament profile targets (e.g. Direct Drive Standard). Selects which variant-specific values apply; informational for matching, not a print-quality lever."
+  },
+  "filament_retract_length_nc": {
+    "type": "float",
+    "vector": true,
+    "label": "length when change hotend",
+    "nullable": true,
+    "min": 0,
+    "max": 18,
+    "default": 10,
+    "description": "Retraction length (mm) pulled when this filament's hotend is deactivated during a hotend change. Longer clears the melt zone and stops ooze from the parked nozzle; too long risks jams on re-engage. Range 0-18, default 10."
+  },
+  "slow_down_layer_time": {
+    "type": "int",
+    "vector": true,
+    "label": "Layer time",
+    "min": 0,
+    "max": 1000,
+    "default": 5,
+    "description": "Target minimum layer time (s), per filament. Faster layers get slowed (floor: slow_down_min_speed) so plastic cools before being covered. Higher = better small-feature quality, slower prints. PLA ~4-8 s; low for high-temp materials."
+  },
+  "filament_start_gcode": {
+    "type": "string",
+    "vector": true,
+    "label": "Start G-code",
+    "default": " ",
+    "description": "G-code emitted when this filament becomes active (print start or tool change, before printing with it). Typical uses: set pressure advance/K-factor, material-specific fans or temperatures. Runs after the previous filament's end G-code."
+  },
+  "chamber_temperatures": {
+    "type": "int",
+    "vector": true,
+    "label": "Chamber temperature",
+    "min": 0,
+    "max": 80,
+    "default": 0,
+    "description": "Target chamber temperature, C (0-80, 0 = uncontrolled). Warm chamber cuts warping and boosts layer adhesion for ABS/ASA/PA/PC; keep 0 for PLA/PETG to avoid heat creep. Only honored by printers with chamber control."
+  },
+  "nozzle_temperature": {
+    "type": "int",
+    "vector": true,
+    "label": "Other layers",
+    "nullable": true,
+    "min": 0,
+    "default": 200,
+    "description": "Nozzle temperature (°C) for all layers after the first. Higher improves layer bonding and flow at speed but increases stringing and sag; lower sharpens detail, risks underextrusion. Stay within the filament's stated temp range."
+  },
+  "nozzle_temperature_range_low": {
+    "type": "int",
+    "vector": true,
+    "label": "Min",
+    "min": 0,
+    "default": 190,
+    "description": "Lower bound (°C) of the filament's usable nozzle temperature range. Slicer warns when configured nozzle temps fall below it. Printing under it risks underextrusion, poor layer bonding, extruder skipping."
+  },
+  "nozzle_temperature_range_high": {
+    "type": "int",
+    "vector": true,
+    "label": "Max",
+    "min": 0,
+    "default": 240,
+    "description": "Upper bound (°C) of the filament's usable nozzle temperature range. Slicer warns when configured nozzle temps exceed it. Set from manufacturer spec; printing above risks degradation, stringing, heat creep."
+  },
+  "impact_strength_z": {
+    "type": "float",
+    "vector": true,
+    "label": "Impact Strength Z",
+    "default": 0,
+    "description": "Filament mechanical-property value for Z-direction (interlayer) impact strength. Development-mode metadata consumed by strength-related features; does not alter sliced geometry. Per-filament."
+  },
+  "circle_compensation_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Circle Compensation Speed",
+    "min": 0,
+    "default": 200,
+    "description": "Calibration reference speed, mm/s, the circular contour compensation model assumes for this filament; does not command actual print speed. Change only when recalibrating compensation coefficients with new test prints."
+  },
+  "counter_coef_1": {
+    "type": "float",
+    "vector": true,
+    "label": "Counter Coef 1",
+    "default": 0,
+    "description": "Circular compensation: constant term of the polynomial that predicts inner-hole (counter) diameter shrinkage for this filament. Calibrated per material; edit only with measured hole-test data."
+  },
+  "counter_coef_2": {
+    "type": "float",
+    "vector": true,
+    "label": "Contour Coef 2",
+    "default": 0.025,
+    "description": "Circular compensation: linear term of the inner-hole diameter compensation polynomial for this filament. Scales correction with hole diameter. Calibrated value; change only from hole-test measurements."
+  },
+  "counter_coef_3": {
+    "type": "float",
+    "vector": true,
+    "label": "Contour Coef 3",
+    "default": -0.11,
+    "description": "Circular compensation: additional polynomial term of the inner-hole diameter correction model for this filament. Calibrated per material from test prints."
+  },
+  "hole_coef_1": {
+    "type": "float",
+    "vector": true,
+    "label": "Hole Coef 1",
+    "default": 0,
+    "description": "Speed term of auto circular-hole compensation: hole offset = coef1*circle_compensation_speed + coef2*diameter + coef3, clamped by hole_limit_min/max. Active only with enable_circle_compensation on supported filaments. Per-filament."
+  },
+  "hole_coef_2": {
+    "type": "float",
+    "vector": true,
+    "label": "Hole Coef 2",
+    "default": -0.025,
+    "description": "Diameter term of auto circular-hole compensation; mm of offset per mm of hole diameter in offset = coef1*speed + coef2*diameter + coef3. Negative default (-0.025) tapers enlargement for bigger holes. Per-filament."
+  },
+  "hole_coef_3": {
+    "type": "float",
+    "vector": true,
+    "label": "Hole Coef 3",
+    "default": 0.28,
+    "description": "Constant term in mm of auto circular-hole compensation formula coef1*speed + coef2*diameter + coef3. Sets the base enlargement applied to detected circular holes. Default 0.28. Per-filament."
+  },
+  "counter_limit_min": {
+    "type": "float",
+    "vector": true,
+    "label": "Contour limit min",
+    "default": -0.04,
+    "description": "Lower clamp, mm, on the automatic inner-hole/contour diameter correction. Prevents the compensation polynomial from over-shrinking features; negative values allow slight reduction."
+  },
+  "counter_limit_max": {
+    "type": "float",
+    "vector": true,
+    "label": "Contour limit max",
+    "default": 0.05,
+    "description": "Upper clamp, mm, on the automatic inner-hole/contour diameter correction. Prevents the compensation polynomial from over-enlarging features on out-of-range diameters."
+  },
+  "hole_limit_min": {
+    "type": "float",
+    "vector": true,
+    "label": "Hole limit min",
+    "default": 0.08,
+    "description": "Lower clamp in mm on the computed circular-hole enlargement from the hole_coef formula. Guarantees a minimum widening so holes never print undersized when compensation is active. Default 0.08. Per-filament."
+  },
+  "hole_limit_max": {
+    "type": "float",
+    "vector": true,
+    "label": "Hole limit max",
+    "default": 0.25,
+    "description": "Upper clamp in mm on the computed circular-hole enlargement from the hole_coef formula. Prevents over-widening small holes. Default 0.25. Per-filament."
+  },
+  "diameter_limit": {
+    "type": "float",
+    "vector": true,
+    "label": "Diameter limit",
+    "default": 50,
+    "description": "Per-filament upper bound (mm) for auto circle contour-hole compensation: circular holes/contours above this diameter are left uncorrected. Acts with enable_circle_compensation and the hole limit values. Default 50."
+  },
+  "filament_dev_ams_drying_ams_limitations": {
+    "type": "string",
+    "vector": true,
+    "default": "",
+    "description": "Developer metadata: free-form note on AMS model restrictions for this filament's drying profile, consumed by the AMS drying feature. Usually empty; no effect on slicing."
+  },
+  "filament_dev_ams_drying_temperature": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Developer metadata: recommended AMS drying temperature (deg C) for this filament, consumed by the AMS drying feature. 0 = unset; no effect on slicing output."
+  },
+  "filament_dev_ams_drying_time": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Developer metadata: recommended AMS drying duration for this filament, paired with filament_dev_ams_drying_temperature. 0 = unset; no effect on slicing output."
+  },
+  "filament_dev_ams_drying_heat_distortion_temperature": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Developer metadata: heat-distortion temperature (deg C) of the filament/spool, used as a safety ceiling when AMS drying selects temperatures. 0 = unset; no effect on toolpaths."
+  },
+  "filament_dev_chamber_drying_bed_temperature": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Heatbed temperature (C) for the in-chamber filament drying routine. Higher dries faster but must stay safe for the material; 0 disables. Developer-level setting; pair with filament_dev_chamber_drying_time."
+  },
+  "filament_dev_chamber_drying_time": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Duration of the in-chamber filament drying routine. Longer removes more moisture; hygroscopic materials (PA, PC, TPU) need extended runs. Developer-level setting used with filament_dev_chamber_drying_bed_temperature."
+  },
+  "filament_dev_drying_softening_temperature": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Material softening temperature (C). Upper safety bound during chamber drying and pre-feed checks: if chamber exceeds it, cooling runs before feeding to avoid soft-filament jams. Set below the temperature where the filament deforms."
+  },
+  "filament_dev_drying_cooling_temperature": {
+    "type": "float",
+    "vector": true,
+    "default": 0,
+    "description": "Chamber temperature (C) the printer cools down to after a drying cycle before printing resumes. Prevents feeding filament through an overheated chamber. Developer-level setting; 0 leaves cooldown unmanaged."
+  },
+  "override_process_overhang_speed": {
+    "type": "bool",
+    "vector": true,
+    "label": "Override overhang speed",
+    "nullable": true,
+    "default": false,
+    "description": "Lets this filament impose its own overhang speeds instead of the process profile's. Useful for materials needing distinct overhang handling (e.g. TPU, high-temp filaments); off, process overhang speeds apply."
+  }
+}

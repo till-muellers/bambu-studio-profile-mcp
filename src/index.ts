@@ -7,6 +7,7 @@ import { ConfigManager, detectDefaultPaths, resolveConfigDir } from "./config.js
 import { strings } from "./strings.js";
 import { FsProfileStore } from "./profile-store.js";
 import { type ToolDeps } from "./tools/deps.js";
+import { registerDiffTool } from "./tools/diff.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
 import { registerImportTools } from "./tools/import.js";
 import { registerListTools } from "./tools/list.js";
@@ -25,6 +26,7 @@ export function buildServer(deps: ToolDeps): McpServer {
   registerUpdateTool(server, deps);
   registerInitConfigTool(server, deps);
   registerListTools(server, deps);
+  registerDiffTool(server, deps);
   return server;
 }
 

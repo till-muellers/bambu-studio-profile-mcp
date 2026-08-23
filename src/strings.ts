@@ -215,6 +215,30 @@ export const strings = {
         name: "Name of the user preset to remove from user/<userId>/<kind>/",
       },
     },
+    diffProfile: {
+      title: "Diff profile",
+      description:
+        "Compare a profile file in a caller-chosen directory against the preset currently installed " +
+        "in Bambu Studio's user preset store (user/<userId>/<kind>/), flat key by key. Reads back " +
+        "values hand-tuned in Bambu Studio and surfaces drift between a project's profile files and " +
+        "the installed presets. Both sides inherit equivalently, so the files' own keys are compared " +
+        "directly; 'inherits' is compared too, while identity and synthesized metadata (name, from, " +
+        "version, settings ids) are skipped.\n\n" +
+        "Returns: { identical, changed: [{key, source, installed}], onlyInSource: [{key, value}], " +
+        "onlyInstalled: [{key, value}], source: {path, modifiedAt}, installed: {path, modifiedAt}, " +
+        "newer } — modifiedAt is the file's ISO 8601 mtime and newer says which side changed last " +
+        "(\"source\", \"installed\", or \"same\").\n\n" +
+        "Errors: source file missing or unparseable; preset absent from the user store; config " +
+        "missing (run init_config first).\n\n" +
+        "Sync drift back with update_profile (project file) or import_profile with overwrite " +
+        "(installed preset). Discover installed presets with list_profiles (source \"user\").",
+      inputs: {
+        kind: "Profile type to compare",
+        name: "Name of the installed preset in user/<userId>/<kind>/",
+        outputDir: "Directory containing the local profile file",
+        sourceName: "Local file name (without .json) when it differs from the installed preset's name",
+      },
+    },
   },
   errors: {
     // Source: src/errors.ts — each function returns the exact current message
@@ -289,6 +313,11 @@ export const strings = {
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
     importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
     // Source: src/tools/import.ts handleRemove
+    diffSourceNotFound: (path: string): string => `Source profile '${path}' not found.`,
+    diffSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
+    diffInstalledNotFound: (path: string): string =>
+      `No preset installed at '${path}'. Install one with import_profile, or check the name with list_profiles.`,
+    diffInstalledNotJson: (path: string): string => `Installed preset '${path}' is not valid JSON.`,
     removeStraySidecar: (jsonPath: string, infoPath: string): string =>
       `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`,
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,

@@ -32,19 +32,23 @@ profile-workspace-init first when it is missing); `init_config` once per session
    into the project's profile directory. These tools validate against the option schema
    and refuse unknown keys; metadata (`from`, `version`, settings ids) is synthesized at
    import time and never written by hand.
-5. **Verify mechanically** before considering the work done — these rules hold only when
-   checked:
-   - `resolve_profile` on the result: the chain contains only presets scoped to the
-     target printer (or `fdm_*`/`@base` roots), and no override equals its resolved
-     parent value.
+5. **Verify mechanically** before installing — these rules hold only when checked.
+   `resolve_profile` reads the installed stores, so a file not yet installed is verified
+   against its parent:
+   - `resolve_profile` on the file's `inherits` target: that chain contains only presets
+     scoped to the target printer (or `fdm_*`/`@base` roots). The file's chain is that
+     chain plus the file itself.
+   - No override in the file equals the parent's resolved effective value for the same
+     key — such a pin is dead weight; drop it.
    - Each vector key's column count matches the workspace section; `compatible_printers`
      names only the workspace's machine presets.
    - Every override has a recorded rationale, and every recorded rationale has its
      override — a mismatch in either direction is a defect, named per key.
 6. **Install**: `import_profile` from the profile directory (`overwrite: true` when
-   replacing a prior version). Confirm with `diff_profile` — expect `identical: true`.
-   Remove superseded presets with `remove_profile`. Tell the user Bambu Studio needs a
-   restart before the preset is visible.
+   replacing a prior version). Confirm with `diff_profile` — expect `identical: true` —
+   and `resolve_profile` on the installed name now resolves the full chain including the
+   new preset. Remove superseded presets with `remove_profile`. Tell the user Bambu
+   Studio needs a restart before the preset is visible.
 
 ## Red Flags
 

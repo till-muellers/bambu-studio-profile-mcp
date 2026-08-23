@@ -33,8 +33,9 @@ project's `CLAUDE.md` (create the file if absent).
    ## Printing Workspace
 
    - Printer: <model>, nozzles <sizes>, AMS <units or none>.
-   - Inherit only system presets scoped to this printer (`@BBL <model>` suffix or
-     `fdm_*`/`@base` roots); other printers' presets carry wrong bed/chamber values.
+   - Inherit only system presets scoped to this printer (for Bambu-brand machines the
+     `@BBL <model>` suffix; other vendors per the scoping observed in `list_profiles`) or
+     `fdm_*`/`@base` roots; other printers' presets carry wrong bed/chamber values.
    - Extruder-variant columns: <N> (<labels>). Vector keys carry <N> columns; a "nil"
      element keeps the inherited value for that column.
    - `compatible_printers` lists exactly the machine-preset names being tuned: <names>.
@@ -46,7 +47,9 @@ project's `CLAUDE.md` (create the file if absent).
    ```
 
    Fill every placeholder with the probed value; drop nothing. When the section already
-   exists, update stale facts in place.
+   exists, update stale facts in place. When the project's `CLAUDE.md` already records
+   these facts in its own wording, update them there instead of adding a duplicate
+   section — one home per fact.
 5. **Report** the recorded facts to the user and name the file updated.
 
 ## Gotchas worth recording when they apply

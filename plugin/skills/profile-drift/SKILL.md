@@ -31,9 +31,10 @@ reconciliation goes in exactly one direction per key, chosen deliberately.
 ## Diagnosing "the print used old values"
 
 - A Bambu Studio instance started before an install keeps slicing from the old preset —
-  instances share no preset state. Compare the process start time
-  (`Get-Process bambu-studio | Select-Object Id, StartTime`) against the installed
-  preset's `modifiedAt` from `diff_profile`. Restart Studio, then re-check.
+  instances share no preset state. Compare the Studio process start time (Windows:
+  `Get-Process bambu-studio | Select-Object Id, StartTime`; elsewhere the OS process
+  list) against the installed preset's `modifiedAt` from `diff_profile`. Restart Studio,
+  then re-check.
 - Machine-level values changed in Studio's Printer settings without saving a preset never
   appear in any file; `resolve_profile` cannot see them. Read them off the UI or have the
   user save a machine preset.

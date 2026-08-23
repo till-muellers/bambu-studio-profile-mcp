@@ -156,4 +156,16 @@ describe("handleImport", () => {
       handleImport(deps(), "process", { vendor: "BBL", outputDir: outDir, name: "Rootless" })
     ).rejects.toThrow(/inherits/);
   });
+
+  it("rejects a traversal name and writes nothing outside the store", async () => {
+    await writeFile(
+      join(tmp, "evil.json"),
+      JSON.stringify({ name: "evil", inherits: "fdm_process_common", layer_height: "0.2" }, null, 4),
+      "utf8"
+    );
+    await expect(
+      handleImport(deps(), "process", { vendor: "BBL", outputDir: outDir, name: "../evil" })
+    ).rejects.toThrow(/path|separator|plain filename/i);
+    expect(existsSync(join(userStore, "evil.json"))).toBe(false);
+  });
 });

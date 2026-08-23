@@ -96,4 +96,13 @@ describe("handleRemove", () => {
   it("errors when the preset is not found at all", async () => {
     await expect(handleRemove(deps(), "process", { name: "Ghost" })).rejects.toThrow(/not found/);
   });
+
+  it("rejects a traversal name and deletes nothing outside the kind dir", async () => {
+    const sentinel = join(tmp, "user", "u1", "sentinel.json");
+    await writeFile(sentinel, JSON.stringify({ name: "sentinel", from: "User" }), "utf8");
+    await expect(handleRemove(deps(), "process", { name: "../sentinel" })).rejects.toThrow(
+      /path|separator|plain filename/i
+    );
+    expect(existsSync(sentinel)).toBe(true);
+  });
 });

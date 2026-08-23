@@ -8,6 +8,11 @@ export function userPresetPaths(
   kind: ProfileKind,
   name: string
 ): { jsonPath: string; infoPath: string } {
+  if (/[/\\]/.test(name) || name === "." || name === "..") {
+    throw new Error(
+      `Invalid profile name '${name}': must be a plain filename without path separators.`
+    );
+  }
   const dir = join(cfg.userDataDir, "user", cfg.userId, kind);
   return { jsonPath: join(dir, `${name}.json`), infoPath: join(dir, `${name}.info`) };
 }

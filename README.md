@@ -5,7 +5,7 @@ An MCP (Model Context Protocol) server for managing 3D printing slicer profiles,
 ## Tools
 
 - `resolve_profile` — resolve a process or filament profile's (`kind` argument) fully-merged active settings by walking its `inherits` chain across the configured user preset store and system profiles.
-- `write_profile` — create a process or filament profile file (`kind` argument) in a caller-chosen output directory from a base profile plus schema-validated key-value overrides. Bambu Studio's own directories are never written; importing profiles into Bambu Studio is a planned later feature.
+- `write_profile` — create a process or filament profile file (`kind` argument) in a caller-chosen output directory from a base profile plus schema-validated key-value overrides. Bambu Studio's own directories are never written by write_profile.
 - `update_profile` — incrementally edit a profile file previously created by `write_profile`: upsert `set` keys and delete `remove` keys in one atomic, schema-validated step, leaving unmentioned keys and the file's `name`/`inherits` untouched.
 - `import_profile` — install a written profile file into Bambu Studio's user preset store (metadata and `.info` sidecar synthesized; overwrite requires an explicit flag; Bambu Studio sees it after a restart).
 - `remove_profile` — delete a user preset (JSON + `.info`) from the store; only presets marked `"from": "User"`; flags presets that have a cloud record.

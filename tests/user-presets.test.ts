@@ -15,6 +15,23 @@ describe("userPresetPaths", () => {
     expect(jsonPath).toBe(join("D:/data", "user", "1234567890", "process", "My Draft.json"));
     expect(infoPath).toBe(join("D:/data", "user", "1234567890", "process", "My Draft.info"));
   });
+
+  it("allows a name with spaces and special characters", () => {
+    const { jsonPath } = userPresetPaths(CFG, "process", "0.20mm Standard @BBL X1C");
+    expect(jsonPath).toBe(
+      join("D:/data", "user", "1234567890", "process", "0.20mm Standard @BBL X1C.json")
+    );
+  });
+
+  it.each([
+    ["../evil"],
+    ["..\\evil"],
+    ["sub/x"],
+    ["sub\\x"],
+    [".."],
+  ])("rejects a traversal name %s", (name) => {
+    expect(() => userPresetPaths(CFG, "process", name)).toThrow(/path|separator|plain filename/i);
+  });
 });
 
 describe("formatInfoSidecar", () => {

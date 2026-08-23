@@ -61,10 +61,11 @@ async function connectedClientAndServer(
 }
 
 describe("bambu-studio-profile-mcp server", () => {
-  it("exposes exactly the ten tools", async () => {
+  it("exposes exactly the eleven tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "diff_profile",
       "import_profile",
       "init_config",
       "list_filaments",
@@ -255,6 +256,16 @@ describe("bambu-studio-profile-mcp server", () => {
       });
       expect(imported.isError).toBeFalsy();
       expect(imported.structuredContent).toMatchObject({ kind: "process", overwritten: false });
+
+      const diffed = await client.callTool({
+        name: "diff_profile",
+        arguments: { kind: "process", name: "Proto Draft", outputDir: outDir },
+      });
+      expect(diffed.isError).toBeFalsy();
+      expect(diffed.structuredContent).toMatchObject({
+        identical: true,
+        newer: expect.stringMatching(/^(source|installed|same)$/),
+      });
 
       const removed = await client.callTool({
         name: "remove_profile",

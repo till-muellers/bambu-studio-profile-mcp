@@ -161,6 +161,7 @@ Configuration persists per project in `.bambu-studio-profile-mcp\config.json`. A
 | `resolve_profile` | Resolve a profile's fully-merged active settings across its `inherits` chain. |
 | `write_profile` | Create a profile file in a caller-chosen directory from a base profile plus validated overrides. |
 | `update_profile` | Atomically upsert and delete keys in a previously written profile file. |
+| `diff_profile` | Compare a local profile file against the installed user preset, key by key — changed, added, and removed values plus which side is newer. |
 | `import_profile` | Install a written profile into Bambu Studio's user preset store (`.info` sidecar synthesized; overwrite requires an explicit flag; Studio sees it after a restart). |
 | `remove_profile` | Delete a user preset (JSON + `.info`) from the store; only presets marked `"from": "User"`. |
 

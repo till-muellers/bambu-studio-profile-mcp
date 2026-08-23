@@ -200,6 +200,8 @@ describe("printing-profile-mcp server", () => {
 
     expect(received).toHaveLength(1);
     expect(received[0]).toMatchObject({ level: "warning", logger: "printing-profile-mcp" });
+    expect((received[0] as { data: string }).data).toContain(".printing-profile-mcp/config.json");
+    expect((received[0] as { data: string }).data).toContain("init_config");
   });
 
   it("does not send a notification via warnIfUnconfigured when already configured", async () => {

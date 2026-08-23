@@ -26,19 +26,24 @@ export function buildServer(deps: ToolDeps): McpServer {
 }
 
 /**
- * Best-effort: if config.json hasn't been created yet, log to stderr and send an MCP logging
+ * Best-effort: if no per-project config exists yet, log to stderr and send an MCP logging
  * notification telling the client to call init_config. Never throws — a notification failure
  * (e.g. no connected transport) must not crash the server.
  */
 export async function warnIfUnconfigured(server: McpServer, deps: ToolDeps): Promise<void> {
   const cfg = await deps.config.load();
   if (cfg) return;
-  console.error("printing-profile-mcp: config.json not found — call the init_config tool to get started.");
+  console.error(
+    "printing-profile-mcp: no configuration found for this project (.printing-profile-mcp/config.json) " +
+      "— call the init_config tool to get started."
+  );
   try {
     await server.server.sendLoggingMessage({
       level: "warning",
       logger: "printing-profile-mcp",
-      data: "printing-profile-mcp is not configured yet. Call the init_config tool to get started.",
+      data:
+        "printing-profile-mcp has no configuration for this project (.printing-profile-mcp/config.json). " +
+        "Call the init_config tool to get started.",
     });
   } catch {
     // Best-effort only — no connected client, or the client hasn't negotiated logging.

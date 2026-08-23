@@ -306,13 +306,15 @@ Studio's user preset store, `user/<userId>/<kind>/`.
 ```json
 {
   "kind": "process | filament",
+  "vendor": "string",
   "outputDir": "string",
   "name": "string",
   "overwrite": false
 }
 ```
 `outputDir`/`name` locate the source file `<outputDir>/<name>.json`, the
-same addressing `update_profile` uses.
+same addressing `update_profile` uses. `vendor` names the system store the
+source's `inherits` chain is resolved against, as on every other tool.
 
 **Behavior**
 
@@ -356,8 +358,9 @@ same addressing `update_profile` uses.
 ```
 
 **Errors**: source `<outputDir>/<name>.json` missing or unparseable;
-schema violations listed per key (like `write_profile`); `inherits`
-target not found or unresolvable; target exists without `overwrite`;
+schema violations listed per key (like `write_profile`); vendor not
+found; `inherits` target not found or unresolvable; target exists
+without `overwrite`;
 target exists but its `from` is not `"User"` (refusal, not bypassable);
 config missing (run `init_config` first). All problems found before any
 write are collected and reported together.

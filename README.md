@@ -19,11 +19,23 @@ Requires Node.js 20+ and a local Bambu Studio installation.
 
 ## Quick start (Claude Code)
 
+The plugin installs the MCP server and three workflow skills (workspace initialization, profile authoring, drift reconciliation) in one step:
+
+```bash
+claude plugin marketplace add till-muellers/bambu-studio-profile-mcp
+```
+
+```bash
+claude plugin install bambu-studio-profiles@bambu-studio-profile-mcp
+```
+
+To register only the MCP server without the skills:
+
 ```powershell
 claude mcp add bambu-profiles --scope user -- npx -y bambu-studio-profile-mcp
 ```
 
-Then ask your agent to call `init_config` once per project — with Bambu Studio installed and logged in, no arguments are needed.
+Then ask your agent to call `init_config` once per project — with Bambu Studio installed and logged in, no arguments are needed. The plugin's `profile-workspace-init` skill does this and records the printer context for later sessions.
 
 ## Installing in other clients
 

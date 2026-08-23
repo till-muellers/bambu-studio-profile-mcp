@@ -1,0 +1,12 @@
+{
+  "name": "bambu-studio-profiles",
+  "version": "0.1.0",
+  "description": "Work with Bambu Studio printing profiles: resolve, author, install, and reconcile process and filament presets through the bambu-profiles MCP server.",
+  "author": {
+    "name": "Till Müllers",
+    "url": "https://github.com/till-muellers"
+  },
+  "repository": "https://github.com/till-muellers/bambu-studio-profile-mcp",
+  "license": "AGPL-3.0-only",
+  "keywords": ["bambu-studio", "3d-printing", "printing-profiles", "slicer", "mcp"]
+}

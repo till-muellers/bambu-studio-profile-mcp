@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bambu-profiles": {
+      "command": "npx",
+      "args": ["-y", "bambu-studio-profile-mcp"]
+    }
+  }
+}

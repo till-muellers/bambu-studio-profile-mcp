@@ -1,0 +1,14 @@
+{
+  "name": "bambu-studio-profile-mcp",
+  "owner": {
+    "name": "Till Müllers",
+    "url": "https://github.com/till-muellers"
+  },
+  "plugins": [
+    {
+      "name": "bambu-studio-profiles",
+      "source": "./plugin",
+      "description": "Bambu Studio printing-profile workflow: the bambu-profiles MCP server plus skills for workspace initialization, profile authoring, and drift reconciliation."
+    }
+  ]
+}

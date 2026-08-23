@@ -21,4 +21,11 @@ describe("strings module", () => {
   it("keeps ConfigMissingError guidance intact", () => {
     expect(strings.errors.configMissing).toContain("init_config");
   });
+
+  it("exposes the import/remove tool strings", () => {
+    expect(strings.tools.importProfile.title).toBe("Import profile");
+    expect(strings.tools.removeProfile.title).toBe("Remove profile");
+    expect(strings.messages.invalidProfileName("a/b")).toContain("a/b");
+    expect(strings.messages.removeStraySidecar("j.json", "j.info")).toContain("j.info");
+  });
 });

@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
 import { resolveProfile } from "../resolver.js";
+import { strings } from "../strings.js";
 import type { ProfileKind, RawProfile } from "../types.js";
 import {
   STUDIO_RESTART_NOTE,
@@ -33,20 +34,20 @@ export async function handleImport(
 
   const sourcePath = join(args.outputDir, `${args.name}.json`);
   if (!existsSync(sourcePath)) {
-    throw new Error(`Source profile '${sourcePath}' not found. Create it with write_profile first.`);
+    throw new Error(strings.messages.importSourceNotFound(sourcePath));
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(sourcePath, "utf8"));
   } catch {
-    throw new Error(`Source profile '${sourcePath}' is not valid JSON.`);
+    throw new Error(strings.messages.importSourceNotJson(sourcePath));
   }
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(`Source profile '${sourcePath}' does not contain a JSON object.`);
+    throw new Error(strings.messages.importSourceNotObject(sourcePath));
   }
   const source = parsed as RawProfile;
   if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(`Source profile '${sourcePath}' has no 'inherits' field.`);
+    throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
   }
 
   const kvps = Object.fromEntries(
@@ -63,18 +64,16 @@ export async function handleImport(
   const overwritten = existsSync(jsonPath);
   if (overwritten) {
     if (!args.overwrite) {
-      throw new Error(`Target preset '${jsonPath}' already exists. Pass overwrite: true to replace it.`);
+      throw new Error(strings.messages.importTargetExists(jsonPath));
     }
     let existing: unknown;
     try {
       existing = JSON.parse(await readFile(jsonPath, "utf8"));
     } catch {
-      throw new Error(
-        `Refusing to overwrite '${jsonPath}': cannot verify it is a user preset (unparseable JSON).`
-      );
+      throw new Error(strings.messages.importTargetUnparseable(jsonPath));
     }
     if ((existing as RawProfile).from !== "User") {
-      throw new Error(`Refusing to overwrite '${jsonPath}': its 'from' field is not "User".`);
+      throw new Error(strings.messages.importTargetNotUser(jsonPath));
     }
   }
 
@@ -116,21 +115,19 @@ export async function handleRemove(
 
   if (!existsSync(jsonPath)) {
     if (infoExists) {
-      throw new Error(
-        `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`
-      );
+      throw new Error(strings.messages.removeStraySidecar(jsonPath, infoPath));
     }
-    throw new Error(`Preset '${jsonPath}' not found in the user store.`);
+    throw new Error(strings.messages.removeNotFound(jsonPath));
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(jsonPath, "utf8"));
   } catch {
-    throw new Error(`Refusing to remove '${jsonPath}': cannot verify it is a user preset (unparseable JSON).`);
+    throw new Error(strings.messages.removeUnparseable(jsonPath));
   }
   if ((parsed as RawProfile).from !== "User") {
-    throw new Error(`Refusing to remove '${jsonPath}': its 'from' field is not "User".`);
+    throw new Error(strings.messages.removeNotUser(jsonPath));
   }
 
   let cloudRecord = false;
@@ -142,7 +139,7 @@ export async function handleRemove(
   if (infoExists) await rm(infoPath);
 
   const note = cloudRecord
-    ? `${STUDIO_RESTART_NOTE} A cloud record exists for this preset; Bambu Studio's sync may restore it.`
+    ? `${STUDIO_RESTART_NOTE} ${strings.messages.cloudRecordWarning}`
     : STUDIO_RESTART_NOTE;
   return {
     kind,
@@ -155,27 +152,16 @@ export async function handleRemove(
 }
 
 const removeInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Profile type to remove"),
-  name: z.string().min(1).describe("Name of the user preset to remove from user/<userId>/<kind>/"),
+  kind: z.enum(["process", "filament"]).describe(strings.tools.removeProfile.inputs.kind),
+  name: z.string().min(1).describe(strings.tools.removeProfile.inputs.name),
 };
 
 function registerRemoveProfile(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "remove_profile",
     {
-      title: "Remove profile",
-      description:
-        "Delete a user preset (its JSON plus .info sidecar) from Bambu Studio's user preset store " +
-        "(user/<userId>/<kind>/). Only presets whose own 'from' field is \"User\" are removable. " +
-        "When the preset has a cloud record (populated setting_id in its sidecar) it is still " +
-        "removed locally and the result flags cloudRecord: true, since Bambu Studio's sync may " +
-        "restore it.\n\n" +
-        "Returns: { kind, name, removedJson, removedInfo, cloudRecord, note } — removedInfo is null " +
-        "when no sidecar existed; note states that Bambu Studio sees the change after a restart.\n\n" +
-        "Errors: preset not found; a stray sidecar without its JSON; the preset's 'from' is not " +
-        "\"User\" or its JSON is unparseable (refused regardless of flags); config missing (run " +
-        "init_config first).\n\n" +
-        "Discover installed user presets with list_profiles (source \"user\").",
+      title: strings.tools.removeProfile.title,
+      description: strings.tools.removeProfile.description,
       inputSchema: removeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
@@ -194,38 +180,19 @@ function registerRemoveProfile(server: McpServer, deps: ToolDeps): void {
 }
 
 const importInputShape = {
-  kind: z.enum(["process", "filament"]).describe("Profile type to import"),
-  vendor: z
-    .string()
-    .min(1)
-    .describe("Vendor id from list_vendors, e.g. 'BBL'; names the system store the source's inherits chain is resolved against"),
-  outputDir: z.string().min(1).describe("Directory containing the source file written by write_profile"),
-  name: z.string().min(1).describe("Name of the profile to import; locates <outputDir>/<name>.json and names the installed preset"),
-  overwrite: z
-    .boolean()
-    .optional()
-    .describe("Pass true to replace an existing user preset of the same name; defaults to false"),
+  kind: z.enum(["process", "filament"]).describe(strings.tools.importProfile.inputs.kind),
+  vendor: z.string().min(1).describe(strings.tools.importProfile.inputs.vendor),
+  outputDir: z.string().min(1).describe(strings.tools.importProfile.inputs.outputDir),
+  name: z.string().min(1).describe(strings.tools.importProfile.inputs.name),
+  overwrite: z.boolean().optional().describe(strings.tools.importProfile.inputs.overwrite),
 };
 
 export function registerImportTools(server: McpServer, deps: ToolDeps): void {
   server.registerTool(
     "import_profile",
     {
-      title: "Import profile",
-      description:
-        "Install a profile file written by write_profile into Bambu Studio's user preset store " +
-        "(user/<userId>/<kind>/), synthesizing the metadata Bambu Studio expects (from, version, " +
-        "settings id) and a minimal .info sidecar. The source is fully re-validated against the " +
-        "option schema first and its inherits chain is resolved; nothing is installed when any " +
-        "check fails. Replacing an existing preset requires overwrite: true and only ever replaces " +
-        "presets whose own 'from' field is \"User\".\n\n" +
-        "Returns: { kind, name, path, infoPath, overwritten, note } — note states that Bambu Studio " +
-        "sees the preset after a restart.\n\n" +
-        "Errors: source missing or unparseable; schema violations listed per key; vendor or inherits " +
-        "target not found; target exists without overwrite; target's 'from' is not \"User\" (refused " +
-        "regardless of flags); config missing (run init_config first).\n\n" +
-        "Typical flow: write_profile into an outputDir, then import_profile with the same " +
-        "outputDir/name. Remove an installed preset again with remove_profile.",
+      title: strings.tools.importProfile.title,
+      description: strings.tools.importProfile.description,
       inputSchema: importInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },

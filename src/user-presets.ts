@@ -1,7 +1,8 @@
 import { join } from "node:path";
+import { strings } from "./strings.js";
 import type { ProfileKind, ServerConfig } from "./types.js";
 
-export const STUDIO_RESTART_NOTE = "Bambu Studio picks this up after a restart.";
+export const STUDIO_RESTART_NOTE = strings.messages.studioRestartNote;
 
 export function userPresetPaths(
   cfg: ServerConfig,
@@ -9,9 +10,7 @@ export function userPresetPaths(
   name: string
 ): { jsonPath: string; infoPath: string } {
   if (/[/\\]/.test(name) || name === "." || name === "..") {
-    throw new Error(
-      `Invalid profile name '${name}': must be a plain filename without path separators.`
-    );
+    throw new Error(strings.messages.invalidProfileName(name));
   }
   const dir = join(cfg.userDataDir, "user", cfg.userId, kind);
   return { jsonPath: join(dir, `${name}.json`), infoPath: join(dir, `${name}.info`) };

@@ -71,7 +71,7 @@ const writeInputShape = {
     .min(1)
     .describe(strings.tools.writeProfile.inputs.baseProfile),
   kvps: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .describe(strings.tools.writeProfile.inputs.kvps),
   outputDir: z.string().min(1).describe(strings.tools.writeProfile.inputs.outputDir),
 };

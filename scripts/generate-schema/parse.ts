@@ -71,17 +71,15 @@ function decodeCppEscapes(text: string): string {
 }
 
 /**
- * Extracts `def-><field> = L(...)` where the L(...) argument is one or more adjacent quoted
+ * Extracts `def->label = L(...)` where the L(...) argument is one or more adjacent quoted
  * string literals (C++ string-literal concatenation, optionally spanning multiple lines), e.g.
  * `def->label = L("part a " "part b")`. C++ adjacent string literals concatenate with NO
  * implicit separator, so the literals' decoded contents are joined directly (any word-boundary
  * spacing must already be present inside the literals themselves, as it is in the source). Returns
  * `undefined` when the field is absent from `body`.
  */
-function extractLField(body: string, field: "label"): string | undefined {
-  const re = new RegExp(
-    `def->${field}\\s*=\\s*L\\(\\s*((?:"(?:[^"\\\\]|\\\\.)*"\\s*)+)\\)`
-  );
+function extractLField(body: string): string | undefined {
+  const re = /def->label\s*=\s*L\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)\)/;
   const match = body.match(re);
   if (!match) return undefined;
   const literals = match[1].match(/"(?:[^"\\]|\\.)*"/g);
@@ -136,7 +134,7 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     if (!mapped) continue;
 
     const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
-    const label = extractLField(body, "label");
+    const label = extractLField(body);
     if (label !== undefined) option.label = label;
     if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);

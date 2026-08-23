@@ -77,17 +77,23 @@ console.log(
     `schema/filament.schema.json (${Object.keys(filamentSchema).length} keys).`
 );
 
-function reportOverlay(kind: string, schema: ProfileSchema, report: { applied: number; missing: string[]; stale: string[] }): void {
+function reportOverlay(kind: string, schema: ProfileSchema, report: { applied: number; missing: string[] }): void {
   console.error(
     `${kind}: applied ${report.applied}/${Object.keys(schema).length} descriptions, ${report.missing.length} missing.`
   );
   if (report.missing.length > 0) {
     console.error(`${kind} missing keys: ${report.missing.join(", ")}`);
   }
-  if (report.stale.length > 0) {
-    console.error(`${kind} stale overlay keys (no matching option): ${report.stale.join(", ")}`);
-  }
 }
 
 reportOverlay("process", processSchema, processReport);
 reportOverlay("filament", filamentSchema, filamentReport);
+
+// A key is only truly stale if it matches neither kind's options — reporting per-kind stale
+// against the same flat overlay would flag every filament-only key as "stale" in the process run
+// (and vice versa), which is permanently noisy once the overlay covers both kinds.
+const knownKeys = new Set([...Object.keys(processSchema), ...Object.keys(filamentSchema)]);
+const globalStale = Object.keys(descriptions).filter((key) => !knownKeys.has(key));
+if (globalStale.length > 0) {
+  console.error(`stale overlay keys (no matching option in either kind): ${globalStale.join(", ")}`);
+}

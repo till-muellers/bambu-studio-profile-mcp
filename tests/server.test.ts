@@ -1,7 +1,7 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { LoggingMessageNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,6 +9,7 @@ import { ConfigManager } from "../src/config.js";
 import { buildServer, warnIfUnconfigured } from "../src/index.js";
 import { FsProfileStore } from "../src/profile-store.js";
 import type { ToolDeps } from "../src/tools/deps.js";
+import type { ServerConfig } from "../src/types.js";
 import { handleWrite } from "../src/tools/write.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -60,7 +61,7 @@ async function connectedClientAndServer(
 }
 
 describe("printing-profile-mcp server", () => {
-  it("exposes exactly the nine tools", async () => {
+  it("exposes exactly the ten tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -70,6 +71,7 @@ describe("printing-profile-mcp server", () => {
       "list_parameters",
       "list_profiles",
       "list_vendors",
+      "remove_profile",
       "resolve_profile",
       "update_profile",
       "write_profile",
@@ -216,5 +218,52 @@ describe("printing-profile-mcp server", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(received).toHaveLength(0);
+  });
+
+  it("serves import_profile and remove_profile end-to-end over the protocol", async () => {
+    const tmp = await mkdtemp(join(tmpdir(), "ppm-proto-"));
+    try {
+      const outDir = join(tmp, "out");
+      await mkdir(join(tmp, "userdata", "user", "u1", "process"), { recursive: true });
+      await mkdir(outDir, { recursive: true });
+      await writeFile(
+        join(outDir, "Proto Draft.json"),
+        JSON.stringify({ name: "Proto Draft", inherits: "fdm_process_common", layer_height: "0.16" }),
+        "utf8"
+      );
+      class ProtoConfig extends ConfigManager {
+        constructor() {
+          super(join(FIXTURES, "does-not-exist.json"));
+        }
+        override async load(): Promise<ServerConfig | null> {
+          return { installDir: join(FIXTURES, "install"), userDataDir: join(tmp, "userdata"), userId: "u1" };
+        }
+      }
+      const server = buildServer({
+        config: new ProtoConfig(),
+        storeFactory: (cfg) => new FsProfileStore(cfg),
+        schemaDir: join(FIXTURES, "schema"),
+        detectPaths: async () => ({}),
+      });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      const client = new Client({ name: "test-client", version: "0.0.0" });
+      await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+
+      const imported = await client.callTool({
+        name: "import_profile",
+        arguments: { kind: "process", vendor: "BBL", outputDir: outDir, name: "Proto Draft" },
+      });
+      expect(imported.isError).toBeFalsy();
+      expect(imported.structuredContent).toMatchObject({ kind: "process", overwritten: false });
+
+      const removed = await client.callTool({
+        name: "remove_profile",
+        arguments: { kind: "process", name: "Proto Draft" },
+      });
+      expect(removed.isError).toBeFalsy();
+      expect(removed.structuredContent).toMatchObject({ cloudRecord: false, removedInfo: expect.any(String) });
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
+    }
   });
 });

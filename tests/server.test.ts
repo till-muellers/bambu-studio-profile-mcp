@@ -61,7 +61,7 @@ async function connectedClientAndServer(
 }
 
 describe("bambu-studio-profile-mcp server", () => {
-  it("exposes exactly the eleven tools", async () => {
+  it("exposes exactly the twelve tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -73,6 +73,7 @@ describe("bambu-studio-profile-mcp server", () => {
       "list_profiles",
       "list_vendors",
       "remove_profile",
+      "resolve_from_file",
       "resolve_profile",
       "update_profile",
       "write_profile",
@@ -265,6 +266,19 @@ describe("bambu-studio-profile-mcp server", () => {
       expect(diffed.structuredContent).toMatchObject({
         identical: true,
         newer: expect.stringMatching(/^(source|installed|same)$/),
+      });
+
+      const resolvedFromFile = await client.callTool({
+        name: "resolve_from_file",
+        arguments: { kind: "process", vendor: "BBL", outputDir: outDir, name: "Proto Draft" },
+      });
+      expect(resolvedFromFile.isError).toBeFalsy();
+      expect(resolvedFromFile.structuredContent).toMatchObject({
+        kind: "process",
+        name: "Proto Draft",
+        chain: ["fdm_process_common", "Proto Draft"],
+        settings: { layer_height: "0.16", wall_loops: "2" },
+        path: join(outDir, "Proto Draft.json"),
       });
 
       const removed = await client.callTool({

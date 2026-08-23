@@ -4,8 +4,11 @@
   "description": "MCP server for resolving and writing Bambu Studio process/filament profiles",
   "type": "module",
   "main": "dist/index.js",
+  "bin": { "printing-profile-mcp": "dist/index.js" },
+  "files": ["dist", "schema"],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "start": "node dist/index.js",
     "test": "vitest run"
   },

@@ -92,12 +92,22 @@ currently 2.7.0.8). Re-run the generator after Bambu Studio updates.
 
 ## Path configuration
 
-`config.json` (repo root, gitignored, machine-specific) stores three
-values:
+`config.json` stores three values:
 
 ```json
 { "installDir": "string", "userDataDir": "string", "userId": "string" }
 ```
+
+It lives at `<configDir>/config.json`, where `configDir` resolves at server
+start (first match wins):
+
+1. `PRINTING_PROFILE_MCP_CONFIG_DIR` env var — used as the config directory
+   verbatim, no subdirectory appended.
+2. `CLAUDE_PROJECT_DIR` env var (set by Claude Code for stdio MCP servers) —
+   config dir is `<CLAUDE_PROJECT_DIR>/.printing-profile-mcp`.
+3. `process.cwd()` — fallback; config dir is `<cwd>/.printing-profile-mcp`.
+
+The resulting directory is per-project and gitignored (`.printing-profile-mcp/`).
 
 - `installDir` — contains `resources/profiles` and
   `resources/profiles_template`.

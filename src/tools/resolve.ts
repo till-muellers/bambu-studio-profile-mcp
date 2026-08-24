@@ -20,7 +20,7 @@ export async function handleResolve(
 }
 
 const resolveInputShape = {
-  kind: z.enum(["process", "filament"]).describe(strings.tools.resolveProfile.inputs.kind),
+  kind: z.enum(["process", "filament", "machine"]).describe(strings.tools.resolveProfile.inputs.kind),
   vendor: z
     .string()
     .min(1)

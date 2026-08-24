@@ -4,7 +4,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { strings } from "../strings.js";
-import type { ProfileKind, RawProfile } from "../types.js";
+import type { WritableProfileKind, RawProfile } from "../types.js";
 import { SYNTHESIZED_METADATA_KEYS, userPresetPaths } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
@@ -17,7 +17,7 @@ export interface DiffFileInfo {
 }
 
 export interface DiffResult {
-  kind: ProfileKind;
+  kind: WritableProfileKind;
   name: string;
   identical: boolean;
   changed: { key: string; source: unknown; installed: unknown }[];
@@ -64,7 +64,7 @@ async function readProfile(
 
 export async function handleDiff(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: WritableProfileKind,
   args: { name: string; outputDir: string; sourceName?: string }
 ): Promise<DiffResult> {
   const cfg = await deps.config.require();
@@ -134,7 +134,7 @@ export function registerDiffTool(server: McpServer, deps: ToolDeps): void {
       inputSchema: diffInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; name: string; outputDir: string; sourceName?: string }) => {
+    async (args: { kind: WritableProfileKind; name: string; outputDir: string; sourceName?: string }) => {
       try {
         const result = await handleDiff(deps, args.kind, args);
         return {

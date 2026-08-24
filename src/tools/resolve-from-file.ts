@@ -64,7 +64,7 @@ export async function handleResolveFromFile(
 }
 
 const resolveFromFileInputShape = {
-  kind: z.enum(["process", "filament"]).describe(strings.tools.resolveFromFile.inputs.kind),
+  kind: z.enum(["process", "filament", "machine"]).describe(strings.tools.resolveFromFile.inputs.kind),
   vendor: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.vendor),
   outputDir: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.outputDir),
   name: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.name),

@@ -1,4 +1,7 @@
-export type ProfileKind = "process" | "filament";
+export type ProfileKind = "process" | "filament" | "machine";
+
+/** Kinds a caller may create, edit, install, or remove. Machine presets are Bambu Studio's to write. */
+export type WritableProfileKind = Exclude<ProfileKind, "machine">;
 
 export interface ServerConfig {
   installDir: string;

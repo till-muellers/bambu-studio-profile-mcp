@@ -1,0 +1,10 @@
+{
+    "name": "fdm_machine_common",
+    "version": "2.7.0.8",
+    "printer_technology": "FFF",
+    "gcode_flavor": "marlin",
+    "printable_height": "250",
+    "nozzle_diameter": ["0.4"],
+    "retraction_length": ["0.8", "0.8", "0.8"],
+    "printer_extruder_variant": ["Direct Drive Standard"]
+}

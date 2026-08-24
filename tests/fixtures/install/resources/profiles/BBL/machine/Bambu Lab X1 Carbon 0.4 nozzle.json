@@ -1,0 +1,9 @@
+{
+    "name": "Bambu Lab X1 Carbon 0.4 nozzle",
+    "inherits": "fdm_machine_common",
+    "printer_model": "Bambu Lab X1 Carbon",
+    "printer_variant": "0.4",
+    "printable_height": "256",
+    "printer_extruder_variant": ["Direct Drive Standard", "Direct Drive High Flow", "Direct Drive Standard"],
+    "retraction_length": ["0.8", "1.2", "0.8"]
+}

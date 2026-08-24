@@ -7,7 +7,7 @@ import type { ProfileKind, SchemaOption } from "../types.js";
 import { loadSchema } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
-const kindEnum = z.enum(["process", "filament"]);
+const kindEnum = z.enum(["process", "filament", "machine"]);
 const sourceEnum = z.enum(["user", "system"]);
 
 /** Which store a listing row came from. */

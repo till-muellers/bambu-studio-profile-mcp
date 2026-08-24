@@ -150,6 +150,78 @@ describe("bambu-studio-profile-mcp server", () => {
     expect(Object.keys((result.structuredContent as { settings: object }).settings)).toEqual(["layer_height"]);
   });
 
+  it("serves the machine kind on the read tools over the protocol", async () => {
+    const client = await connectedClient();
+
+    const resolved = await client.callTool({
+      name: "resolve_profile",
+      arguments: { kind: "machine", vendor: "BBL", name: "Bambu Lab X1 Carbon 0.4 nozzle" },
+    });
+    expect(resolved.isError).toBeFalsy();
+    expect(resolved.structuredContent).toMatchObject({
+      kind: "machine",
+      settings: {
+        printer_extruder_variant: ["Direct Drive Standard", "Direct Drive High Flow", "Direct Drive Standard"],
+      },
+    });
+
+    const listed = await client.callTool({
+      name: "list_profiles",
+      arguments: { kind: "machine", vendor: "BBL" },
+    });
+    expect(listed.isError).toBeFalsy();
+    expect((listed.structuredContent as { profiles: { name: string }[] }).profiles.map((p) => p.name)).toContain(
+      "fdm_machine_common"
+    );
+
+    const params = await client.callTool({
+      name: "list_parameters",
+      arguments: { kind: "machine", search: "printer_extruder_variant" },
+    });
+    expect(params.isError).toBeFalsy();
+    expect(params.structuredContent).toMatchObject({
+      kind: "machine",
+      parameters: [{ key: "printer_extruder_variant", vector: true }],
+    });
+  });
+
+  it("rejects the machine kind on every writing tool over the protocol", async () => {
+    const client = await connectedClient();
+    const calls: { name: string; arguments: Record<string, unknown> }[] = [
+      {
+        name: "write_profile",
+        arguments: {
+          kind: "machine",
+          vendor: "BBL",
+          name: "Nope",
+          baseProfile: "fdm_machine_common",
+          kvps: { printable_height: "300" },
+          outputDir: join(FIXTURES, "unused"),
+        },
+      },
+      {
+        name: "update_profile",
+        arguments: { kind: "machine", name: "Nope", outputDir: join(FIXTURES, "unused"), set: { printable_height: "300" } },
+      },
+      {
+        name: "import_profile",
+        arguments: { kind: "machine", name: "Nope", outputDir: join(FIXTURES, "unused") },
+      },
+      { name: "remove_profile", arguments: { kind: "machine", name: "Nope" } },
+      {
+        name: "diff_profile",
+        arguments: { kind: "machine", name: "Nope", outputDir: join(FIXTURES, "unused") },
+      },
+    ];
+    for (const call of calls) {
+      const result = await client.callTool(call);
+      expect(result.isError, `${call.name} must reject kind machine`).toBe(true);
+      const text = (result.content as { text: string }[])[0].text;
+      expect(text, `${call.name} must reject kind machine at the schema`).toContain("kind");
+      expect(text).toContain("validation");
+    }
+  });
+
   it("filters list_profiles by source over the protocol", async () => {
     const client = await connectedClient();
     const result = await client.callTool({

@@ -1,0 +1,23 @@
+{
+  "printer_technology": { "type": "enum", "vector": false, "enum": ["FFF", "SLA"], "default": "FFF" },
+  "gcode_flavor": { "type": "enum", "vector": false, "enum": ["marlin", "klipper"], "default": "marlin" },
+  "printable_height": { "type": "float", "vector": false, "min": 0, "max": 2000, "default": 250 },
+  "nozzle_diameter": { "type": "float", "vector": true, "min": 0, "max": 2, "default": 0.4 },
+  "retraction_length": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "max": 10,
+    "default": 0.8,
+    "label": "Retraction length",
+    "description": "Filament pulled back at each travel move."
+  },
+  "printer_extruder_variant": {
+    "type": "string",
+    "vector": true,
+    "label": "Printer's extruder variant",
+    "default": "Direct Drive Standard"
+  },
+  "printer_model": { "type": "string", "vector": false },
+  "printer_variant": { "type": "string", "vector": false }
+}

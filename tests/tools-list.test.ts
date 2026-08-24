@@ -54,6 +54,18 @@ describe("handleListProfiles", () => {
     expect(result.profiles.map((p) => p.name)).toEqual(["0.20mm Standard @BBL X1C"]);
   });
 
+  it("lists machine profiles under the machine kind", async () => {
+    const result = await handleListProfiles(fixtureDeps(), { kind: "machine", vendor: "BBL" });
+    expect(result.kind).toBe("machine");
+    expect(result.profiles.map((p) => p.name).sort()).toEqual([
+      "Bambu Lab X1 Carbon 0.4 nozzle",
+      "fdm_machine_common",
+    ]);
+    expect(result.profiles.find((p) => p.name === "Bambu Lab X1 Carbon 0.4 nozzle")?.inherits).toBe(
+      "fdm_machine_common"
+    );
+  });
+
   it("lists filament profiles under the filament kind", async () => {
     const result = await handleListProfiles(fixtureDeps(), { kind: "filament", vendor: "BBL" });
     expect(result.kind).toBe("filament");
@@ -140,6 +152,14 @@ describe("handleListParameters", () => {
   it("matches search case-insensitively against the description", async () => {
     const result = await handleListParameters(fixtureDeps(), { kind: "filament", search: "does not support" });
     expect(result.parameters.map((p) => p.key)).toEqual(["nozzle_temperature"]);
+  });
+
+  it("lists machine option keys under the machine kind", async () => {
+    const result = await handleListParameters(fixtureDeps(), { kind: "machine" });
+    expect(result.kind).toBe("machine");
+    const byKey = new Map(result.parameters.map((p) => [p.key, p]));
+    expect(byKey.get("printer_extruder_variant")?.vector).toBe(true);
+    expect(byKey.get("printable_height")?.vector).toBe(false);
   });
 
   it("returns no entries when search matches nothing", async () => {

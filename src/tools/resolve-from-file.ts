@@ -8,6 +8,7 @@ import { strings } from "../strings.js";
 import type { ProfileKind, RawProfile, ResolvedProfile } from "../types.js";
 import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
+import { projectKeys } from "./project-keys.js";
 
 /** Identity plus synthesized metadata; never part of merged settings. */
 const SKIPPED_KEYS = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
@@ -20,7 +21,7 @@ export interface ResolvedFileProfile extends ResolvedProfile {
 export async function handleResolveFromFile(
   deps: ToolDeps,
   kind: ProfileKind,
-  args: { vendor: string; outputDir: string; name: string; sourceName?: string }
+  args: { vendor: string; outputDir: string; name: string; sourceName?: string; keys?: string[] }
 ): Promise<ResolvedFileProfile> {
   const cfg = await deps.config.require();
   const path = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
@@ -49,7 +50,7 @@ export async function handleResolveFromFile(
     settings[key] = value;
   }
 
-  return {
+  const result: ResolvedFileProfile = {
     vendor: args.vendor,
     name: args.name,
     kind,
@@ -57,6 +58,9 @@ export async function handleResolveFromFile(
     settings,
     path,
   };
+  if (args.keys === undefined) return result;
+  const projection = projectKeys(settings, args.keys);
+  return { ...result, settings: projection.settings, missingKeys: projection.missingKeys };
 }
 
 const resolveFromFileInputShape = {
@@ -65,6 +69,7 @@ const resolveFromFileInputShape = {
   outputDir: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.outputDir),
   name: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.name),
   sourceName: z.string().min(1).optional().describe(strings.tools.resolveFromFile.inputs.sourceName),
+  keys: z.array(z.string().min(1)).min(1).optional().describe(strings.tools.resolveFromFile.inputs.keys),
 };
 
 export function registerResolveFromFileTool(server: McpServer, deps: ToolDeps): void {
@@ -76,7 +81,14 @@ export function registerResolveFromFileTool(server: McpServer, deps: ToolDeps): 
       inputSchema: resolveFromFileInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor: string; outputDir: string; name: string; sourceName?: string }) => {
+    async (args: {
+      kind: ProfileKind;
+      vendor: string;
+      outputDir: string;
+      name: string;
+      sourceName?: string;
+      keys?: string[];
+    }) => {
       try {
         const result = await handleResolveFromFile(deps, args.kind, args);
         return {

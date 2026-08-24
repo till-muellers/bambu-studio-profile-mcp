@@ -154,6 +154,38 @@ describe("handleResolveFromFile", () => {
     ).rejects.toThrow(/JSON object/i);
   });
 
+  it("projects settings down to the requested keys and reports the rest", async () => {
+    await writeSource("Tuned", {
+      name: "Tuned",
+      inherits: "0.20mm Standard @BBL X1C",
+      layer_height: "0.16",
+    });
+
+    const result = await handleResolveFromFile(deps(), "process", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Tuned",
+      keys: ["layer_height", "no_such_key"],
+    });
+
+    expect(Object.keys(result.settings)).toEqual(["layer_height"]);
+    expect(result.settings.layer_height).toBe("0.16");
+    expect(result.missingKeys).toEqual(["no_such_key"]);
+    expect(result.chain).toEqual(["fdm_process_common", "0.20mm Standard @BBL X1C", "Tuned"]);
+  });
+
+  it("returns the unprojected result byte-for-byte when keys is omitted", async () => {
+    await writeSource("Plain", { name: "Plain", inherits: "0.20mm Standard @BBL X1C", layer_height: "0.16" });
+    const args = { vendor: "BBL", outputDir: outDir, name: "Plain" };
+
+    const withoutKeys = await handleResolveFromFile(deps(), "process", args);
+    const withUndefinedKeys = await handleResolveFromFile(deps(), "process", { ...args, keys: undefined });
+
+    expect(JSON.stringify(withoutKeys)).toBe(JSON.stringify(withUndefinedKeys));
+    expect(withoutKeys).not.toHaveProperty("missingKeys");
+    expect(Object.keys(withoutKeys.settings).length).toBeGreaterThan(1);
+  });
+
   it("fails on a missing, empty, or unresolvable inherits field", async () => {
     await writeSource("Rootless", { name: "Rootless", layer_height: "0.2" });
     await expect(

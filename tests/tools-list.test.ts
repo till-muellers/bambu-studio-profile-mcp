@@ -60,6 +60,27 @@ describe("handleListProfiles", () => {
     expect(result.profiles.map((p) => p.name)).toContain("Generic PLA @BBL X1C");
   });
 
+  it("returns only user rows for source 'user'", async () => {
+    const result = await handleListProfiles(fixtureDeps(), { kind: "process", source: "user" });
+    expect(result.profiles.length).toBeGreaterThan(0);
+    expect(result.profiles.every((p) => p.source === "user")).toBe(true);
+  });
+
+  it("returns only system rows for source 'system'", async () => {
+    const result = await handleListProfiles(fixtureDeps(), { kind: "process", source: "system" });
+    expect(result.profiles.length).toBeGreaterThan(0);
+    expect(result.profiles.every((p) => p.source === "system")).toBe(true);
+  });
+
+  it("returns both sources when source is omitted", async () => {
+    const both = await handleListProfiles(fixtureDeps(), { kind: "process" });
+    const users = await handleListProfiles(fixtureDeps(), { kind: "process", source: "user" });
+    const systems = await handleListProfiles(fixtureDeps(), { kind: "process", source: "system" });
+    expect(both.profiles.length).toBe(users.profiles.length + systems.profiles.length);
+    expect(both.profiles.some((p) => p.source === "user")).toBe(true);
+    expect(both.profiles.some((p) => p.source === "system")).toBe(true);
+  });
+
   it("throws ConfigMissingError when unconfigured", async () => {
     await expect(handleListProfiles(fixtureDeps(false), { kind: "process" })).rejects.toBeInstanceOf(
       ConfigMissingError

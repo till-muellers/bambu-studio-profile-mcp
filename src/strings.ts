@@ -12,7 +12,9 @@ export const strings = {
         "the flat merged key->value map; scalar options are bare strings like \"0.2\", per-extruder " +
         "options are string arrays like [\"250\",\"500\",\"500\"]. settings also includes " +
         "print_extruder_variant (process) or filament_extruder_variant (filament), which names what " +
-        "each position of every other vector option's array means for this profile.\n\n" +
+        "each position of every other vector option's array means for this profile. With keys given, " +
+        "settings carries exactly the requested keys and missingKeys lists the requested keys the " +
+        "resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
         "missing (run init_config first).\n\n" +
         "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +
@@ -23,6 +25,10 @@ export const strings = {
           "Vendor id from list_vendors, e.g. 'BBL'. Required for user presets too: it names the system " +
           "store their inherits chain can reference",
         name: "Exact profile name as returned by list_profiles (the 'name' field inside the profile JSON)",
+        keys:
+          "Option keys to keep in settings, e.g. ['layer_height','wall_loops']; omit for the whole " +
+          "merged map. Applied after the chain is merged, so inherited values still decide each key's " +
+          "value. Keys absent from the resolved profile come back in missingKeys",
       },
     },
     // Source: src/tools/write.ts registerWriteTools(...)
@@ -125,6 +131,9 @@ export const strings = {
         kind: "Profile type to list",
         vendor: "Vendor id from list_vendors, e.g. 'BBL'; omit to search every vendor",
         search: "Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'",
+        source:
+          "Restrict the rows to one store: 'user' for the user preset store, 'system' for the vendors' " +
+          "shipped profiles; omit to get both",
       },
     },
     listVendors: {
@@ -251,7 +260,9 @@ export const strings = {
         "directories stay untouched.\n\n" +
         "Returns: { vendor, name, kind, chain: string[] (root-first, ending with this file), settings: " +
         "object, path } — settings is the flat merged key->value map, matching resolve_profile's shape; " +
-        "path is the file that was read.\n\n" +
+        "path is the file that was read. With keys given, settings carries exactly the requested keys " +
+        "and missingKeys lists the requested keys the merged result lacks; the inherits chain is walked " +
+        "in full either way.\n\n" +
         "Errors: file missing or unparseable; file lacking an 'inherits' field; vendor not found; " +
         "inherits target not found; circular or unresolvable inherits chain; config missing (run " +
         "init_config first).\n\n" +
@@ -265,6 +276,10 @@ export const strings = {
         outputDir: "Directory containing the local profile file",
         name: "Name the resolved profile carries; also the file name (<name>.json) unless sourceName says otherwise",
         sourceName: "Local file name (without .json) when it differs from name",
+        keys:
+          "Option keys to keep in settings, e.g. ['layer_height','wall_loops']; omit for the whole " +
+          "merged map. Applied after the chain and the file's own keys are merged, so inheritance still " +
+          "decides each key's value. Keys absent from the merged result come back in missingKeys",
       },
     },
   },

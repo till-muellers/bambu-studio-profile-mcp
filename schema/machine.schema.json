@@ -46,6 +46,7 @@
     "type": "float",
     "vector": false,
     "label": "Printable height",
+    "unit": "mm",
     "min": 0,
     "max": 1000,
     "default": 100,
@@ -55,6 +56,7 @@
     "type": "float",
     "vector": true,
     "label": "Extruder printable height",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "max": 1000,
@@ -170,6 +172,7 @@
     "type": "float",
     "vector": false,
     "label": "Height to rod",
+    "unit": "mm",
     "min": 0,
     "default": 40,
     "description": "Vertical clearance (mm) from the nozzle tip up to the gantry rods. Caps how tall a finished object may be when the head passes over it in sequential printing."
@@ -178,6 +181,7 @@
     "type": "float",
     "vector": false,
     "label": "Height to lid",
+    "unit": "mm",
     "min": 0,
     "default": 120,
     "description": "Vertical clearance (mm) from the nozzle tip to the lid or top frame. Second height limit on object height in sequential printing."
@@ -186,6 +190,7 @@
     "type": "float",
     "vector": false,
     "label": "Distance to rod",
+    "unit": "mm",
     "min": 0,
     "default": 40,
     "description": "Horizontal clearance (mm) from the nozzle to the gantry rods. Used with the height clearances to space objects printed one at a time."
@@ -194,6 +199,7 @@
     "type": "float",
     "vector": false,
     "label": "Nozzle height",
+    "unit": "mm",
     "min": 0,
     "default": 4,
     "description": "Height (mm) of the nozzle cone below the hotend body. Sets how close to a finished wall the head may travel without the heatsink striking it."
@@ -202,6 +208,7 @@
     "type": "float",
     "vector": false,
     "label": "Max Radius",
+    "unit": "mm",
     "min": 0,
     "default": 68,
     "description": "Radius (mm) of the toolhead's largest horizontal footprint. Minimum spacing between objects in sequential printing."
@@ -210,6 +217,7 @@
     "type": "float",
     "vector": true,
     "label": "Grab length",
+    "unit": "mm",
     "min": 0,
     "default": 0,
     "description": "Filament length (mm) the extruder gear pulls back to park the tip inside the toolhead when unloading. Per extruder."
@@ -225,6 +233,7 @@
     "type": "string",
     "vector": true,
     "label": "Extruder offset",
+    "unit": "mm",
     "min": -5,
     "max": 5,
     "description": "Nozzle offset per extruder as 'XxY' millimetres from the machine origin. Non-zero for a second toolhead; the slicer compensates every move by it."
@@ -239,6 +248,7 @@
   "physical_extruder_map": {
     "type": "int",
     "vector": true,
+    "label": "Map the logical extruder to physical extruder",
     "default": 0,
     "description": "Maps each logical extruder to the physical extruder driving it. Identity on single-toolhead machines."
   },
@@ -246,6 +256,7 @@
     "type": "float",
     "vector": false,
     "label": "Filament load time",
+    "unit": "s",
     "min": 0,
     "default": 0,
     "description": "Seconds the machine needs to load filament. Estimation only; feeds the printing-time prediction for multi-material jobs."
@@ -254,6 +265,7 @@
     "type": "float",
     "vector": false,
     "label": "Filament unload time",
+    "unit": "s",
     "min": 0,
     "default": 0,
     "description": "Seconds the machine needs to unload filament. Estimation only; feeds time prediction for filament changes."
@@ -262,6 +274,7 @@
     "type": "float",
     "vector": false,
     "label": "Extruder switch time",
+    "unit": "s",
     "min": 0,
     "default": 5,
     "description": "Seconds to switch between toolheads on a multi-extruder machine. Estimation only."
@@ -270,6 +283,7 @@
     "type": "float",
     "vector": false,
     "label": "Hotend change time",
+    "unit": "s",
     "min": 0,
     "default": 0,
     "description": "Seconds to swap a hotend. Estimation only."
@@ -524,6 +538,7 @@
   "machine_min_extruding_rate": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "min": 0,
     "default": [
       0,
@@ -534,6 +549,7 @@
   "machine_min_travel_rate": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "min": 0,
     "default": [
       0,
@@ -544,6 +560,7 @@
   "machine_max_acceleration_extruding": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -555,6 +572,7 @@
   "machine_max_acceleration_retracting": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -566,6 +584,7 @@
   "machine_max_acceleration_travel": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -578,6 +597,7 @@
     "type": "float",
     "vector": true,
     "label": "Max",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -587,6 +607,7 @@
     "type": "float",
     "vector": true,
     "label": "Min",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "default": 0.07,
@@ -596,6 +617,7 @@
     "type": "float",
     "vector": true,
     "label": "Nozzle diameter",
+    "unit": "mm",
     "nullable": true,
     "max": 1,
     "default": 0.4,
@@ -621,6 +643,7 @@
     "type": "float",
     "vector": true,
     "label": "Nozzle volume",
+    "unit": "mm³",
     "nullable": true,
     "default": 0,
     "description": "Melt-zone volume (mm³) inside the hotend, per extruder. Sets how much filament must be purged to fully change colour or material."
@@ -641,6 +664,7 @@
     "type": "float",
     "vector": true,
     "label": "Travel distance threshold",
+    "unit": "mm",
     "nullable": true,
     "default": 2,
     "description": "Shortest travel move (mm) that triggers a retraction, per extruder. Raising it skips retractions on short hops, saving time and filament grinding at some risk of stringing."
@@ -649,6 +673,7 @@
     "type": "percent",
     "vector": true,
     "label": "Retract amount before wipe",
+    "unit": "%",
     "nullable": true,
     "default": 100,
     "description": "Share of the retraction (percent) performed before the wipe move starts, per extruder. 100% retracts fully then wipes; lower values retract during the wipe, smearing less but oozing more."
@@ -665,6 +690,7 @@
     "type": "float",
     "vector": true,
     "label": "Length",
+    "unit": "mm",
     "nullable": true,
     "default": 0.8,
     "description": "Filament pulled back (mm) on retraction, per extruder. Too little strings; too much grinds the filament and leaves gaps on restart. Direct drive 0.4-1.2 mm, bowden 2-6 mm."
@@ -697,6 +723,7 @@
     "type": "float",
     "vector": true,
     "label": "Length",
+    "unit": "mm",
     "nullable": true,
     "default": 10,
     "description": "Filament pulled back (mm) when switching to another extruder, per extruder. Longer than an ordinary retraction because the tip must clear the melt zone entirely."
@@ -705,6 +732,7 @@
     "type": "float",
     "vector": true,
     "label": "Z hop when retract",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "max": 5,
@@ -715,6 +743,7 @@
     "type": "float",
     "vector": true,
     "label": "Z hop lower boundary",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -724,6 +753,7 @@
     "type": "float",
     "vector": true,
     "label": "Z hop upper boundary",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -764,24 +794,28 @@
   "extruder_variant_list": {
     "type": "string",
     "vector": true,
+    "label": "Extruder variant list",
     "default": "Direct Drive Standard",
     "description": "Every extruder variant this machine supports, as 'drive type + nozzle volume' strings. printer_extruder_variant picks from this list."
   },
   "printer_extruder_id": {
     "type": "int",
     "vector": true,
+    "label": "Printer extruder id",
     "default": 1,
     "description": "Extruder index each printer_extruder_variant column belongs to. Lets one physical extruder carry several variants."
   },
   "printer_extruder_variant": {
     "type": "string",
     "vector": true,
+    "label": "Printer's extruder variant",
     "default": "Direct Drive Standard",
     "description": "Active extruder variant per column, such as 'Direct Drive Standard'. Its length is the column count every per-extruder vector key in presets for this machine must match."
   },
   "master_extruder_id": {
     "type": "int",
     "vector": false,
+    "label": "Master extruder id",
     "default": 1,
     "description": "Index of the extruder treated as primary. It prints first and supplies the machine-wide defaults."
   },
@@ -789,6 +823,7 @@
     "type": "float",
     "vector": true,
     "label": "Extra length on restart",
+    "unit": "mm",
     "nullable": true,
     "default": 0,
     "description": "Extra filament (mm) pushed beyond the retraction when printing resumes, per extruder. Small positive values fight gaps after a retraction; too much blobs. Usually 0."
@@ -797,6 +832,7 @@
     "type": "float",
     "vector": true,
     "label": "Extra length on restart",
+    "unit": "mm",
     "nullable": true,
     "default": 0,
     "description": "Extra filament (mm) pushed on restart after a toolchange retraction, per extruder. Compensates for material lost while the extruder stood idle."
@@ -805,6 +841,7 @@
     "type": "float",
     "vector": true,
     "label": "Retraction Speed",
+    "unit": "mm/s",
     "nullable": true,
     "default": 30,
     "description": "Speed (mm/s) at which filament is pulled back, per extruder. Faster cuts oozing but risks grinding soft filament; 30-60 mm/s typical."
@@ -813,6 +850,7 @@
     "type": "float",
     "vector": true,
     "label": "Deretraction Speed",
+    "unit": "mm/s",
     "nullable": true,
     "default": 0,
     "description": "Speed (mm/s) at which retracted filament is pushed back, per extruder. 0 reuses retraction_speed. Slower helps flexibles and high-flow hotends recover cleanly."
@@ -834,6 +872,7 @@
   "head_wrap_detect_zone": {
     "type": "string",
     "vector": true,
+    "label": "Head wrap detect zone",
     "description": "Bed region used by the toolhead wrap-detection routine, as 'XxY' polygon points."
   },
   "change_filament_gcode": {
@@ -869,6 +908,7 @@
     "type": "float",
     "vector": true,
     "label": "Wipe Distance",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "default": 2,
@@ -877,6 +917,7 @@
   "machine_max_speed_x": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -888,6 +929,7 @@
   "machine_max_speed_y": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -899,6 +941,7 @@
   "machine_max_speed_z": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -910,6 +953,7 @@
   "machine_max_speed_e": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -921,6 +965,7 @@
   "machine_max_acceleration_x": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -932,6 +977,7 @@
   "machine_max_acceleration_y": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -943,6 +989,7 @@
   "machine_max_acceleration_z": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -954,6 +1001,7 @@
   "machine_max_acceleration_e": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s²",
     "nullable": true,
     "min": 0,
     "default": [
@@ -965,6 +1013,7 @@
   "machine_max_jerk_x": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -976,6 +1025,7 @@
   "machine_max_jerk_y": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -987,6 +1037,7 @@
   "machine_max_jerk_z": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [
@@ -998,6 +1049,7 @@
   "machine_max_jerk_e": {
     "type": "float",
     "vector": true,
+    "unit": "mm/s",
     "nullable": true,
     "min": 0,
     "default": [

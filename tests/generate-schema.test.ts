@@ -222,6 +222,43 @@ describe("parsePrinterOptionList", () => {
   });
 });
 
+describe("option units", () => {
+  it("carries def->sidetext into unit, concatenating adjacent literals", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.layer_height.unit).toBe("mm");
+    expect(options.outer_wall_speed.unit).toBe("mm/s");
+  });
+
+  it("omits unit for options that declare no sidetext", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.wall_loops.unit).toBeUndefined();
+    expect(options.enable_support.unit).toBeUndefined();
+  });
+
+  it("reads an unlocalized sidetext literal too", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parseAxisLimitOptions(source);
+
+    expect(options.machine_max_speed_x.unit).toBe("mm/s");
+    expect(options.machine_max_acceleration_x.unit).toBe("mm/s²");
+  });
+
+  it("carries the unit onto synthesized filament overrides", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    synthesizeFilamentOverrides(options, [], ["filament_bridge_speed"]);
+
+    expect(options.bridge_speed.unit).toBeUndefined();
+    options.outer_wall_speed.unit = "mm/s";
+    synthesizeFilamentOverrides(options, ["filament_outer_wall_speed"], []);
+    expect(options.filament_outer_wall_speed.unit).toBe("mm/s");
+  });
+});
+
 describe("resolveEnumDefault", () => {
   const zHop = ["Auto Lift", "Normal Lift", "Slope Lift", "Spiral Lift"];
 

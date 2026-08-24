@@ -79,18 +79,21 @@ function decodeCppEscapes(text: string): string {
 }
 
 /**
- * Extracts `def->label = L(...)` where the L(...) argument is one or more adjacent quoted
- * string literals (C++ string-literal concatenation, optionally spanning multiple lines), e.g.
- * `def->label = L("part a " "part b")`. C++ adjacent string literals concatenate with NO
- * implicit separator, so the literals' decoded contents are joined directly (any word-boundary
- * spacing must already be present inside the literals themselves, as it is in the source). Returns
- * `undefined` when the field is absent from `body`.
+ * Extracts `def-><field> = ...` where the value is one or more adjacent quoted string literals
+ * (C++ string-literal concatenation, optionally spanning multiple lines), wrapped in the `L(...)`
+ * localization macro or bare: `def->label = L("part a " "part b")`, `def->sidetext = "mm/s"`.
+ * C++ adjacent string literals concatenate with NO implicit separator, so the literals' decoded
+ * contents are joined directly (any word-boundary spacing must already be present inside the
+ * literals themselves, as it is in the source). Returns `undefined` when the field is absent from
+ * `body`, or when its value is not a literal.
  */
-function extractLField(body: string): string | undefined {
-  const re = /def->label\s*=\s*L\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)\)/;
+function extractStringField(body: string, field: string): string | undefined {
+  const literalRun = String.raw`(?:"(?:[^"\\]|\\.)*"\s*)+`;
+  const re = new RegExp(String.raw`def->${field}\s*=\s*(?:L\(\s*(${literalRun})\)|(${literalRun}))\s*;`);
   const match = body.match(re);
-  if (!match) return undefined;
-  const literals = match[1].match(/"(?:[^"\\]|\\.)*"/g);
+  const value = match?.[1] ?? match?.[2];
+  if (value === undefined) return undefined;
+  const literals = value.match(/"(?:[^"\\]|\\.)*"/g);
   if (!literals) return undefined;
   return literals.map((lit) => decodeCppEscapes(lit.slice(1, -1))).join("");
 }
@@ -180,8 +183,10 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     if (!mapped) continue;
 
     const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
-    const label = extractLField(body);
+    const label = extractStringField(body, "label");
     if (label !== undefined) option.label = label;
+    const unit = extractStringField(body, "sidetext");
+    if (unit !== undefined) option.unit = unit;
     if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     if (min) option.min = Number(min[1]);
@@ -270,6 +275,7 @@ export function synthesizeFilamentOverrides(
     }
     const out: SchemaOption = { type: base.type, vector: base.vector };
     if (base.label !== undefined) out.label = base.label;
+    if (base.unit !== undefined) out.unit = base.unit;
     if (base.min !== undefined) out.min = base.min;
     if (base.max !== undefined) out.max = base.max;
     if (base.enum !== undefined) out.enum = [...base.enum];
@@ -344,8 +350,10 @@ export function parseAxisLimitOptions(cppSource: string): Record<string, SchemaO
     const column = body.match(/set_default_value\([\s\S]*?axis\.(\w+)\s*\)/)?.[1];
     const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
     const max = body.match(/def->max\s*=\s*(-?[\d.]+)/);
+    const unit = extractStringField(body, "sidetext");
     for (const axis of axes) {
       const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
+      if (unit !== undefined) option.unit = unit;
       if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
       if (min) option.min = Number(min[1]);
       if (max) option.max = Number(max[1]);

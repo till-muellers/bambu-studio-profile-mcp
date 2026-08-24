@@ -5,6 +5,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("layer_height", coFloat);
     def->label = L("Layer height");
+    def->sidetext = L("mm");
     def->tooltip = L("Slicing height for each layer. Smaller layer height means more accurate and more printing time");
     def->min = 0.04;
     def->max = 1.0;
@@ -29,6 +30,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("outer_wall_speed", coFloats);
     def->label = L("Outer wall speed");
+    def->sidetext = L("mm" "/s");
     def->tooltip = L("Speed of outer wall which is outermost and visible. It's used to be slower "
         "than inner wall speed to get better quality.");
     def->min = 0;

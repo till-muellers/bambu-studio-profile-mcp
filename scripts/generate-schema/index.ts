@@ -4,13 +4,16 @@
  * Writes schema/process.schema.json and schema/filament.schema.json.
  */
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { ProfileSchema } from "../../src/types.js";
 import {
   applyDescriptions,
+  parseAxisLimitOptions,
+  parseExtruderOptionKeys,
   parseOptionList,
   parsePrintConfig,
+  parsePrinterOptionList,
   parseStringVector,
   synthesizeFilamentOverrides,
 } from "./parse.js";
@@ -38,7 +41,7 @@ if (!presetPath) {
 }
 
 const printConfigSource = await readFile(printConfigPath, "utf8");
-const allOptions = parsePrintConfig(printConfigSource);
+const allOptions = { ...parsePrintConfig(printConfigSource), ...parseAxisLimitOptions(printConfigSource) };
 synthesizeFilamentOverrides(
   allOptions,
   parseStringVector(printConfigSource, "filament_extruder_override_keys"),
@@ -47,6 +50,27 @@ synthesizeFilamentOverrides(
 const presetSource = await readFile(presetPath, "utf8");
 const processKeys = new Set(parseOptionList(presetSource, "print_options"));
 const filamentKeys = new Set(parseOptionList(presetSource, "filament_options"));
+
+/** Identity and metadata fields of a machine preset file; they are not schema options. */
+const MACHINE_METADATA_KEYS = new Set([
+  "name",
+  "from",
+  "version",
+  "inherits",
+  "instantiation",
+  "setting_id",
+  "printer_settings_id",
+  "type",
+  "printer_model",
+  "printer_variant",
+]);
+
+// `Preset::printer_options()` = s_Preset_printer_options + s_Preset_machine_limits_options +
+// Preset::nozzle_options(), the last being print_config_def.extruder_option_keys().
+const machineKeys = new Set([
+  ...parsePrinterOptionList(presetSource),
+  ...parseExtruderOptionKeys(printConfigSource),
+]);
 
 function pick(keys: Set<string>): ProfileSchema {
   const out: ProfileSchema = {};
@@ -58,11 +82,59 @@ function pick(keys: Set<string>): ProfileSchema {
 
 const processSchema = pick(processKeys);
 const filamentSchema = pick(filamentKeys);
-if (Object.keys(processSchema).length === 0 || Object.keys(filamentSchema).length === 0) {
+const machineSchema = pick(machineKeys);
+if (
+  Object.keys(processSchema).length === 0 ||
+  Object.keys(filamentSchema).length === 0 ||
+  Object.keys(machineSchema).length === 0
+) {
   console.error(
     `Parsed ${Object.keys(allOptions).length} options but matched ` +
-      `${Object.keys(processSchema).length} process / ${Object.keys(filamentSchema).length} filament keys. ` +
+      `${Object.keys(processSchema).length} process / ${Object.keys(filamentSchema).length} filament / ` +
+      `${Object.keys(machineSchema).length} machine keys. ` +
       `The option-list parsing likely needs adjusting for this checkout — inspect ${presetPath}.`
+  );
+  process.exit(1);
+}
+
+// Completeness gate: every non-metadata key any shipped BBL machine preset actually sets must be
+// in the emitted machine schema. This is what surfaces the runtime-only nozzle_options() keys.
+const machineProfileDir = join(checkout, "resources", "profiles", "BBL", "machine");
+const observedMachineKeys = new Set<string>();
+for (const entry of await readdir(machineProfileDir)) {
+  if (!entry.endsWith(".json")) continue;
+  let preset: Record<string, unknown>;
+  try {
+    preset = JSON.parse(await readFile(join(machineProfileDir, entry), "utf8"));
+  } catch (err) {
+    console.error(`Failed to parse machine preset '${entry}': ${(err as Error).message}`);
+    process.exit(1);
+  }
+  // The directory also holds `machine_model` descriptors and untyped g-code template fragments;
+  // neither carries machine option keys.
+  if (preset.type !== "machine") continue;
+  for (const key of Object.keys(preset)) {
+    if (!MACHINE_METADATA_KEYS.has(key)) observedMachineKeys.add(key);
+  }
+}
+const uncoveredMachineKeys = [...observedMachineKeys].filter((key) => !(key in machineSchema)).sort();
+// A key PrintConfig.cpp never defines is not an option in this Studio version — the shipped vendor
+// profiles carry it as file-level data or as a leftover. Only an option the generator *could* have
+// emitted and did not is a gate failure.
+const undefinedInPrintConfig = uncoveredMachineKeys.filter((key) => !(key in allOptions));
+const droppedOptions = uncoveredMachineKeys.filter((key) => key in allOptions);
+if (undefinedInPrintConfig.length > 0) {
+  console.error(
+    `machine: ${undefinedInPrintConfig.length} key(s) set by shipped BBL machine presets have no ` +
+      `option definition in PrintConfig.cpp and are therefore absent from the schema: ` +
+      `${undefinedInPrintConfig.join(", ")}`
+  );
+}
+if (droppedOptions.length > 0) {
+  console.error(
+    `Machine schema is incomplete: ${droppedOptions.length} key(s) set by shipped BBL machine ` +
+      `presets are defined in PrintConfig.cpp but absent from the emitted schema: ` +
+      `${droppedOptions.join(", ")}`
   );
   process.exit(1);
 }
@@ -80,13 +152,16 @@ try {
 
 const processReport = applyDescriptions(processSchema, descriptions);
 const filamentReport = applyDescriptions(filamentSchema, descriptions);
+const machineReport = applyDescriptions(machineSchema, descriptions);
 
 await mkdir("schema", { recursive: true });
 await writeFile(join("schema", "process.schema.json"), JSON.stringify(processSchema, null, 2) + "\n");
 await writeFile(join("schema", "filament.schema.json"), JSON.stringify(filamentSchema, null, 2) + "\n");
+await writeFile(join("schema", "machine.schema.json"), JSON.stringify(machineSchema, null, 2) + "\n");
 console.log(
-  `Wrote schema/process.schema.json (${Object.keys(processSchema).length} keys) and ` +
-    `schema/filament.schema.json (${Object.keys(filamentSchema).length} keys).`
+  `Wrote schema/process.schema.json (${Object.keys(processSchema).length} keys), ` +
+    `schema/filament.schema.json (${Object.keys(filamentSchema).length} keys), and ` +
+    `schema/machine.schema.json (${Object.keys(machineSchema).length} keys).`
 );
 
 function reportOverlay(kind: string, schema: ProfileSchema, report: { applied: number; missing: string[] }): void {
@@ -100,11 +175,16 @@ function reportOverlay(kind: string, schema: ProfileSchema, report: { applied: n
 
 reportOverlay("process", processSchema, processReport);
 reportOverlay("filament", filamentSchema, filamentReport);
+reportOverlay("machine", machineSchema, machineReport);
 
 // A key is only truly stale if it matches neither kind's options — reporting per-kind stale
 // against the same flat overlay would flag every filament-only key as "stale" in the process run
 // (and vice versa), which is permanently noisy once the overlay covers both kinds.
-const knownKeys = new Set([...Object.keys(processSchema), ...Object.keys(filamentSchema)]);
+const knownKeys = new Set([
+  ...Object.keys(processSchema),
+  ...Object.keys(filamentSchema),
+  ...Object.keys(machineSchema),
+]);
 const globalStale = Object.keys(descriptions).filter((key) => !knownKeys.has(key));
 if (globalStale.length > 0) {
   console.error(`stale overlay keys (no matching option in either kind): ${globalStale.join(", ")}`);

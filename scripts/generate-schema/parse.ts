@@ -13,7 +13,14 @@ const TYPE_MAP: Record<string, { type: SchemaType; vector: boolean }> = {
   coEnums: { type: "enum", vector: true },
   coPercent: { type: "percent", vector: false },
   coPercents: { type: "percent", vector: true },
+  // Point-family options serialize into preset JSON as "XxY" strings — a bare string for coPoint,
+  // an array of them for coPoints, and an array of comma-joined point lists for coPointsGroups.
+  coPoint: { type: "string", vector: false },
+  coPoints: { type: "string", vector: true },
+  coPointsGroups: { type: "string", vector: true },
 };
+
+const POINT_TYPES = new Set(["coPoint", "coPoints", "coPointsGroups"]);
 
 /**
  * Extracts the raw argument text passed to `set_default_value(new ConfigOptionXxx<...>(...))` /
@@ -155,10 +162,14 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
         option.enum = sourceEnum ? [...sourceEnum] : [];
       }
     }
-    const rawDefault = extractDefaultRaw(body);
-    if (rawDefault !== undefined) {
-      const parsed = parseDefaultValue(rawDefault);
-      if (parsed !== undefined) option.default = coerceDefault(parsed, mapped.type);
+    // A point-family default is written as C++ constructor calls (`ConfigOptionPoints{ Vec2d(0,0) }`),
+    // which carries no honest rendering into the "XxY" string form preset files use. Omit it.
+    if (!POINT_TYPES.has(coType)) {
+      const rawDefault = extractDefaultRaw(body);
+      if (rawDefault !== undefined) {
+        const parsed = parseDefaultValue(rawDefault);
+        if (parsed !== undefined) option.default = coerceDefault(parsed, mapped.type);
+      }
     }
     options[key] = option;
     if (alias) aliasToKey[alias] = key;
@@ -238,6 +249,86 @@ export function synthesizeFilamentOverrides(
 /** Strips C++ `/* block *\/` and `// line` comments so commented-out keys are not extracted. */
 function stripComments(text: string): string {
   return text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+}
+
+/**
+ * Extracts the extruder-scoped option keys from PrintConfig.cpp's
+ * `PrintConfigDef::init_extruder_option_keys()`. `Preset::nozzle_options()` returns exactly this
+ * list (`print_config_def.extruder_option_keys()`), so it is the machine option set's third
+ * contribution.
+ */
+export function parseExtruderOptionKeys(cppSource: string): string[] {
+  const decl = cppSource.match(/m_extruder_option_keys\s*=\s*\{([\s\S]*?)\}\s*;/);
+  if (!decl) return [];
+  return [...stripComments(decl[1]).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+/**
+ * Expands PrintConfig.cpp's machine-limit axis loop. The loop builds each key by concatenation
+ * (`this->add("machine_max_speed_" + axis.name, coFloats)`) over a literal `AxisDefault` table, so
+ * the generic `this->add("key", coType)` block scan cannot see these options. Facts come from the
+ * loop body; each option's default is the `AxisDefault` column its `set_default_value` call names.
+ * Returns an empty record when the loop is absent.
+ */
+export function parseAxisLimitOptions(cppSource: string): Record<string, SchemaOption> {
+  const struct = cppSource.match(/struct\s+AxisDefault\s*\{([\s\S]*?)\}\s*;/);
+  const table = cppSource.match(/std::vector<AxisDefault>\s+axes\s*\{([\s\S]*?)\n\s*\}\s*;/);
+  if (!struct || !table) return {};
+
+  // Struct field order fixes the column order of each table row after the leading axis name.
+  const columns = [...struct[1].matchAll(/std::vector<double>\s+(\w+)\s*;/g)].map((m) => m[1]);
+  const axes: { name: string; columns: Record<string, number[]> }[] = [];
+  const rowRe = /\{\s*"(\w+)"\s*,((?:[^{}]|\{[^{}]*\})*)\}/g;
+  for (const row of stripComments(table[1]).matchAll(rowRe)) {
+    const groups = [...row[2].matchAll(/\{([^{}]*)\}/g)].map((g) =>
+      g[1]
+        .split(",")
+        .map((v) => v.trim())
+        .filter((v) => v !== "")
+        .map(Number)
+    );
+    const byColumn: Record<string, number[]> = {};
+    columns.forEach((column, index) => {
+      if (groups[index]) byColumn[column] = groups[index];
+    });
+    axes.push({ name: row[1], columns: byColumn });
+  }
+
+  const options: Record<string, SchemaOption> = {};
+  const blockRe =
+    /def\s*=\s*this->add\(\s*"([^"]+)"\s*\+\s*axis\.name\s*,\s*(co\w+)\s*\)([\s\S]*?)(?=def\s*=\s*this->add\(|$)/g;
+  for (const [, prefix, coType, body] of cppSource.matchAll(blockRe)) {
+    const mapped = TYPE_MAP[coType];
+    if (!mapped) continue;
+    const column = body.match(/set_default_value\([\s\S]*?axis\.(\w+)\s*\)/)?.[1];
+    const min = body.match(/def->min\s*=\s*(-?[\d.]+)/);
+    const max = body.match(/def->max\s*=\s*(-?[\d.]+)/);
+    for (const axis of axes) {
+      const option: SchemaOption = { type: mapped.type, vector: mapped.vector };
+      if (/def->nullable\s*=\s*true\s*;/.test(body)) option.nullable = true;
+      if (min) option.min = Number(min[1]);
+      if (max) option.max = Number(max[1]);
+      const values = column ? axis.columns[column] : undefined;
+      if (values !== undefined) option.default = values.length === 1 ? values[0] : values;
+      options[prefix + axis.name] = option;
+    }
+  }
+  return options;
+}
+
+/**
+ * Extracts the machine (printer) option keys. `Preset::printer_options()` composes
+ * `s_Preset_printer_options`, `s_Preset_machine_limits_options`, and `Preset::nozzle_options()`;
+ * the last is `print_config_def.extruder_option_keys()`, built at runtime and not statically
+ * parseable, so it is supplied separately. Returns the union of the two static vectors in
+ * declaration order, deduplicated.
+ */
+export function parsePrinterOptionList(cppSource: string): string[] {
+  const keys = [
+    ...parseStringVector(cppSource, "s_Preset_printer_options"),
+    ...parseStringVector(cppSource, "s_Preset_machine_limits_options"),
+  ];
+  return [...new Set(keys)];
 }
 
 /** Extracts the quoted option keys from a `print_options()` / `filament_options()` list body. */

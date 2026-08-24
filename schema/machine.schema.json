@@ -1,0 +1,1013 @@
+{
+  "printer_technology": {
+    "type": "enum",
+    "vector": false,
+    "label": "Printer technology",
+    "enum": [
+      "FFF",
+      "SLA"
+    ],
+    "default": "ptFFF",
+    "description": "Printing process family this machine describes. FFF builds by extruding filament; SLA cures resin. Bambu Studio machine presets are FFF."
+  },
+  "printable_area": {
+    "type": "string",
+    "vector": true,
+    "label": "Printable area",
+    "description": "Bed outline as a closed polygon of 'XxY' millimetre points, four corners for a rectangular bed. Bounds where objects may sit and fixes the origin all g-code coordinates are relative to."
+  },
+  "extruder_printable_area": {
+    "type": "string",
+    "vector": true,
+    "label": "Extruder printable area",
+    "description": "Per-extruder reachable outline, one entry per extruder, each a comma-joined list of 'XxY' points. Narrows printable_area for a toolhead that cannot cover the whole bed."
+  },
+  "bed_exclude_area": {
+    "type": "string",
+    "vector": true,
+    "label": "Bed exclude area",
+    "description": "Bed regions objects may not occupy, as 'XxY' polygon points. Covers fixed hardware such as a purge chute or nozzle wiper. Empty when the whole bed is usable."
+  },
+  "bed_custom_texture": {
+    "type": "string",
+    "vector": false,
+    "label": "Bed custom texture",
+    "default": "",
+    "description": "Path to an image drawn on the bed surface in the 3D scene. Cosmetic; no effect on slicing."
+  },
+  "bed_custom_model": {
+    "type": "string",
+    "vector": false,
+    "label": "Bed custom model",
+    "default": "",
+    "description": "Path to a 3D model used to draw the bed in the scene. Cosmetic; no effect on slicing."
+  },
+  "printable_height": {
+    "type": "float",
+    "vector": false,
+    "label": "Printable height",
+    "min": 0,
+    "max": 1000,
+    "default": 100,
+    "description": "Highest Z (mm) the toolhead can reach. Objects taller than this cannot be sliced. Machine-specific; around 250 on most Bambu machines."
+  },
+  "extruder_printable_height": {
+    "type": "float",
+    "vector": true,
+    "label": "Extruder printable height",
+    "nullable": true,
+    "min": 0,
+    "max": 1000,
+    "default": 0,
+    "description": "Per-extruder maximum Z in mm; a 'nil' column keeps the machine-wide printable_height. Lower for a toolhead mounted higher than its sibling."
+  },
+  "print_host": {
+    "type": "string",
+    "vector": false,
+    "label": "Hostname, IP or URL",
+    "default": "",
+    "description": "Hostname, IP address, or URL of the network print host g-code is uploaded to. Paired with host_type."
+  },
+  "print_host_webui": {
+    "type": "string",
+    "vector": false,
+    "label": "Device UI",
+    "default": "",
+    "description": "URL of the print host's web interface. Convenience link only; no effect on slicing or upload."
+  },
+  "printhost_apikey": {
+    "type": "string",
+    "vector": false,
+    "label": "API Key / Password",
+    "default": "",
+    "description": "API key or password authenticating uploads to print_host. Blank when the host needs no credentials."
+  },
+  "printhost_port": {
+    "type": "string",
+    "vector": false,
+    "label": "Printer",
+    "default": "",
+    "description": "Printer identifier on the print host when that host serves several machines or queues."
+  },
+  "printhost_cafile": {
+    "type": "string",
+    "vector": false,
+    "label": "HTTPS CA File",
+    "default": "",
+    "description": "Path to a CA certificate bundle used to validate the print host's HTTPS certificate. Blank uses the system trust store."
+  },
+  "printhost_user": {
+    "type": "string",
+    "vector": false,
+    "label": "User",
+    "default": "",
+    "description": "User name for print hosts using user/password authorization; see printhost_authorization_type."
+  },
+  "printhost_password": {
+    "type": "string",
+    "vector": false,
+    "label": "Password",
+    "default": "",
+    "description": "Password paired with printhost_user for user/password print-host authorization."
+  },
+  "printhost_ssl_ignore_revoke": {
+    "type": "bool",
+    "vector": false,
+    "label": "Ignore HTTPS certificate revocation checks",
+    "default": false,
+    "description": "Skips HTTPS certificate revocation checking when uploading to print_host. Reserve for intranet hosts whose certificates cannot be checked."
+  },
+  "printhost_authorization_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Authorization Type",
+    "enum": [
+      "key",
+      "user"
+    ],
+    "default": "atKeyPassword",
+    "description": "How print_host authenticates uploads. key: the single API key in printhost_apikey; user: printhost_user plus printhost_password."
+  },
+  "before_layer_change_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Before layer change G-code",
+    "default": "",
+    "description": "Custom g-code emitted just before the Z move that starts a layer. Placeholders such as [layer_num] and [layer_z] expand. Runs earlier than layer_change_gcode."
+  },
+  "upward_compatible_machine": {
+    "type": "string",
+    "vector": true,
+    "label": "upward compatible machine",
+    "description": "Names of newer machine profiles that can also run prints sliced for this one. Lets Studio offer the job to a compatible printer."
+  },
+  "default_filament_profile": {
+    "type": "string",
+    "vector": true,
+    "label": "Default filament profile",
+    "description": "Filament preset selected by default for each extruder when this machine is chosen. Per extruder."
+  },
+  "default_print_profile": {
+    "type": "string",
+    "vector": false,
+    "label": "Default process profile",
+    "description": "Process preset selected by default when this machine is chosen."
+  },
+  "machine_end_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "End G-code",
+    "default": "M104 S0 ; turn off temperature\\nG28 X0  ; home X axis\\nM84     ; disable motors\\n",
+    "description": "G-code appended after the last layer. Typically turns off heaters, retracts, parks the head, and disables motors."
+  },
+  "printing_by_object_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Between Object Gcode",
+    "default": "",
+    "description": "G-code inserted between objects when printing sequentially, after one object finishes and before the next starts."
+  },
+  "extruder_clearance_height_to_rod": {
+    "type": "float",
+    "vector": false,
+    "label": "Height to rod",
+    "min": 0,
+    "default": 40,
+    "description": "Vertical clearance (mm) from the nozzle tip up to the gantry rods. Caps how tall a finished object may be when the head passes over it in sequential printing."
+  },
+  "extruder_clearance_height_to_lid": {
+    "type": "float",
+    "vector": false,
+    "label": "Height to lid",
+    "min": 0,
+    "default": 120,
+    "description": "Vertical clearance (mm) from the nozzle tip to the lid or top frame. Second height limit on object height in sequential printing."
+  },
+  "extruder_clearance_dist_to_rod": {
+    "type": "float",
+    "vector": false,
+    "label": "Distance to rod",
+    "min": 0,
+    "default": 40,
+    "description": "Horizontal clearance (mm) from the nozzle to the gantry rods. Used with the height clearances to space objects printed one at a time."
+  },
+  "nozzle_height": {
+    "type": "float",
+    "vector": false,
+    "label": "Nozzle height",
+    "min": 0,
+    "default": 4,
+    "description": "Height (mm) of the nozzle cone below the hotend body. Sets how close to a finished wall the head may travel without the heatsink striking it."
+  },
+  "extruder_clearance_max_radius": {
+    "type": "float",
+    "vector": false,
+    "label": "Max Radius",
+    "min": 0,
+    "default": 68,
+    "description": "Radius (mm) of the toolhead's largest horizontal footprint. Minimum spacing between objects in sequential printing."
+  },
+  "grab_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Grab length",
+    "min": 0,
+    "default": 0,
+    "description": "Filament length (mm) the extruder gear pulls back to park the tip inside the toolhead when unloading. Per extruder."
+  },
+  "extruder_colour": {
+    "type": "string",
+    "vector": true,
+    "label": "Extruder Color",
+    "default": "",
+    "description": "Display colour per extruder as a hex string (#RRGGBB). Preview only; no effect on slicing."
+  },
+  "extruder_offset": {
+    "type": "string",
+    "vector": true,
+    "label": "Extruder offset",
+    "min": -5,
+    "max": 5,
+    "description": "Nozzle offset per extruder as 'XxY' millimetres from the machine origin. Non-zero for a second toolhead; the slicer compensates every move by it."
+  },
+  "printer_notes": {
+    "type": "string",
+    "vector": false,
+    "label": "Printer notes",
+    "default": "",
+    "description": "Free-text notes stored with the machine preset. Ignored by slicing; useful for hardware mods and calibration history."
+  },
+  "physical_extruder_map": {
+    "type": "int",
+    "vector": true,
+    "default": 0,
+    "description": "Maps each logical extruder to the physical extruder driving it. Identity on single-toolhead machines."
+  },
+  "machine_load_filament_time": {
+    "type": "float",
+    "vector": false,
+    "label": "Filament load time",
+    "min": 0,
+    "default": 0,
+    "description": "Seconds the machine needs to load filament. Estimation only; feeds the printing-time prediction for multi-material jobs."
+  },
+  "machine_unload_filament_time": {
+    "type": "float",
+    "vector": false,
+    "label": "Filament unload time",
+    "min": 0,
+    "default": 0,
+    "description": "Seconds the machine needs to unload filament. Estimation only; feeds time prediction for filament changes."
+  },
+  "machine_switch_extruder_time": {
+    "type": "float",
+    "vector": false,
+    "label": "Extruder switch time",
+    "min": 0,
+    "default": 5,
+    "description": "Seconds to switch between toolheads on a multi-extruder machine. Estimation only."
+  },
+  "machine_hotend_change_time": {
+    "type": "float",
+    "vector": false,
+    "label": "Hotend change time",
+    "min": 0,
+    "default": 0,
+    "description": "Seconds to swap a hotend. Estimation only."
+  },
+  "group_algo_with_time": {
+    "type": "bool",
+    "vector": false,
+    "default": false,
+    "description": "Lets the filament-grouping algorithm weigh estimated time alongside material waste when assigning filaments to extruders."
+  },
+  "machine_prepare_compensation_time": {
+    "type": "float",
+    "vector": false,
+    "default": 260,
+    "description": "Seconds of machine preparation — homing, bed levelling, purge — added to the estimated print time ahead of the first layer."
+  },
+  "hotend_cooling_rate": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "default": 2,
+    "description": "Hotend cooling rate in °C per second, per extruder. Feeds the pre-heat scheduler so a temperature drop is started early enough."
+  },
+  "hotend_heating_rate": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "default": 2,
+    "description": "Hotend heating rate in °C per second, per extruder. Used with enable_pre_heating to begin heating ahead of the move that needs the new temperature."
+  },
+  "enable_pre_heating": {
+    "type": "bool",
+    "vector": false,
+    "default": false,
+    "description": "Starts hotend temperature changes early, using hotend_heating_rate and hotend_cooling_rate, so the nozzle is at target when the change is due. Cuts idle waiting on multi-filament prints."
+  },
+  "support_object_skip_flush": {
+    "type": "bool",
+    "vector": false,
+    "default": false,
+    "description": "Lets the machine purge into an object already being printed instead of the wipe tower or chute during a filament change. Saves material where the object can absorb it."
+  },
+  "bed_temperature_formula": {
+    "type": "enum",
+    "vector": false,
+    "label": "Bed temperature type",
+    "enum": [
+      "by_first_filament",
+      "by_highest_temp"
+    ],
+    "default": "BedTempFormula::btfFirstFilament",
+    "description": "How the bed target is chosen when several filaments print together. by_first_filament takes the first filament's bed temperature; by_highest_temp takes the highest requested — safer for adhesion, riskier for low-temperature materials."
+  },
+  "nozzle_flush_dataset": {
+    "type": "int",
+    "vector": true,
+    "nullable": true,
+    "default": 0,
+    "description": "Index of the calibrated flushing-volume dataset used per extruder. Selects the purge amounts applied at filament changes."
+  },
+  "scan_first_layer": {
+    "type": "bool",
+    "vector": false,
+    "label": "Scan first layer",
+    "default": false,
+    "description": "Runs the machine's first-layer inspection scan after layer one. Catches adhesion failures early at a small time cost."
+  },
+  "print_in_clockwise": {
+    "type": "bool",
+    "vector": false,
+    "label": "Print loops in clockwise",
+    "default": false,
+    "description": "Prints perimeter loops clockwise rather than counter-clockwise. Changes which side the seam falls on and the direction overhangs are laid down."
+  },
+  "wrapping_detection_layers": {
+    "type": "int",
+    "vector": false,
+    "label": "Clumping detection layers",
+    "min": 0,
+    "default": 20,
+    "description": "Layers between clumping-detection probe checks. Lower checks more often at some time cost; 20 default."
+  },
+  "wrapping_exclude_area": {
+    "type": "string",
+    "vector": true,
+    "label": "Probing exclude area of clumping",
+    "description": "Bed region the clumping-detection probe must skip, as 'XxY' polygon points. Covers hardware the probe cannot touch."
+  },
+  "thumbnail_size": {
+    "type": "string",
+    "vector": true,
+    "label": "Thumbnail size",
+    "description": "Preview thumbnail dimensions embedded in the g-code, as 'WxH' pixels. Must match what the printer's screen expects."
+  },
+  "nozzle_type": {
+    "type": "enum",
+    "vector": true,
+    "label": "Nozzle type",
+    "nullable": true,
+    "enum": [
+      "undefine",
+      "hardened_steel",
+      "stainless_steel",
+      "tungsten_carbide",
+      "brass"
+    ],
+    "default": "ntUndefine",
+    "description": "Nozzle material per extruder. hardened_steel and tungsten_carbide survive abrasive filaments (carbon- or glass-filled); stainless_steel and brass conduct heat better and suit plain polymers. Studio blocks abrasive filaments on brass."
+  },
+  "printer_structure": {
+    "type": "enum",
+    "vector": false,
+    "label": "Printer structure",
+    "enum": [
+      "undefine",
+      "corexy",
+      "i3",
+      "hbot",
+      "delta"
+    ],
+    "default": "psUndefine",
+    "description": "Motion system topology. corexy moves the head in XY on crossed belts while the bed drops; i3 moves the bed in Y; hbot uses a single H-shaped belt; delta uses three parallel arms. Determines which acceleration and jerk limits are realistic."
+  },
+  "best_object_pos": {
+    "type": "string",
+    "vector": false,
+    "label": "Best object position",
+    "description": "Preferred object placement as bed fractions, 'XxY' in 0-1. Studio centres a single object here; useful when part of the bed is flatter or better cooled."
+  },
+  "auxiliary_fan": {
+    "type": "bool",
+    "vector": false,
+    "label": "Auxiliary part cooling fan",
+    "default": false,
+    "description": "Declares that the machine has an auxiliary (side) part-cooling fan, enabling the filament and process keys that drive it."
+  },
+  "fan_direction": {
+    "type": "enum",
+    "vector": false,
+    "label": "Fan direction",
+    "enum": [
+      "undefine",
+      "left",
+      "right",
+      "both"
+    ],
+    "default": "fdUndefine",
+    "description": "Side the auxiliary fan blows from. Lets the slicer bias seam and overhang placement relative to the airflow."
+  },
+  "support_chamber_temp_control": {
+    "type": "bool",
+    "vector": false,
+    "label": "Support control chamber temperature",
+    "default": false,
+    "description": "Declares that the machine can hold a chamber temperature target, enabling chamber_temperature handling in filament presets."
+  },
+  "support_air_filtration": {
+    "type": "bool",
+    "vector": false,
+    "label": "Air filtration enhancement",
+    "default": false,
+    "description": "Declares that the machine has an exhaust or filtration fan, enabling the filament keys that run it during and after printing."
+  },
+  "support_cooling_filter": {
+    "type": "bool",
+    "vector": false,
+    "default": false,
+    "description": "Declares that the machine has a cooling filter unit; prerequisite for cooling_filter_enabled."
+  },
+  "cooling_filter_enabled": {
+    "type": "bool",
+    "vector": false,
+    "label": "Use cooling filter",
+    "default": false,
+    "description": "Runs the machine's cooling filter while printing. Requires support_cooling_filter."
+  },
+  "gcode_flavor": {
+    "type": "enum",
+    "vector": false,
+    "label": "G-code flavor",
+    "enum": [
+      "marlin",
+      "klipper",
+      "reprap",
+      "reprapfirmware",
+      "repetier",
+      "teacup",
+      "makerware",
+      "marlin2",
+      "sailfish",
+      "mach3",
+      "machinekit",
+      "smoothie",
+      "no-extrusion"
+    ],
+    "default": "gcfMarlinLegacy",
+    "description": "G-code dialect emitted for this machine — marlin and marlin2 for Marlin firmware, klipper for Klipper, reprapfirmware for Duet, and so on. The wrong flavor yields commands the firmware ignores or rejects."
+  },
+  "inherits": {
+    "type": "string",
+    "vector": false,
+    "label": "Inherits profile",
+    "description": "Name of the parent system preset this profile derives from. Profile stores only keys that differ; unset keys follow the parent, including after parent updates. Empty means a standalone full profile."
+  },
+  "layer_change_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Layer change G-code",
+    "default": "",
+    "description": "Custom g-code emitted at the start of each layer, after the Z move. Placeholders such as [layer_num] and [layer_z] expand. See before_layer_change_gcode for the earlier hook."
+  },
+  "time_lapse_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Time lapse G-code",
+    "default": "",
+    "description": "G-code emitted once per layer to capture a timelapse frame, typically parking the head and triggering the camera."
+  },
+  "wrapping_detection_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Clumping detection G-code",
+    "default": "",
+    "description": "G-code run every wrapping_detection_layers layers to probe for filament clumping around the nozzle. Empty disables the check."
+  },
+  "silent_mode": {
+    "type": "bool",
+    "vector": false,
+    "label": "Supports silent mode",
+    "default": false,
+    "description": "Declares that the machine offers a quiet motion mode running under its own, lower, machine limits."
+  },
+  "machine_pause_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Pause G-code",
+    "default": "",
+    "description": "G-code emitted where a pause is inserted, usually parking the head and waiting for the operator."
+  },
+  "template_custom_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Custom G-code",
+    "default": "",
+    "description": "Reusable custom g-code block shipped with the machine that a process preset can reference."
+  },
+  "extruder_max_nozzle_count": {
+    "type": "int",
+    "vector": true,
+    "nullable": true,
+    "default": 1,
+    "description": "Nozzles the extruder can carry, per extruder. Above one only on toolheads with switchable nozzles."
+  },
+  "machine_min_extruding_rate": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": [
+      0,
+      0
+    ],
+    "description": "Lowest feedrate (mm/s) the firmware honours while extruding; slower moves are clamped up to it. 0 disables the floor."
+  },
+  "machine_min_travel_rate": {
+    "type": "float",
+    "vector": true,
+    "min": 0,
+    "default": [
+      0,
+      0
+    ],
+    "description": "Lowest feedrate (mm/s) the firmware honours for non-extruding travel. 0 disables the floor."
+  },
+  "machine_max_acceleration_extruding": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      1500,
+      1250
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for extruding moves. Clamps whatever the process preset requests; raising it past what the frame can take brings ringing and skipped steps. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_retracting": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      1500,
+      1250
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for retraction moves. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_travel": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      1500,
+      1250
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for travel moves — usually the highest of the three, since nothing is being laid down. A 'nil' column keeps the inherited value."
+  },
+  "max_layer_height": {
+    "type": "float",
+    "vector": true,
+    "label": "Max",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Largest layer height (mm) the extruder may print, per extruder. 0 means 75% of nozzle_diameter. Caps adaptive and per-object layer heights."
+  },
+  "min_layer_height": {
+    "type": "float",
+    "vector": true,
+    "label": "Min",
+    "nullable": true,
+    "min": 0,
+    "default": 0.07,
+    "description": "Smallest layer height (mm) the extruder may print, per extruder. Floor for adaptive layer height; 0.07 typical for a 0.4 nozzle."
+  },
+  "nozzle_diameter": {
+    "type": "float",
+    "vector": true,
+    "label": "Nozzle diameter",
+    "nullable": true,
+    "max": 1,
+    "default": 0.4,
+    "description": "Nozzle bore in mm, per extruder. Sets the usable line-width and layer-height range: 0.4 standard, 0.2 for fine detail, 0.6-0.8 for speed and strength."
+  },
+  "host_type": {
+    "type": "enum",
+    "vector": false,
+    "label": "Host Type",
+    "enum": [
+      "prusalink",
+      "octoprint",
+      "duet",
+      "flashair",
+      "astrobox",
+      "repetier",
+      "mks"
+    ],
+    "default": "htOctoPrint",
+    "description": "Print host software running at print_host — octoprint, prusalink, duet, repetier and friends. Determines which upload API is used."
+  },
+  "nozzle_volume": {
+    "type": "float",
+    "vector": true,
+    "label": "Nozzle volume",
+    "nullable": true,
+    "default": 0,
+    "description": "Melt-zone volume (mm³) inside the hotend, per extruder. Sets how much filament must be purged to fully change colour or material."
+  },
+  "printer_model": {
+    "type": "string",
+    "vector": false,
+    "label": "Printer type",
+    "description": "Machine model this preset targets, such as 'Bambu Lab P1S'. Presets and filaments are matched to printers by this value."
+  },
+  "printer_variant": {
+    "type": "string",
+    "vector": false,
+    "label": "Printer variant",
+    "description": "Hardware variant within printer_model, conventionally the nozzle diameter ('0.4'). Distinguishes one model's per-nozzle machine presets."
+  },
+  "retraction_minimum_travel": {
+    "type": "float",
+    "vector": true,
+    "label": "Travel distance threshold",
+    "nullable": true,
+    "default": 2,
+    "description": "Shortest travel move (mm) that triggers a retraction, per extruder. Raising it skips retractions on short hops, saving time and filament grinding at some risk of stringing."
+  },
+  "retract_before_wipe": {
+    "type": "percent",
+    "vector": true,
+    "label": "Retract amount before wipe",
+    "nullable": true,
+    "default": 100,
+    "description": "Share of the retraction (percent) performed before the wipe move starts, per extruder. 100% retracts fully then wipes; lower values retract during the wipe, smearing less but oozing more."
+  },
+  "retract_when_changing_layer": {
+    "type": "bool",
+    "vector": true,
+    "label": "Retract when change layer",
+    "nullable": true,
+    "default": false,
+    "description": "Retracts at every layer change, per extruder. Reduces the blob at the Z seam at the cost of one retraction per layer."
+  },
+  "retraction_length": {
+    "type": "float",
+    "vector": true,
+    "label": "Length",
+    "nullable": true,
+    "default": 0.8,
+    "description": "Filament pulled back (mm) on retraction, per extruder. Too little strings; too much grinds the filament and leaves gaps on restart. Direct drive 0.4-1.2 mm, bowden 2-6 mm."
+  },
+  "enable_long_retraction_when_cut": {
+    "type": "int",
+    "vector": false,
+    "default": 0,
+    "description": "Enables the long retraction performed when the filament is cut at a change. 0 off, 1 on; depends on the machine having a cutter."
+  },
+  "long_retractions_when_cut": {
+    "type": "bool",
+    "vector": true,
+    "label": "Long retraction when cut(experimental)",
+    "nullable": true,
+    "default": false,
+    "description": "Performs the long retraction when the filament is cut, per extruder. Pulls the tip clear of the melt zone so the next filament loads cleanly."
+  },
+  "retraction_distances_when_cut": {
+    "type": "float",
+    "vector": true,
+    "label": "Retraction distance when cut",
+    "nullable": true,
+    "min": 10,
+    "max": 18,
+    "default": 18,
+    "description": "Distance (mm) pulled back during the cut retraction, per extruder. Must carry the tip past the cutter; 10-18 mm."
+  },
+  "retract_length_toolchange": {
+    "type": "float",
+    "vector": true,
+    "label": "Length",
+    "nullable": true,
+    "default": 10,
+    "description": "Filament pulled back (mm) when switching to another extruder, per extruder. Longer than an ordinary retraction because the tip must clear the melt zone entirely."
+  },
+  "z_hop": {
+    "type": "float",
+    "vector": true,
+    "label": "Z hop when retract",
+    "nullable": true,
+    "min": 0,
+    "max": 5,
+    "default": 0.4,
+    "description": "Height (mm) the nozzle lifts for travel after retracting, per extruder. Stops the tip dragging over printed material; costs time and can string. 0.2-0.4 mm typical, 0 disables."
+  },
+  "retract_lift_above": {
+    "type": "float",
+    "vector": true,
+    "label": "Z hop lower boundary",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Lowest Z (mm) at which z_hop applies, per extruder. Raise it to skip hopping on the first layers, where there is nothing to collide with."
+  },
+  "retract_lift_below": {
+    "type": "float",
+    "vector": true,
+    "label": "Z hop upper boundary",
+    "nullable": true,
+    "min": 0,
+    "default": 0,
+    "description": "Highest Z (mm) at which z_hop applies, per extruder. 0 means no upper bound."
+  },
+  "z_hop_types": {
+    "type": "enum",
+    "vector": true,
+    "label": "Z Hop Type",
+    "nullable": true,
+    "enum": [
+      "Auto Lift",
+      "Normal Lift",
+      "Slope Lift",
+      "Spiral Lift"
+    ],
+    "default": "ZHopType::zhtSpiral",
+    "description": "How the lift is performed, per extruder. Auto Lift lets the slicer choose per move; Normal Lift goes straight up then travels; Slope Lift climbs along the travel direction; Spiral Lift climbs helically, gentlest on the print. Slope and Spiral cost less time than Normal."
+  },
+  "extruder_type": {
+    "type": "enum",
+    "vector": true,
+    "label": "Type",
+    "enum": [
+      "Direct Drive",
+      "Bowden"
+    ],
+    "default": "ExtruderType::etDirectDrive",
+    "description": "Extruder drive layout per extruder. Direct Drive mounts the gears at the hotend and needs short retractions; Bowden pushes through a long tube and needs far longer ones."
+  },
+  "default_nozzle_volume_type": {
+    "type": "enum",
+    "vector": true,
+    "label": "Default Nozzle Volume Type",
+    "enum": [],
+    "default": "NozzleVolumeType::nvtStandard",
+    "description": "Nozzle volume class selected by default for each extruder, such as standard or high flow. Picks which calibrated flow and purge data apply."
+  },
+  "extruder_variant_list": {
+    "type": "string",
+    "vector": true,
+    "default": "Direct Drive Standard",
+    "description": "Every extruder variant this machine supports, as 'drive type + nozzle volume' strings. printer_extruder_variant picks from this list."
+  },
+  "printer_extruder_id": {
+    "type": "int",
+    "vector": true,
+    "default": 1,
+    "description": "Extruder index each printer_extruder_variant column belongs to. Lets one physical extruder carry several variants."
+  },
+  "printer_extruder_variant": {
+    "type": "string",
+    "vector": true,
+    "default": "Direct Drive Standard",
+    "description": "Active extruder variant per column, such as 'Direct Drive Standard'. Its length is the column count every per-extruder vector key in presets for this machine must match."
+  },
+  "master_extruder_id": {
+    "type": "int",
+    "vector": false,
+    "default": 1,
+    "description": "Index of the extruder treated as primary. It prints first and supplies the machine-wide defaults."
+  },
+  "retract_restart_extra": {
+    "type": "float",
+    "vector": true,
+    "label": "Extra length on restart",
+    "nullable": true,
+    "default": 0,
+    "description": "Extra filament (mm) pushed beyond the retraction when printing resumes, per extruder. Small positive values fight gaps after a retraction; too much blobs. Usually 0."
+  },
+  "retract_restart_extra_toolchange": {
+    "type": "float",
+    "vector": true,
+    "label": "Extra length on restart",
+    "nullable": true,
+    "default": 0,
+    "description": "Extra filament (mm) pushed on restart after a toolchange retraction, per extruder. Compensates for material lost while the extruder stood idle."
+  },
+  "retraction_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Retraction Speed",
+    "nullable": true,
+    "default": 30,
+    "description": "Speed (mm/s) at which filament is pulled back, per extruder. Faster cuts oozing but risks grinding soft filament; 30-60 mm/s typical."
+  },
+  "deretraction_speed": {
+    "type": "float",
+    "vector": true,
+    "label": "Deretraction Speed",
+    "nullable": true,
+    "default": 0,
+    "description": "Speed (mm/s) at which retracted filament is pushed back, per extruder. 0 reuses retraction_speed. Slower helps flexibles and high-flow hotends recover cleanly."
+  },
+  "machine_start_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Start G-code",
+    "default": "G28 ; home all axes\\nG1 Z5 F5000 ; lift nozzle\\n",
+    "description": "G-code emitted before the first layer: home, heat, level, and purge. Placeholders such as [nozzle_temperature_initial_layer] expand."
+  },
+  "single_extruder_multi_material": {
+    "type": "bool",
+    "vector": false,
+    "label": "Single Extruder Multi Material",
+    "default": false,
+    "description": "Declares that several filaments feed one nozzle, AMS-style. Enables purge and flush handling at filament changes."
+  },
+  "head_wrap_detect_zone": {
+    "type": "string",
+    "vector": true,
+    "description": "Bed region used by the toolhead wrap-detection routine, as 'XxY' polygon points."
+  },
+  "change_filament_gcode": {
+    "type": "string",
+    "vector": false,
+    "label": "Change filament G-code",
+    "default": "",
+    "description": "G-code emitted at each filament change to unload, purge, and load the next filament. Placeholders identify the outgoing and incoming filaments."
+  },
+  "use_relative_e_distances": {
+    "type": "bool",
+    "vector": false,
+    "label": "Use relative E distances",
+    "default": true,
+    "description": "Emits extrusion-axis moves as relative distances (M83) rather than absolute (M82). Relative is the modern default and survives custom g-code that moves E on its own."
+  },
+  "use_firmware_retraction": {
+    "type": "bool",
+    "vector": false,
+    "label": "Use firmware retraction",
+    "default": false,
+    "description": "Emits G10/G11 and lets the firmware retract using its own stored settings. The slicer's retraction lengths and speeds stop applying."
+  },
+  "wipe": {
+    "type": "bool",
+    "vector": true,
+    "label": "Wipe while retracting",
+    "nullable": true,
+    "default": false,
+    "description": "Moves the nozzle along the path just printed while retracting, per extruder. Wipes the tip so less material oozes during travel; see wipe_distance and retract_before_wipe."
+  },
+  "wipe_distance": {
+    "type": "float",
+    "vector": true,
+    "label": "Wipe Distance",
+    "nullable": true,
+    "min": 0,
+    "default": 2,
+    "description": "Length (mm) of the wipe move, per extruder. Longer wipes clean the tip better but reheat the last extrusion; 1-3 mm typical."
+  },
+  "machine_max_speed_x": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      500,
+      200
+    ],
+    "description": "Firmware feedrate cap (mm/s) for the X axis. Clamps every X move whatever the process preset asks for — a hardware limit, not a tuning knob. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_speed_y": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      500,
+      200
+    ],
+    "description": "Firmware feedrate cap (mm/s) for the Y axis. Clamps every Y move whatever the process preset asks for. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_speed_z": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      12,
+      12
+    ],
+    "description": "Firmware feedrate cap (mm/s) for the Z axis. Far lower than X and Y on leadscrew-driven axes; governs how fast layer changes and z hops move. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_speed_e": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      120,
+      120
+    ],
+    "description": "Firmware feedrate cap (mm/s) for the extruder axis. Bounds retraction and deretraction speeds however high the extruder keys are set. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_x": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      1000,
+      1000
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for the X axis. Clamps the process preset's accelerations; beyond what the frame tolerates it brings ringing and skipped steps. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_y": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      1000,
+      1000
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for the Y axis. On a bed-slinger this is the axis that moves the print, so it is usually the tighter of X and Y. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_z": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      500,
+      200
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for the Z axis. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_acceleration_e": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      5000,
+      5000
+    ],
+    "description": "Firmware acceleration cap (mm/s²) for the extruder axis. Governs how sharply retractions can start and stop. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_jerk_x": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      10,
+      10
+    ],
+    "description": "Firmware jerk limit (mm/s) for the X axis — the largest instantaneous speed change allowed at a corner. Higher keeps corners fast but rings; lower is smoother and slower. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_jerk_y": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      10,
+      10
+    ],
+    "description": "Firmware jerk limit (mm/s) for the Y axis: the largest instantaneous speed change allowed at a corner. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_jerk_z": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      0.2,
+      0.4
+    ],
+    "description": "Firmware jerk limit (mm/s) for the Z axis. Small, since leadscrews tolerate little abrupt change. A 'nil' column keeps the inherited value."
+  },
+  "machine_max_jerk_e": {
+    "type": "float",
+    "vector": true,
+    "nullable": true,
+    "min": 0,
+    "default": [
+      2.5,
+      2.5
+    ],
+    "description": "Firmware jerk limit (mm/s) for the extruder axis. Bounds how abruptly retraction can reverse the filament. A 'nil' column keeps the inherited value."
+  }
+}

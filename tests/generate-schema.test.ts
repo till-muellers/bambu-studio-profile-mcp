@@ -3,8 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   applyDescriptions,
+  parseAxisLimitOptions,
+  parseExtruderOptionKeys,
   parseOptionList,
   parsePrintConfig,
+  parsePrinterOptionList,
   parseStringVector,
   synthesizeFilamentOverrides,
 } from "../scripts/generate-schema/parse.js";
@@ -93,6 +96,15 @@ describe("parsePrintConfig (smoke test)", () => {
     expect(options.exclude_object).toMatchObject({ type: "bool", default: true });
   });
 
+  it("maps the point family onto the 'XxY' string form preset files use, without a default", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.printable_area).toMatchObject({ type: "string", vector: true });
+    expect(options.printable_area.default).toBeUndefined();
+    expect(options.best_object_pos).toMatchObject({ type: "string", vector: false });
+  });
+
   it("extracts enum values declared via enum_values.emplace_back(...)", async () => {
     const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
     const options = parsePrintConfig(source);
@@ -178,6 +190,83 @@ describe("parseOptionList", () => {
     const source = await readFile(PRESET_FIXTURE, "utf8");
 
     expect(parseOptionList(source, "sla_print_options")).toEqual([]);
+  });
+});
+
+describe("parsePrinterOptionList", () => {
+  it("unions the printer and machine-limits static vectors", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    expect(parsePrinterOptionList(source)).toEqual([
+      "printer_technology",
+      "printable_area",
+      "printer_model",
+      "nozzle_type",
+      "z_hop_types",
+      "machine_max_speed_x",
+      "machine_max_speed_y",
+    ]);
+  });
+
+  it("drops commented-out keys from both vectors", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    const keys = parsePrinterOptionList(source);
+    expect(keys).not.toContain("bed_shape");
+    expect(keys).not.toContain("legacy_option");
+  });
+
+  it("returns an empty array when neither vector is present", () => {
+    expect(parsePrinterOptionList("// nothing here")).toEqual([]);
+  });
+});
+
+describe("parseExtruderOptionKeys", () => {
+  it("reads the m_extruder_option_keys brace-init list, ignoring comments", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const keys = parseExtruderOptionKeys(source);
+    expect(keys).toEqual(["nozzle_diameter", "retraction_length", "wipe"]);
+    expect(keys).not.toContain("legacy_extruder_key");
+  });
+
+  it("returns an empty array when the assignment is absent", () => {
+    expect(parseExtruderOptionKeys("// nothing here")).toEqual([]);
+  });
+});
+
+describe("parseAxisLimitOptions", () => {
+  it("expands the machine-limit axis loop into one option per axis and family", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const options = parseAxisLimitOptions(source);
+    expect(Object.keys(options).sort()).toEqual([
+      "machine_max_acceleration_x",
+      "machine_max_acceleration_z",
+      "machine_max_jerk_x",
+      "machine_max_jerk_z",
+      "machine_max_speed_x",
+      "machine_max_speed_z",
+    ]);
+  });
+
+  it("carries the per-axis facts, including the default drawn from the named struct field", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const options = parseAxisLimitOptions(source);
+    expect(options.machine_max_speed_x).toMatchObject({
+      type: "float",
+      vector: true,
+      nullable: true,
+      min: 0,
+      default: [500, 200],
+    });
+    expect(options.machine_max_jerk_z).toMatchObject({ type: "float", default: [0.2, 0.4] });
+    expect(options.machine_max_acceleration_z).toMatchObject({ default: [500, 200] });
+  });
+
+  it("returns an empty record when the axis loop is absent", () => {
+    expect(parseAxisLimitOptions("// nothing here")).toEqual({});
   });
 });
 

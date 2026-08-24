@@ -4,15 +4,18 @@ export const strings = {
     resolveProfile: {
       title: "Resolve profile",
       description:
-        "Resolve a Bambu Studio process or filament profile's fully-merged active settings. Walks the " +
+        "Resolve a Bambu Studio process, filament, or machine profile's fully-merged active settings. Walks the " +
         "profile's 'inherits' chain across the configured user preset store and the vendor's system " +
         "profiles, merging settings root-first so a more specific profile's values override its " +
         "ancestors'.\n\n" +
         "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object } — settings is " +
         "the flat merged key->value map; scalar options are bare strings like \"0.2\", per-extruder " +
         "options are string arrays like [\"250\",\"500\",\"500\"]. settings also includes " +
-        "print_extruder_variant (process) or filament_extruder_variant (filament), which names what " +
-        "each position of every other vector option's array means for this profile. With keys given, " +
+        "print_extruder_variant (process), filament_extruder_variant (filament), or " +
+        "printer_extruder_variant (machine), which names what " +
+        "each position of every other vector option's array means for this profile. The machine " +
+        "profile's printer_extruder_variant is the authoritative column count: resolve the machine " +
+        "kind to learn how many elements a per-extruder array needs. With keys given, " +
         "settings carries exactly the requested keys and missingKeys lists the requested keys the " +
         "resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
@@ -20,7 +23,9 @@ export const strings = {
         "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +
         "a profile's effective settings before creating a variant of it with write_profile.",
       inputs: {
-        kind: "Profile type to resolve",
+        kind:
+          "Profile type to resolve; 'machine' reads the printer preset Bambu Studio owns, whose " +
+          "printer_extruder_variant fixes the column count of every per-extruder vector option",
         vendor:
           "Vendor id from list_vendors, e.g. 'BBL'. Required for user presets too: it names the system " +
           "store their inherits chain can reference",
@@ -121,14 +126,14 @@ export const strings = {
     listProfiles: {
       title: "List profiles",
       description:
-        "Discover the process or filament profiles available in the user preset store and the vendors' " +
+        "Discover the process, filament, or machine profiles available in the user preset store and the vendors' " +
         "system stores.\n\n" +
         "Returns: { kind, profiles: [{ name, source: \"user\"|\"system\", vendor?, inherits? }] } — " +
         "user presets carry no vendor field; inherits names a profile's parent.\n\n" +
         "Errors: vendor not found (only when vendor is given); config missing (run init_config first).\n\n" +
         "Results feed the vendor/name/baseProfile arguments of resolve_profile and write_profile.",
       inputs: {
-        kind: "Profile type to list",
+        kind: "Profile type to list; 'machine' lists the printer presets Bambu Studio owns",
         vendor: "Vendor id from list_vendors, e.g. 'BBL'; omit to search every vendor",
         search: "Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'",
         source:
@@ -148,20 +153,23 @@ export const strings = {
     listParameters: {
       title: "List parameters",
       description:
-        "Discover the option keys valid for process or filament profiles, with their value type, " +
+        "Discover the option keys valid for process, filament, or machine profiles, with their value type, " +
         "range/enum, default, and (where Bambu Studio provides them) the GUI label and description. " +
         "Search by name or by what a setting does — the filter matches key, label, and description.\n\n" +
         "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, " +
         "description?, nullable? }] } — vector: true means the option takes a string array with one " +
         "element per (extruder × hotend-variant) position of the target profile — see the profile's " +
-        "print_extruder_variant/filament_extruder_variant in resolve_profile's settings; vector: false " +
+        "print_extruder_variant/filament_extruder_variant, or the machine profile's " +
+        "printer_extruder_variant, in resolve_profile's settings; vector: false " +
         "a single value. Options marked nullable: true accept \"nil\" as an element (or as the whole " +
         "value) to keep the base/printer value at that position.\n\n" +
         "Errors: config missing (run init_config first).\n\n" +
         "Results feed the kvps argument of write_profile: use key as the kvps key and respect " +
         "type/vector/enum/min/max/nullable when choosing the value.",
       inputs: {
-        kind: "Profile type whose option schema to list",
+        kind:
+          "Profile type whose option schema to list; 'machine' lists the printer option keys, which " +
+          "write_profile and update_profile leave to Bambu Studio",
         search: "Case-insensitive substring matched against key, label, and description, e.g. 'seam' or 'temperature'",
       },
     },
@@ -269,7 +277,9 @@ export const strings = {
         "Use it to verify a file authored with write_profile or update_profile before installing it " +
         "with import_profile. For presets already installed, resolve_profile is the tool.",
       inputs: {
-        kind: "Profile type to resolve",
+        kind:
+          "Profile type to resolve; 'machine' resolves the file against the printer presets Bambu " +
+          "Studio owns",
         vendor:
           "Vendor id from list_vendors, e.g. 'BBL'; names the system store the file's inherits chain " +
           "is resolved against",

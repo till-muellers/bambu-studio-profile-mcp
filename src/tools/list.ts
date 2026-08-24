@@ -3,11 +3,11 @@ import { join } from "node:path";
 import { z } from "zod";
 import { strings } from "../strings.js";
 import { listFilaments, listProfiles, listVendors, type ProfileListing } from "../profile-store.js";
-import type { ProfileKind, SchemaOption } from "../types.js";
+import type { ReadableProfileKind, SchemaOption } from "../types.js";
 import { loadSchema } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
-const kindEnum = z.enum(["process", "filament"]);
+const kindEnum = z.enum(["process", "filament", "machine"]);
 const sourceEnum = z.enum(["user", "system"]);
 
 /** Which store a listing row came from. */
@@ -19,8 +19,8 @@ export interface ParameterListing extends SchemaOption {
 
 export async function handleListProfiles(
   deps: ToolDeps,
-  args: { kind: ProfileKind; vendor?: string; search?: string; source?: ProfileSource }
-): Promise<{ kind: ProfileKind; profiles: ProfileListing[] }> {
+  args: { kind: ReadableProfileKind; vendor?: string; search?: string; source?: ProfileSource }
+): Promise<{ kind: ReadableProfileKind; profiles: ProfileListing[] }> {
   const cfg = await deps.config.require();
   let profiles = await listProfiles(cfg, args.kind, args.vendor);
   if (args.source) {
@@ -43,8 +43,8 @@ export async function handleListVendors(
 
 export async function handleListParameters(
   deps: ToolDeps,
-  args: { kind: ProfileKind; search?: string }
-): Promise<{ kind: ProfileKind; parameters: ParameterListing[] }> {
+  args: { kind: ReadableProfileKind; search?: string }
+): Promise<{ kind: ReadableProfileKind; parameters: ParameterListing[] }> {
   await deps.config.require();
   const schema = await loadSchema(join(deps.schemaDir, `${args.kind}.schema.json`));
   let parameters: ParameterListing[] = Object.entries(schema).map(([key, option]) => ({ key, ...option }));
@@ -82,7 +82,7 @@ function registerListProfiles(server: McpServer, deps: ToolDeps): void {
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor?: string; search?: string; source?: ProfileSource }) => {
+    async (args: { kind: ReadableProfileKind; vendor?: string; search?: string; source?: ProfileSource }) => {
       try {
         const result = await handleListProfiles(deps, args);
         return {
@@ -135,7 +135,7 @@ function registerListParameters(server: McpServer, deps: ToolDeps): void {
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; search?: string }) => {
+    async (args: { kind: ReadableProfileKind; search?: string }) => {
       try {
         const result = await handleListParameters(deps, args);
         return {

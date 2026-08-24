@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { z } from "zod";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
-import type { ProfileKind, RawProfile, ResolvedProfile } from "../types.js";
+import type { ReadableProfileKind, RawProfile, ResolvedProfile } from "../types.js";
 import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { projectKeys } from "./project-keys.js";
@@ -20,7 +20,7 @@ export interface ResolvedFileProfile extends ResolvedProfile {
 
 export async function handleResolveFromFile(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: ReadableProfileKind,
   args: { vendor: string; outputDir: string; name: string; sourceName?: string; keys?: string[] }
 ): Promise<ResolvedFileProfile> {
   const cfg = await deps.config.require();
@@ -64,7 +64,7 @@ export async function handleResolveFromFile(
 }
 
 const resolveFromFileInputShape = {
-  kind: z.enum(["process", "filament"]).describe(strings.tools.resolveFromFile.inputs.kind),
+  kind: z.enum(["process", "filament", "machine"]).describe(strings.tools.resolveFromFile.inputs.kind),
   vendor: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.vendor),
   outputDir: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.outputDir),
   name: z.string().min(1).describe(strings.tools.resolveFromFile.inputs.name),
@@ -82,7 +82,7 @@ export function registerResolveFromFileTool(server: McpServer, deps: ToolDeps): 
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
     async (args: {
-      kind: ProfileKind;
+      kind: ReadableProfileKind;
       vendor: string;
       outputDir: string;
       name: string;

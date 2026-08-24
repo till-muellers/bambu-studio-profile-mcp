@@ -6,7 +6,7 @@ import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
-import type { ProfileKind, RawProfile } from "../types.js";
+import type { WritableProfileKind, RawProfile } from "../types.js";
 import {
   STUDIO_RESTART_NOTE,
   SYNTHESIZED_METADATA_KEYS,
@@ -18,7 +18,7 @@ import { loadSchema, validateKvps } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
 export interface ImportResult {
-  kind: ProfileKind;
+  kind: WritableProfileKind;
   name: string;
   path: string;
   infoPath: string;
@@ -28,7 +28,7 @@ export interface ImportResult {
 
 export async function handleImport(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: WritableProfileKind,
   args: { vendor: string; outputDir: string; name: string; overwrite?: boolean }
 ): Promise<ImportResult> {
   const cfg = await deps.config.require();
@@ -101,7 +101,7 @@ export async function handleImport(
 }
 
 export interface RemoveResult {
-  kind: ProfileKind;
+  kind: WritableProfileKind;
   name: string;
   removedJson: string;
   removedInfo: string | null;
@@ -111,7 +111,7 @@ export interface RemoveResult {
 
 export async function handleRemove(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: WritableProfileKind,
   args: { name: string }
 ): Promise<RemoveResult> {
   const cfg = await deps.config.require();
@@ -170,7 +170,7 @@ function registerRemoveProfile(server: McpServer, deps: ToolDeps): void {
       inputSchema: removeInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; name: string }) => {
+    async (args: { kind: WritableProfileKind; name: string }) => {
       try {
         const result = await handleRemove(deps, args.kind, args);
         return {
@@ -201,7 +201,7 @@ export function registerImportTools(server: McpServer, deps: ToolDeps): void {
       inputSchema: importInputShape,
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor: string; outputDir: string; name: string; overwrite?: boolean }) => {
+    async (args: { kind: WritableProfileKind; vendor: string; outputDir: string; name: string; overwrite?: boolean }) => {
       try {
         const result = await handleImport(deps, args.kind, args);
         return {

@@ -1,9 +1,9 @@
 import { CircularInheritanceError, ProfileNotFoundError } from "./errors.js";
-import type { ProfileKind, ProfileStore, RawProfile, ResolvedProfile } from "./types.js";
+import type { ReadableProfileKind, ProfileStore, RawProfile, ResolvedProfile } from "./types.js";
 
 export async function resolveProfile(
   store: ProfileStore,
-  kind: ProfileKind,
+  kind: ReadableProfileKind,
   vendor: string,
   name: string
 ): Promise<ResolvedProfile> {

@@ -1,4 +1,14 @@
-export type ProfileKind = "process" | "filament";
+/**
+ * Preset kinds this server reads. Machine presets describe the printer itself — their
+ * printer_extruder_variant fixes how many columns every per-extruder vector option carries.
+ */
+export type ReadableProfileKind = "process" | "filament" | "machine";
+
+/**
+ * Preset kinds this server authors, installs, and removes. Bambu Studio owns machine presets:
+ * it writes them from its Printer settings, and values changed there may never reach a file at all.
+ */
+export type WritableProfileKind = "process" | "filament";
 
 export interface ServerConfig {
   installDir: string;
@@ -23,13 +33,13 @@ export interface ProfileHit {
 /** Read-only lookup over the system + user preset stores. */
 export interface ProfileStore {
   /** User store (user/<userId>/<kind>) first, then system store under the given vendor. Null if absent in both. */
-  findProfile(kind: ProfileKind, vendor: string, name: string): Promise<ProfileHit | null>;
+  findProfile(kind: ReadableProfileKind, vendor: string, name: string): Promise<ProfileHit | null>;
 }
 
 export interface ResolvedProfile {
   vendor: string;
   name: string;
-  kind: ProfileKind;
+  kind: ReadableProfileKind;
   chain: string[];
   settings: Record<string, unknown>;
   /** Present when a key projection was requested: the requested keys the resolved settings lack. */

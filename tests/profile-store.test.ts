@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,6 +43,35 @@ describe("FsProfileStore.findProfile", () => {
   it("finds a filament profile under the filament kind", async () => {
     const hit = await store().findProfile("filament", "BBL", "Generic PLA @BBL X1C");
     expect(hit?.source).toBe("system");
+  });
+
+  it("finds a machine profile under the machine kind", async () => {
+    const hit = await store().findProfile("machine", "BBL", "Bambu Lab X1 Carbon 0.4 nozzle");
+    expect(hit?.source).toBe("system");
+    expect(hit?.profile.inherits).toBe("fdm_machine_common");
+    expect(hit?.path).toContain(join("BBL", "machine"));
+  });
+
+  it("prefers a user machine preset over the system store", async () => {
+    const userDataDir = await mkdtemp(join(tmpdir(), "bsp-machine-user-"));
+    try {
+      const machineDir = join(userDataDir, "user", "1234567890", "machine");
+      await mkdir(machineDir, { recursive: true });
+      await writeFile(
+        join(machineDir, "mine.json"),
+        JSON.stringify({ name: "Bambu Lab X1 Carbon 0.4 nozzle", printable_height: "999" }),
+        "utf8"
+      );
+      const hit = await new FsProfileStore({
+        installDir: join(FIXTURES, "install"),
+        userDataDir,
+        userId: "1234567890",
+      }).findProfile("machine", "BBL", "Bambu Lab X1 Carbon 0.4 nozzle");
+      expect(hit?.source).toBe("user");
+      expect(hit?.profile.printable_height).toBe("999");
+    } finally {
+      await rm(userDataDir, { recursive: true, force: true });
+    }
   });
 
   it("returns null for an unknown profile in a known vendor", async () => {

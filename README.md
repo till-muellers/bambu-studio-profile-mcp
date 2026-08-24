@@ -163,16 +163,18 @@ Configuration persists per project in `.bambu-studio-profile-mcp\config.json`. A
 
 ## Tools
 
+The read tools (`list_profiles`, `list_parameters`, `resolve_profile`, `resolve_from_file`) accept kind `process`, `filament`, or `machine`. Machine presets are Bambu Studio's to write, so `write_profile`, `update_profile`, `diff_profile`, `import_profile`, and `remove_profile` accept `process` and `filament`.
+
 | Tool | Purpose |
 | --- | --- |
 | `init_config` | Set and persist `installDir` / `userDataDir` / `userId`; all auto-detected when omitted. |
-| `list_profiles` | Discover process or filament profiles, optionally scoped to a vendor, filtered by name substring, and restricted to the user or system store. |
+| `list_profiles` | Discover process, filament, or machine profiles, optionally scoped to a vendor, filtered by name substring, and restricted to the user or system store. |
 | `list_vendors` | List vendor ids under `resources/profiles` with display names. |
 | `list_filaments` | List distinct `filament_id` values across all filament profiles with display names. |
-| `list_parameters` | Discover valid option keys per profile kind — type, range/enum, default, label, description. |
-| `resolve_profile` | Resolve a profile's fully-merged active settings across its `inherits` chain; `keys` projects the result down to the options asked for. |
-| `resolve_from_file` | Resolve a local profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for. |
-| `write_profile` | Create a profile file in a caller-chosen directory from a base profile plus validated overrides. |
+| `list_parameters` | Discover valid option keys per profile kind (`process`, `filament`, `machine`) — type, range/enum, default, label, description. |
+| `resolve_profile` | Resolve a process, filament, or machine profile's fully-merged active settings across its `inherits` chain; `keys` projects the result down to the options asked for. Reading kind `machine` gives `printer_extruder_variant`, the authoritative column count for per-extruder vector options. |
+| `resolve_from_file` | Resolve a local process, filament, or machine profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for. |
+| `write_profile` | Create a process or filament profile file in a caller-chosen directory from a base profile plus validated overrides. |
 | `update_profile` | Atomically upsert and delete keys in a previously written profile file. |
 | `diff_profile` | Compare a local profile file against the installed user preset, key by key — changed, added, and removed values plus which side is newer. |
 | `import_profile` | Install a written profile into Bambu Studio's user preset store (`.info` sidecar synthesized; overwrite requires an explicit flag; Studio sees it after a restart). |

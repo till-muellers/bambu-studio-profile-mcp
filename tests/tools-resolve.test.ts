@@ -73,6 +73,33 @@ describe("handleResolve", () => {
     expect(result.chain).toEqual(["fdm_process_common", "0.20mm Standard @BBL X1C"]);
   });
 
+  it("resolves machine profiles under the machine kind", async () => {
+    const result = await handleResolve(fixtureDeps(), "machine", {
+      vendor: "BBL",
+      name: "Bambu Lab X1 Carbon 0.4 nozzle",
+    });
+    expect(result.kind).toBe("machine");
+    expect(result.chain).toEqual(["fdm_machine_common", "Bambu Lab X1 Carbon 0.4 nozzle"]);
+    expect(result.settings.printer_extruder_variant).toEqual([
+      "Direct Drive Standard",
+      "Direct Drive High Flow",
+      "Direct Drive Standard",
+    ]);
+    expect(result.settings.retraction_length).toEqual(["0.8", "1.2", "0.8"]);
+    expect(result.settings.gcode_flavor).toBe("marlin");
+    expect(result.settings.printable_height).toBe("256");
+  });
+
+  it("projects the machine column count down to printer_extruder_variant", async () => {
+    const result = await handleResolve(fixtureDeps(), "machine", {
+      vendor: "BBL",
+      name: "Bambu Lab X1 Carbon 0.4 nozzle",
+      keys: ["printer_extruder_variant"],
+    });
+    expect(Object.keys(result.settings)).toEqual(["printer_extruder_variant"]);
+    expect((result.settings.printer_extruder_variant as string[]).length).toBe(3);
+  });
+
   it("reports requested keys the resolved settings lack", async () => {
     const result = await handleResolve(fixtureDeps(), "process", {
       vendor: "BBL",

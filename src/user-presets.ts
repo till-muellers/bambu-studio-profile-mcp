@@ -1,12 +1,12 @@
 import { join } from "node:path";
 import { strings } from "./strings.js";
-import type { ProfileKind, ServerConfig } from "./types.js";
+import type { WritableProfileKind, ServerConfig } from "./types.js";
 
 export const STUDIO_RESTART_NOTE = strings.messages.studioRestartNote;
 
 export function userPresetPaths(
   cfg: ServerConfig,
-  kind: ProfileKind,
+  kind: WritableProfileKind,
   name: string
 ): { jsonPath: string; infoPath: string } {
   if (/[/\\]/.test(name) || name === "." || name === "..") {

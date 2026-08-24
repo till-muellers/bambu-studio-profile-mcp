@@ -6,13 +6,13 @@ import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
 import { strings } from "../strings.js";
 import { writeProfileFile } from "../profile-store.js";
-import type { ProfileKind, RawProfile, Violation } from "../types.js";
+import type { WritableProfileKind, RawProfile, Violation } from "../types.js";
 import { loadSchema, validateKvps } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
 export interface UpdateResult {
   name: string;
-  kind: ProfileKind;
+  kind: WritableProfileKind;
   path: string;
   set: string[];
   removed: string[];
@@ -23,7 +23,7 @@ const RESERVED_KEYS = ["name", "inherits"] as const;
 
 export async function handleUpdate(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: WritableProfileKind,
   args: {
     name: string;
     outputDir: string;
@@ -132,7 +132,7 @@ export function registerUpdateTool(server: McpServer, deps: ToolDeps): void {
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     },
     async (args: {
-      kind: ProfileKind;
+      kind: WritableProfileKind;
       name: string;
       outputDir: string;
       set?: Record<string, unknown>;

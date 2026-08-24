@@ -74,6 +74,33 @@ describe("handleResolveFromFile", () => {
     expect(result.settings.brim_type).toBe("no_brim");
   });
 
+  it("merges a machine file's overrides on top of its resolved machine chain", async () => {
+    await writeSource("X1C Wide", {
+      name: "X1C Wide",
+      inherits: "Bambu Lab X1 Carbon 0.4 nozzle",
+      printable_height: "300",
+    });
+
+    const result = await handleResolveFromFile(deps(), "machine", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "X1C Wide",
+    });
+
+    expect(result.kind).toBe("machine");
+    expect(result.chain).toEqual([
+      "fdm_machine_common",
+      "Bambu Lab X1 Carbon 0.4 nozzle",
+      "X1C Wide",
+    ]);
+    expect(result.settings.printable_height).toBe("300");
+    expect(result.settings.printer_extruder_variant).toEqual([
+      "Direct Drive Standard",
+      "Direct Drive High Flow",
+      "Direct Drive Standard",
+    ]);
+  });
+
   it("ignores identity and synthesized metadata keys in the file", async () => {
     await writeSource("Installed Shape", {
       name: "Installed Shape",

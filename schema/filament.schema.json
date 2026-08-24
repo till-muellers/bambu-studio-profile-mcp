@@ -135,7 +135,6 @@
       "75%",
       "95%"
     ],
-    "default": "(int)Overhang_threshold_bridge",
     "description": "Overhang ratio (per extruder position) above which the part-cooling fan is forced to its overhang speed. Expressed as line-width overhang percentage; 0% cools every line, 95% only near-bridges. Lower thresholds improve overhang surfaces on heat-sensitive materials like PLA; keep high for warp-prone ABS."
   },
   "overhang_threshold_participating_cooling": {
@@ -150,7 +149,6 @@
       "75%",
       "100%"
     ],
-    "default": "(int) Overhang_threshold_participating_cooling_bridge",
     "description": "Overhang ratio above which lines count toward layer-time cooling calculations (per extruder position). At 100% only bridges participate; lower values make overhanging lines trigger slowdown-for-cooling earlier. Tune together with overhang_fan_threshold."
   },
   "compatible_printers": {
@@ -199,7 +197,7 @@
       "uniform_cooling",
       "consistent_surface"
     ],
-    "default": "(int)cslUniformCooling",
+    "default": "uniform_cooling",
     "description": "Strategy used when layer time falls below the cooling threshold: 'uniform_cooling' slows the whole layer evenly, 'consistent_surface' preserves outer-wall speed for a uniform sheen and slows other features harder. Per extruder position."
   },
   "cooling_perimeter_transition_distance": {
@@ -465,7 +463,7 @@
       "Medium",
       "High"
     ],
-    "default": "fmsNone",
+    "default": "None",
     "description": "Stickiness class of a metal-fill material (None/Low/Medium/High), used to adapt handling of tacky metal-loaded filaments. Leave None for ordinary polymers."
   },
   "filament_density": {
@@ -499,7 +497,7 @@
       "external",
       "all"
     ],
-    "default": 0,
+    "default": "none",
     "description": "Filament-level scarf seam preference: 'none' keeps ordinary seams, 'external' applies scarf joints to visible outer walls only, 'all' to every wall. Scarf seams ramp the seam over a distance to hide it; effective on glossy materials where seam bumps show most."
   },
   "filament_scarf_length": {
@@ -996,7 +994,7 @@
       "Slope Lift",
       "Spiral Lift"
     ],
-    "default": "ZHopType::zhtSpiral",
+    "default": "Spiral Lift",
     "nullable": true,
     "description": "Per-extruder override of the printer's Z hop trajectory for this filament ('Auto Lift', 'Normal Lift', 'Slope Lift', 'Spiral Lift'); 'nil' keeps the printer value. Slope/Spiral reduce stringing and ooze marks on sticky materials by moving diagonally while lifting."
   },

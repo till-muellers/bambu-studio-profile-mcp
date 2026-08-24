@@ -7,7 +7,7 @@
       "FFF",
       "SLA"
     ],
-    "default": "ptFFF",
+    "default": "FFF",
     "description": "Printing process family this machine describes. FFF builds by extruding filament; SLA cures resin. Bambu Studio machine presets are FFF."
   },
   "printable_area": {
@@ -125,7 +125,6 @@
       "key",
       "user"
     ],
-    "default": "atKeyPassword",
     "description": "How print_host authenticates uploads. key: the single API key in printhost_apikey; user: printhost_user plus printhost_password."
   },
   "before_layer_change_gcode": {
@@ -321,7 +320,6 @@
       "by_first_filament",
       "by_highest_temp"
     ],
-    "default": "BedTempFormula::btfFirstFilament",
     "description": "How the bed target is chosen when several filaments print together. by_first_filament takes the first filament's bed temperature; by_highest_temp takes the highest requested — safer for adhesion, riskier for low-temperature materials."
   },
   "nozzle_flush_dataset": {
@@ -377,7 +375,7 @@
       "tungsten_carbide",
       "brass"
     ],
-    "default": "ntUndefine",
+    "default": "undefine",
     "description": "Nozzle material per extruder. hardened_steel and tungsten_carbide survive abrasive filaments (carbon- or glass-filled); stainless_steel and brass conduct heat better and suit plain polymers. Studio blocks abrasive filaments on brass."
   },
   "printer_structure": {
@@ -391,7 +389,7 @@
       "hbot",
       "delta"
     ],
-    "default": "psUndefine",
+    "default": "undefine",
     "description": "Motion system topology. corexy moves the head in XY on crossed belts while the bed drops; i3 moves the bed in Y; hbot uses a single H-shaped belt; delta uses three parallel arms. Determines which acceleration and jerk limits are realistic."
   },
   "best_object_pos": {
@@ -417,7 +415,7 @@
       "right",
       "both"
     ],
-    "default": "fdUndefine",
+    "default": "undefine",
     "description": "Side the auxiliary fan blows from. Lets the slicer bias seam and overhang placement relative to the airflow."
   },
   "support_chamber_temp_control": {
@@ -466,7 +464,6 @@
       "smoothie",
       "no-extrusion"
     ],
-    "default": "gcfMarlinLegacy",
     "description": "G-code dialect emitted for this machine — marlin and marlin2 for Marlin firmware, klipper for Klipper, reprapfirmware for Duet, and so on. The wrong flavor yields commands the firmware ignores or rejects."
   },
   "inherits": {
@@ -617,7 +614,7 @@
       "repetier",
       "mks"
     ],
-    "default": "htOctoPrint",
+    "default": "octoprint",
     "description": "Print host software running at print_host — octoprint, prusalink, duet, repetier and friends. Determines which upload API is used."
   },
   "nozzle_volume": {
@@ -743,7 +740,7 @@
       "Slope Lift",
       "Spiral Lift"
     ],
-    "default": "ZHopType::zhtSpiral",
+    "default": "Spiral Lift",
     "description": "How the lift is performed, per extruder. Auto Lift lets the slicer choose per move; Normal Lift goes straight up then travels; Slope Lift climbs along the travel direction; Spiral Lift climbs helically, gentlest on the print. Slope and Spiral cost less time than Normal."
   },
   "extruder_type": {
@@ -754,7 +751,7 @@
       "Direct Drive",
       "Bowden"
     ],
-    "default": "ExtruderType::etDirectDrive",
+    "default": "Direct Drive",
     "description": "Extruder drive layout per extruder. Direct Drive mounts the gears at the hotend and needs short retractions; Bowden pushes through a long tube and needs far longer ones."
   },
   "default_nozzle_volume_type": {
@@ -762,7 +759,6 @@
     "vector": true,
     "label": "Default Nozzle Volume Type",
     "enum": [],
-    "default": "NozzleVolumeType::nvtStandard",
     "description": "Nozzle volume class selected by default for each extruder, such as standard or high flow. Picks which calibrated flow and purge data apply."
   },
   "extruder_variant_list": {

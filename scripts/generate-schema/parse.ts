@@ -130,6 +130,44 @@ function coerceDefault(value: unknown, type: SchemaType): unknown {
   return value;
 }
 
+/** Lowercases and drops every non-alphanumeric character, so "normal(auto)" and "NormalAuto" meet. */
+function normalizeEnumToken(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Turns the C++ default of an enum option into the enum token it names, or `undefined` when it
+ * names nothing the option declares. A plain integer (with any `(int)` cast stripped) indexes
+ * `enumValues`. An enum constant — scoped (`ZHopType::zhtSpiral`) or bare (`btAutoBrim`) — matches a
+ * token only when the two normalize identically, either whole or with the constant's leading
+ * lowercase type prefix removed. Matching is exact on purpose: `ipRectilinear` must not be talked
+ * into `alignedrectilinear`. An omitted default is correct; a fabricated one is a defect.
+ */
+export function resolveEnumDefault(rawDefault: string, enumValues: string[]): string | undefined {
+  const text = rawDefault.replace(/\(\s*int\s*\)/g, "").trim();
+  if (text === "") return undefined;
+
+  if (/^\d+$/.test(text)) return enumValues[Number(text)];
+
+  const identifier = text.includes("::") ? text.slice(text.lastIndexOf("::") + 2).trim() : text;
+  const candidates = [identifier, identifier.replace(/^[a-z]+(?=[A-Z])/, "")]
+    .map(normalizeEnumToken)
+    .filter((candidate) => candidate !== "");
+
+  for (const candidate of candidates) {
+    const hit = enumValues.find((value) => normalizeEnumToken(value) === candidate);
+    if (hit !== undefined) return hit;
+  }
+  // Enum tokens often carry a trailing noun the constant drops ("zhtSpiral" -> "Spiral Lift").
+  // Accept that only when exactly one token starts with the candidate, so an ambiguous stem
+  // resolves to nothing rather than to a near neighbour.
+  for (const candidate of candidates) {
+    const hits = enumValues.filter((value) => normalizeEnumToken(value).startsWith(candidate));
+    if (hits.length === 1) return hits[0];
+  }
+  return undefined;
+}
+
 export function parsePrintConfig(cppSource: string): Record<string, SchemaOption> {
   const options: Record<string, SchemaOption> = {};
   const aliasToKey: Record<string, string> = {};
@@ -166,7 +204,10 @@ export function parsePrintConfig(cppSource: string): Record<string, SchemaOption
     // which carries no honest rendering into the "XxY" string form preset files use. Omit it.
     if (!POINT_TYPES.has(coType)) {
       const rawDefault = extractDefaultRaw(body);
-      if (rawDefault !== undefined) {
+      if (rawDefault !== undefined && mapped.type === "enum") {
+        const resolved = resolveEnumDefault(rawDefault, option.enum ?? []);
+        if (resolved !== undefined) option.default = resolved;
+      } else if (rawDefault !== undefined) {
         const parsed = parseDefaultValue(rawDefault);
         if (parsed !== undefined) option.default = coerceDefault(parsed, mapped.type);
       }

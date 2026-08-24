@@ -96,7 +96,7 @@
       "all top",
       "topmost"
     ],
-    "default": "TopOneWallType::Alltop",
+    "default": "all top",
     "description": "Uses a single wall on top surfaces so solid infill reaches closer to the edge, improving top finish. not apply: disabled; all top: every layer with top surface; topmost: final layer only. Single wall slightly weakens edges."
   },
   "top_area_threshold": {
@@ -256,7 +256,7 @@
       "outer_and_inner",
       "no_brim"
     ],
-    "default": "btAutoBrim",
+    "default": "auto_brim",
     "description": "Brim placement. auto_brim: slicer decides per object based on adhesion risk; brim_ears: small discs at sharp corners only; outer_only: brim outside the outline (most common manual choice); inner_only: inside holes only; outer_and_inner: both sides; no_brim: none. Outer brims fight warping; inner brims consume hole clearance."
   },
   "brim_object_gap": {
@@ -288,7 +288,7 @@
       "by layer",
       "by object"
     ],
-    "default": "PrintSequence::ByLayer",
+    "default": "by layer",
     "description": "Order for multiple objects. by layer: all objects advance together each layer — fastest, travels between objects can string. by object: finish each object before the next — cleaner parts, needs toolhead/gantry clearance around objects."
   },
   "default_acceleration": {
@@ -358,7 +358,7 @@
       "partial",
       "enabled"
     ],
-    "default": "EnsureVerticalThicknessLevel::evtEnabled",
+    "default": "enabled",
     "description": "Adds solid infill near sloped surfaces to guarantee the configured shell thickness. enabled: full enforcement, watertight, more material/time; partial: reinforces only critical areas; disabled: fastest, risks gaps or pinholes on slopes."
   },
   "detect_floating_vertical_shell": {
@@ -391,7 +391,6 @@
       "archimedeanchords",
       "octagramspiral"
     ],
-    "default": "ipRectilinear",
     "description": "Top solid surface pattern. monotonic: one sweep direction, uniform sheen, best default; zig-zag: rectilinear, can show joins; monotonicline: monotonic with connected ends; alignedrectilinear: same angle every layer; concentric: outline rings, suits round parts; hilbertcurve / archimedeanchords / octagramspiral: decorative, slower."
   },
   "top_surface_density": {
@@ -426,7 +425,6 @@
       "archimedeanchords",
       "octagramspiral"
     ],
-    "default": "ipRectilinear",
     "description": "Pattern for bottom solid surfaces. concentric: contour rings; zig-zag: fast lines; monotonic: single sweep direction, best for visible undersides; monotonicline: monotonic, connected ends; alignedrectilinear: fixed line angle; hilbertcurve/archimedeanchords/octagramspiral: decorative."
   },
   "bottom_surface_density": {
@@ -452,7 +450,6 @@
       "archimedeanchords",
       "octagramspiral"
     ],
-    "default": "ipRectilinear",
     "description": "Pattern for hidden internal solid layers; cosmetics irrelevant. zig-zag/monotonic/monotonicline: fast rectilinear variants; alignedrectilinear: same direction every layer; concentric: follows perimeters; hilbertcurve/archimedeanchords/octagramspiral: slow curves. zig-zag typical."
   },
   "outer_wall_line_width": {
@@ -490,7 +487,7 @@
       "outer wall/inner wall",
       "inner-outer-inner wall"
     ],
-    "default": "WallSequence::InnerOuter",
+    "default": "inner-outer-inner wall",
     "description": "Print order of wall loops. inner wall/outer wall: inner first, supports overhangs (default); outer wall/inner wall: best accuracy and surface, worse overhangs; inner-outer-inner wall: one inner, then outer, then rest — accuracy plus overhang support, needs 3+ loops."
   },
   "is_infill_first": {
@@ -587,7 +584,7 @@
       "lockedzag",
       "2dlattice"
     ],
-    "default": "ipCubic",
+    "default": "cubic",
     "description": "Interior fill geometry. cubic/adaptivecubic/supportcubic: all-round strength, latter two densify near top only; grid/triangles/tri-hexagon: strong; gyroid/crosshatch: isotropic, flexible-friendly; honeycomb/3dhoneycomb: strong, slow; lightning: minimal, props top only; line/zig-zag/zigzag/alignedrectilinear: cheap directional; crosszag/lockedzag: zigzag variants; concentric: follows walls; hilbertcurve/archimedeanchords/octagramspiral: decorative; 2dlattice: struts per lattice angles. Default cubic."
   },
   "locked_skin_infill_pattern": {
@@ -613,7 +610,7 @@
       "zigzag",
       "crosszag"
     ],
-    "default": "ipCrossZag",
+    "default": "crosszag",
     "description": "Pattern for the outer (skin) zone adjacent to walls when sparse infill uses the Locked Zag pattern. Skin zone anchors infill to walls; crosszag default improves wall bonding, other values as with normal sparse infill. Ignored for other infill patterns."
   },
   "locked_skeleton_infill_pattern": {
@@ -639,7 +636,7 @@
       "zigzag",
       "crosszag"
     ],
-    "default": "ipZigZag",
+    "default": "zig-zag",
     "description": "Pattern for the interior (skeleton) zone when sparse infill uses the Locked Zag pattern. Skeleton bears the load: zig-zag/grid/cubic/gyroid etc. as with normal sparse infill; crosshatch/crosszag suit flexibles. Zig-zag default. Ignored for other infill patterns."
   },
   "top_surface_acceleration": {
@@ -795,7 +792,7 @@
       "allwalls",
       "disabled_fuzzy"
     ],
-    "default": "FuzzySkinType::None",
+    "default": "none",
     "description": "Where random wall jitter (rough texture) is applied. none: off, painting still allowed; external: outer contour only, holes stay smooth; all: contour and holes; allwalls: inner walls too; disabled_fuzzy: force off in this region, overriding object setting."
   },
   "fuzzy_skin_thickness": {
@@ -834,7 +831,7 @@
       "ridgedmulti",
       "voronoi"
     ],
-    "default": "NoiseType::Classic",
+    "default": "classic",
     "description": "Texture noise source. classic: uniform random grain; perlin: smooth coherent texture; billow: perlin-like but clumpy/puffy; ridgedmulti: sharp ridges, marble-like; voronoi: surface split into cells, each offset randomly, patchwork look."
   },
   "fuzzy_skin_scale": {
@@ -873,7 +870,7 @@
       "extrusion",
       "combined"
     ],
-    "default": "FuzzySkinMode::Displacement",
+    "default": "displacement",
     "description": "How texture is produced. displacement: nozzle path jitters sideways; extrusion: path stays straight, flow varies — better dimensional accuracy; combined: both, fills gaps between perimeters. extrusion/combined require fuzzy_skin_thickness <= line width."
   },
   "filter_out_gap_fill": {
@@ -1155,7 +1152,7 @@
       "topmost",
       "solid"
     ],
-    "default": "IroningType::NoIroning",
+    "default": "no ironing",
     "description": "Where the hot nozzle re-traverses surfaces to melt them smooth. no ironing: off; top: all upward-facing surfaces; topmost: only each object's highest surface, saving time; solid: every solid layer, mainly to strengthen layer bonding. Adds significant print time."
   },
   "ironing_pattern": {
@@ -1166,7 +1163,6 @@
       "concentric",
       "zig-zag"
     ],
-    "default": "ipRectilinear",
     "description": "Toolpath pattern for ironing passes. zig-zag: parallel back-and-forth lines, fast, standard choice; concentric: follows the surface outline inward, suits round tops and avoids directional sheen. Only used when ironing is enabled."
   },
   "ironing_flow": {
@@ -1238,7 +1234,7 @@
       "Auto",
       "Enabled"
     ],
-    "default": "rirAuto",
+    "default": "Auto",
     "description": "Retraction policy for travels inside sparse infill, where ooze stays hidden. Disabled: always retract. Enabled: skip retraction there — faster, less extruder wear, minor internal blobbing. Auto: slicer decides. Saves time on infill-heavy prints."
   },
   "ooze_prevention": {
@@ -1396,7 +1392,7 @@
       "back",
       "random"
     ],
-    "default": "spAligned",
+    "default": "aligned",
     "description": "Perimeter seam placement. nearest: closest point to previous loop — fastest. aligned: seams stacked into one vertical line — easy to hide or sand. back: at the model's rear (Y max). random: scattered per layer — no seam line, pinpricks all over."
   },
   "seam_placement_away_from_overhangs": {
@@ -1468,7 +1464,7 @@
       "external",
       "all"
     ],
-    "default": "SeamScarfType::None",
+    "default": "none",
     "description": "Enables scarf joint seams: loop start/end ramp in Z so the seam overlaps gradually instead of butting. none: regular seams. external: outer walls only — hides visible seams. all: outer and inner walls. Costs time; tuned via seam_slope_* settings."
   },
   "seam_slope_min_length": {
@@ -1520,7 +1516,7 @@
       "limited",
       "enabled"
     ],
-    "default": "dsDisabled",
+    "default": "disabled",
     "description": "Prints a wall around the model to block drafts and trap heat, reducing warping of high-shrinkage materials. disabled: none; limited: shield only up to skirt height; enabled: full object height. Costs material, time, and plate area."
   },
   "skirt_loops": {
@@ -1587,7 +1583,6 @@
       "0",
       "1"
     ],
-    "default": "tlTraditional",
     "description": "Timelapse capture mode. 0 (traditional): photos during normal printing, no extra moves, toolhead may appear in frame; 1 (smooth): toolhead parks each layer before the photo, clean frames, adds time, needs a prime tower for the extra extrusion."
   },
   "standby_temperature_delta": {
@@ -1621,7 +1616,7 @@
       "even_odd",
       "close_holes"
     ],
-    "default": "SlicingMode::Regular",
+    "default": "regular",
     "description": "Mesh interpretation. regular: inside/outside from face orientation. even_odd: even-odd fill rule — overlapping shells alternate solid/hollow (e.g. 3DLabPrint planes). close_holes: fills all enclosed cavities solid."
   },
   "enable_support": {
@@ -1641,7 +1636,7 @@
       "normal(manual)",
       "tree(manual)"
     ],
-    "default": "stNormalAuto",
+    "default": "normal(auto)",
     "description": "Support generation mode. normal(auto): pillar supports wherever support_threshold_angle triggers; tree(auto): branching supports, less material and contact, suits organic shapes; normal(manual) / tree(manual): only where enforcers are painted or placed."
   },
   "support_object_xy_distance": {
@@ -1793,7 +1788,6 @@
       "concentric",
       "zig-zag"
     ],
-    "default": "ipRectilinear",
     "description": "Toolpath pattern for ironing passes over support tops. concentric: follows region outline inward, good for curved areas; zig-zag: parallel back-and-forth lines, faster and fine for flat pads. Only active when ironing is applied to supports."
   },
   "support_ironing_flow": {
@@ -1869,7 +1863,7 @@
       "lightning",
       "hollow"
     ],
-    "default": "smpDefault",
+    "default": "default",
     "description": "Fill pattern of the normal-support body. default: slicer picks per support style; rectilinear: parallel lines, easy removal; rectilinear-grid: crossing lines, stronger, harder to remove; honeycomb: strong, more material; lightning: sparse branching, fastest and leanest; hollow: perimeter only, no fill."
   },
   "support_interface_pattern": {
@@ -1883,7 +1877,7 @@
       "rectilinear_interlaced",
       "grid"
     ],
-    "default": "smipAuto",
+    "default": "auto",
     "description": "Pattern of support interface layers. auto: slicer chooses per support type; rectilinear: parallel lines; concentric: loops following the contact outline; rectilinear_interlaced: line phase alternates between layers for denser coverage; grid: crossing lines, stronger but harder to remove."
   },
   "support_base_pattern_spacing": {
@@ -1923,7 +1917,7 @@
       "tree_hybrid",
       "tree_organic"
     ],
-    "default": "smsDefault",
+    "default": "default",
     "description": "Structure style. Normal supports: default = slicer picks; grid = rectilinear lattice, sturdy, harder removal; snug = hugs model outline, less material. Tree: tree_slim = thin branches, minimal contact; tree_strong = thick stable branches; tree_hybrid = trunks plus normal tops for flat overhangs; tree_organic = smooth curved branches."
   },
   "top_z_overrides_xy_distance": {
@@ -2248,7 +2242,7 @@
       "classic",
       "arachne"
     ],
-    "default": "PerimeterGeneratorType::Arachne",
+    "default": "arachne",
     "description": "Perimeter engine. classic: fixed-width loops, predictable flow, may leave gaps in thin features; arachne: variable-width loops that fill thin walls and gaps cleanly, fewer tiny gap-fill moves. Arachne default; classic if width variation causes artifacts."
   },
   "wall_transition_length": {

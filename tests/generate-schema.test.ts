@@ -9,6 +9,7 @@ import {
   parsePrintConfig,
   parsePrinterOptionList,
   parseStringVector,
+  resolveEnumDefault,
   synthesizeFilamentOverrides,
 } from "../scripts/generate-schema/parse.js";
 import type { SchemaOption } from "../src/types.js";
@@ -47,7 +48,7 @@ describe("filament override synthesis", () => {
       type: "enum",
       vector: true,
       nullable: true,
-      enum: ["Auto Lift", "Normal Lift"],
+      enum: ["Auto Lift", "Normal Lift", "Slope Lift", "Spiral Lift"],
     });
     expect(options.filament_wipe).toMatchObject({ type: "bool", vector: true, nullable: true });
     expect(options.filament_bridge_speed).toMatchObject({
@@ -218,6 +219,72 @@ describe("parsePrinterOptionList", () => {
 
   it("returns an empty array when neither vector is present", () => {
     expect(parsePrinterOptionList("// nothing here")).toEqual([]);
+  });
+});
+
+describe("resolveEnumDefault", () => {
+  const zHop = ["Auto Lift", "Normal Lift", "Slope Lift", "Spiral Lift"];
+
+  it("resolves a scoped enum constant by its identifier, separators and case ignored", () => {
+    expect(resolveEnumDefault("ZHopType::zhtSpiral", zHop)).toBe("Spiral Lift");
+    expect(resolveEnumDefault("PrintSequence::ByLayer", ["by layer", "by object"])).toBe("by layer");
+  });
+
+  it("resolves a bare enum constant the same way", () => {
+    expect(resolveEnumDefault("btAutoBrim", ["auto_brim", "no_brim"])).toBe("auto_brim");
+    expect(resolveEnumDefault("stNormalAuto", ["normal(auto)", "tree(auto)"])).toBe("normal(auto)");
+  });
+
+  it("indexes the enum for a plain integer default, stripping an (int) cast", () => {
+    expect(resolveEnumDefault("0", ["none", "external", "all"])).toBe("none");
+    expect(resolveEnumDefault("(int) 2", ["none", "external", "all"])).toBe("all");
+    expect(resolveEnumDefault("3", ["none", "external", "all"])).toBeUndefined();
+  });
+
+  it("returns undefined when nothing matches exactly, rather than guessing a near neighbour", () => {
+    expect(resolveEnumDefault("(int)Overhang_threshold_bridge", ["0%", "10%", "25%"])).toBeUndefined();
+    // ipRectilinear must not be talked into "alignedrectilinear".
+    expect(resolveEnumDefault("ipRectilinear", ["concentric", "alignedrectilinear"])).toBeUndefined();
+    expect(resolveEnumDefault("NozzleVolumeType::nvtStandard", [])).toBeUndefined();
+  });
+});
+
+describe("enum defaults in parsePrintConfig", () => {
+  it("resolves an enum constant default to the enum token it names", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.z_hop_types.default).toBe("Spiral Lift");
+    expect(options.brim_type.default).toBe("auto_brim");
+    expect(options.wall_generator.default).toBe("classic");
+  });
+
+  it("resolves a numeric enum default by index", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.scarf_seam_type.default).toBe("none");
+  });
+
+  it("omits the default entirely when the enum constant resolves to nothing", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.overhang_fan_threshold.type).toBe("enum");
+    expect("default" in options.overhang_fan_threshold).toBe(false);
+    expect("default" in options.top_surface_pattern).toBe(false);
+  });
+
+  it("carries the resolved default onto synthesized filament overrides", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    synthesizeFilamentOverrides(
+      options,
+      parseStringVector(source, "filament_extruder_override_keys"),
+      parseStringVector(source, "filament_overhang_override_keys")
+    );
+
+    expect(options.filament_z_hop_types.default).toBe("Spiral Lift");
   });
 });
 

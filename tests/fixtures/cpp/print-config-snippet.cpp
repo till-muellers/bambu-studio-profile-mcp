@@ -93,6 +93,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Z Hop Type");
     def->enum_values.push_back("Auto Lift");
     def->enum_values.push_back("Normal Lift");
+    def->enum_values.push_back("Slope Lift");
+    def->enum_values.push_back("Spiral Lift");
     def->nullable = true;
     def->set_default_value(new ConfigOptionEnumsGenericNullable{ ZHopType::zhtSpiral });
 
@@ -105,6 +107,18 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->nullable = true;
     def->set_default_value(new ConfigOptionFloatsNullable{25});
+
+    def = this->add("overhang_fan_threshold", coEnums);
+    def->label = L("Cooling overhang threshold");
+    def->enum_values.push_back("0%");
+    def->enum_values.push_back("10%");
+    def->set_default_value(new ConfigOptionEnumsGenericNullable{ (int)Overhang_threshold_bridge });
+
+    def = this->add("scarf_seam_type", coEnum);
+    def->label = L("Scarf seam type");
+    def->enum_values.push_back("none");
+    def->enum_values.push_back("external");
+    def->set_default_value(new ConfigOptionEnum<SeamScarfType>(0));
 
     def = this->add("printable_area", coPoints);
     def->label = L("Printable area");

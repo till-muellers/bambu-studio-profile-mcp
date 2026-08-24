@@ -138,6 +138,23 @@ describe("handleImport", () => {
     expect(plain.note).not.toMatch(/regenerated/);
   });
 
+  it("installs nil columns verbatim: import writes file content, not resolved values", async () => {
+    await writeSource("Nil PLA", {
+      name: "Nil PLA",
+      inherits: "Generic PLA @BBL X1C",
+      filament_retraction_length: ["1.5", "nil", "nil"],
+      nozzle_temperature: ["230"],
+    });
+    const result = await handleImport(deps(), "filament", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Nil PLA",
+    });
+    const onDisk = JSON.parse(await readFile(result.path, "utf8"));
+    expect(onDisk.filament_retraction_length).toEqual(["1.5", "nil", "nil"]);
+    expect(onDisk.nozzle_temperature).toEqual(["230"]);
+  });
+
   it("rejects invalid source kvps and writes nothing", async () => {
     await writeSource("Broken", { name: "Broken", inherits: "fdm_process_common", bogus_key: "1" });
     await expect(

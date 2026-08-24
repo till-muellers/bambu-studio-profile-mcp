@@ -1,0 +1,5 @@
+{
+  "name": "Nil Override PLA @BBL X1C",
+  "inherits": "Generic PLA @BBL X1C",
+  "filament_retraction_length": ["1.5", "nil", "nil"]
+}

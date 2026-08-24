@@ -119,6 +119,47 @@ describe("handleResolve", () => {
     expect(Object.keys(withoutKeys.settings).length).toBeGreaterThan(2);
   });
 
+  it("fills a filament override's nil columns from the named machine preset", async () => {
+    const result = await handleResolve(fixtureDeps(), "filament", {
+      vendor: "BBL",
+      name: "Nil Override PLA @BBL X1C",
+      machineName: "Bambu Lab X1 Carbon 0.4 nozzle",
+    });
+    expect(result.settings.filament_retraction_length).toEqual(["1.5", "1.2", "0.8"]);
+    expect(result.nilResolved).toEqual({ filament_retraction_length: [1, 2] });
+    expect(result).not.toHaveProperty("nilUnresolved");
+  });
+
+  it("keeps a filament override's nil columns when no machine preset is named", async () => {
+    const result = await handleResolve(fixtureDeps(), "filament", {
+      vendor: "BBL",
+      name: "Nil Override PLA @BBL X1C",
+    });
+    expect(result.settings.filament_retraction_length).toEqual(["1.5", "nil", "nil"]);
+    expect(result.nilUnresolved).toEqual({ filament_retraction_length: [1, 2] });
+    expect(result).not.toHaveProperty("nilResolved");
+  });
+
+  it("projects the nil report down to the requested keys", async () => {
+    const result = await handleResolve(fixtureDeps(), "filament", {
+      vendor: "BBL",
+      name: "Nil Override PLA @BBL X1C",
+      keys: ["nozzle_temperature"],
+    });
+    expect(Object.keys(result.settings)).toEqual(["nozzle_temperature"]);
+    expect(result).not.toHaveProperty("nilUnresolved");
+  });
+
+  it("propagates ProfileNotFoundError for an unknown machine preset", async () => {
+    await expect(
+      handleResolve(fixtureDeps(), "filament", {
+        vendor: "BBL",
+        name: "Nil Override PLA @BBL X1C",
+        machineName: "No Such Printer",
+      })
+    ).rejects.toBeInstanceOf(ProfileNotFoundError);
+  });
+
   it("propagates ProfileNotFoundError", async () => {
     await expect(
       handleResolve(fixtureDeps(), "process", { vendor: "BBL", name: "ghost" })

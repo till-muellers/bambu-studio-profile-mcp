@@ -172,8 +172,8 @@ The read tools (`list_profiles`, `list_parameters`, `resolve_profile`, `resolve_
 | `list_vendors` | List vendor ids under `resources/profiles` with display names. |
 | `list_filaments` | List distinct `filament_id` values across all filament profiles with display names. |
 | `list_parameters` | Discover valid option keys per profile kind (`process`, `filament`, `machine`) — type, range/enum, default, label, description. |
-| `resolve_profile` | Resolve a process, filament, or machine profile's fully-merged active settings across its `inherits` chain; `keys` projects the result down to the options asked for. Reading kind `machine` gives `printer_extruder_variant`, the authoritative column count for per-extruder vector options. |
-| `resolve_from_file` | Resolve a local process, filament, or machine profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for. |
+| `resolve_profile` | Resolve a process, filament, or machine profile's fully-merged active settings across its `inherits` chain; `keys` projects the result down to the options asked for. Reading kind `machine` gives `printer_extruder_variant`, the authoritative column count for per-extruder vector options. A `"nil"` column shows the value its parent supplies, reported per key in `nilResolved`/`nilUnresolved`; `machineName` names the machine preset the `filament_*` override family reads its columns from. |
+| `resolve_from_file` | Resolve a local process, filament, or machine profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for, `machineName` resolves the `filament_*` override family's `"nil"` columns. |
 | `write_profile` | Create a process or filament profile file in a caller-chosen directory from a base profile plus validated overrides. |
 | `update_profile` | Atomically upsert and delete keys in a previously written profile file. |
 | `diff_profile` | Compare a local profile file against the installed user preset, key by key — changed, added, and removed values plus which side is newer. |

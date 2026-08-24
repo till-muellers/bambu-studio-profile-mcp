@@ -150,6 +150,34 @@ describe("bambu-studio-profile-mcp server", () => {
     expect(Object.keys((result.structuredContent as { settings: object }).settings)).toEqual(["layer_height"]);
   });
 
+  it("resolves nil columns against a named machine preset over the protocol", async () => {
+    const client = await connectedClient();
+    const withMachine = await client.callTool({
+      name: "resolve_profile",
+      arguments: {
+        kind: "filament",
+        vendor: "BBL",
+        name: "Nil Override PLA @BBL X1C",
+        machineName: "Bambu Lab X1 Carbon 0.4 nozzle",
+      },
+    });
+    expect(withMachine.isError).toBeFalsy();
+    expect(withMachine.structuredContent).toMatchObject({
+      settings: { filament_retraction_length: ["1.5", "1.2", "0.8"] },
+      nilResolved: { filament_retraction_length: [1, 2] },
+    });
+
+    const withoutMachine = await client.callTool({
+      name: "resolve_profile",
+      arguments: { kind: "filament", vendor: "BBL", name: "Nil Override PLA @BBL X1C" },
+    });
+    expect(withoutMachine.isError).toBeFalsy();
+    expect(withoutMachine.structuredContent).toMatchObject({
+      settings: { filament_retraction_length: ["1.5", "nil", "nil"] },
+      nilUnresolved: { filament_retraction_length: [1, 2] },
+    });
+  });
+
   it("serves the machine kind on the read tools over the protocol", async () => {
     const client = await connectedClient();
 

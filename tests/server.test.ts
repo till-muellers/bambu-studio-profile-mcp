@@ -131,6 +131,37 @@ describe("bambu-studio-profile-mcp server", () => {
     });
   });
 
+  it("projects resolve_profile settings over the protocol", async () => {
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "resolve_profile",
+      arguments: {
+        kind: "process",
+        vendor: "BBL",
+        name: "0.20mm Standard @BBL X1C",
+        keys: ["layer_height", "no_such_key"],
+      },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      settings: { layer_height: "0.2" },
+      missingKeys: ["no_such_key"],
+    });
+    expect(Object.keys((result.structuredContent as { settings: object }).settings)).toEqual(["layer_height"]);
+  });
+
+  it("filters list_profiles by source over the protocol", async () => {
+    const client = await connectedClient();
+    const result = await client.callTool({
+      name: "list_profiles",
+      arguments: { kind: "process", source: "user" },
+    });
+    expect(result.isError).toBeFalsy();
+    const { profiles } = result.structuredContent as { profiles: { source: string }[] };
+    expect(profiles.length).toBeGreaterThan(0);
+    expect(profiles.every((p) => p.source === "user")).toBe(true);
+  });
+
   it("serves update_profile end-to-end over the protocol", async () => {
     const outDir = join(await mkdtemp(join(tmpdir(), "ppm-server-update-")), "out");
     try {

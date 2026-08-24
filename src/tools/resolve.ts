@@ -4,15 +4,19 @@ import { strings } from "../strings.js";
 import { resolveProfile } from "../resolver.js";
 import type { ProfileKind, ResolvedProfile } from "../types.js";
 import { toToolError, type ToolDeps } from "./deps.js";
+import { projectKeys } from "./project-keys.js";
 
 export async function handleResolve(
   deps: ToolDeps,
   kind: ProfileKind,
-  args: { vendor: string; name: string }
+  args: { vendor: string; name: string; keys?: string[] }
 ): Promise<ResolvedProfile> {
   const cfg = await deps.config.require();
   const store = deps.storeFactory(cfg);
-  return resolveProfile(store, kind, args.vendor, args.name);
+  const resolved = await resolveProfile(store, kind, args.vendor, args.name);
+  if (args.keys === undefined) return resolved;
+  const { settings, missingKeys } = projectKeys(resolved.settings, args.keys);
+  return { ...resolved, settings, missingKeys };
 }
 
 const resolveInputShape = {
@@ -25,6 +29,11 @@ const resolveInputShape = {
     .string()
     .min(1)
     .describe(strings.tools.resolveProfile.inputs.name),
+  keys: z
+    .array(z.string().min(1))
+    .min(1)
+    .optional()
+    .describe(strings.tools.resolveProfile.inputs.keys),
 };
 
 export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
@@ -36,7 +45,7 @@ export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor: string; name: string }) => {
+    async (args: { kind: ProfileKind; vendor: string; name: string; keys?: string[] }) => {
       try {
         const result = await handleResolve(deps, args.kind, args);
         return {

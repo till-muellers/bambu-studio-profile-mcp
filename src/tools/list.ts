@@ -8,6 +8,10 @@ import { loadSchema } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
 const kindEnum = z.enum(["process", "filament"]);
+const sourceEnum = z.enum(["user", "system"]);
+
+/** Which store a listing row came from. */
+export type ProfileSource = ProfileListing["source"];
 
 export interface ParameterListing extends SchemaOption {
   key: string;
@@ -15,10 +19,13 @@ export interface ParameterListing extends SchemaOption {
 
 export async function handleListProfiles(
   deps: ToolDeps,
-  args: { kind: ProfileKind; vendor?: string; search?: string }
+  args: { kind: ProfileKind; vendor?: string; search?: string; source?: ProfileSource }
 ): Promise<{ kind: ProfileKind; profiles: ProfileListing[] }> {
   const cfg = await deps.config.require();
   let profiles = await listProfiles(cfg, args.kind, args.vendor);
+  if (args.source) {
+    profiles = profiles.filter((p) => p.source === args.source);
+  }
   if (args.search) {
     const needle = args.search.toLowerCase();
     profiles = profiles.filter((p) => p.name.toLowerCase().includes(needle));
@@ -71,10 +78,11 @@ function registerListProfiles(server: McpServer, deps: ToolDeps): void {
         kind: kindEnum.describe(strings.tools.listProfiles.inputs.kind),
         vendor: z.string().min(1).optional().describe(strings.tools.listProfiles.inputs.vendor),
         search: z.string().min(1).optional().describe(strings.tools.listProfiles.inputs.search),
+        source: sourceEnum.optional().describe(strings.tools.listProfiles.inputs.source),
       },
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor?: string; search?: string }) => {
+    async (args: { kind: ProfileKind; vendor?: string; search?: string; source?: ProfileSource }) => {
       try {
         const result = await handleListProfiles(deps, args);
         return {

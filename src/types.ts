@@ -32,6 +32,8 @@ export interface ResolvedProfile {
   kind: ProfileKind;
   chain: string[];
   settings: Record<string, unknown>;
+  /** Present when a key projection was requested: the requested keys the resolved settings lack. */
+  missingKeys?: string[];
 }
 
 export type SchemaType = "string" | "int" | "float" | "bool" | "enum" | "percent";

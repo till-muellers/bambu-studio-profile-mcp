@@ -166,12 +166,12 @@ Configuration persists per project in `.bambu-studio-profile-mcp\config.json`. A
 | Tool | Purpose |
 | --- | --- |
 | `init_config` | Set and persist `installDir` / `userDataDir` / `userId`; all auto-detected when omitted. |
-| `list_profiles` | Discover process or filament profiles, optionally scoped to a vendor and filtered by name substring. |
+| `list_profiles` | Discover process or filament profiles, optionally scoped to a vendor, filtered by name substring, and restricted to the user or system store. |
 | `list_vendors` | List vendor ids under `resources/profiles` with display names. |
 | `list_filaments` | List distinct `filament_id` values across all filament profiles with display names. |
 | `list_parameters` | Discover valid option keys per profile kind — type, range/enum, default, label, description. |
-| `resolve_profile` | Resolve a profile's fully-merged active settings across its `inherits` chain. |
-| `resolve_from_file` | Resolve a local profile file's fully-merged active settings before it is installed. |
+| `resolve_profile` | Resolve a profile's fully-merged active settings across its `inherits` chain; `keys` projects the result down to the options asked for. |
+| `resolve_from_file` | Resolve a local profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for. |
 | `write_profile` | Create a profile file in a caller-chosen directory from a base profile plus validated overrides. |
 | `update_profile` | Atomically upsert and delete keys in a previously written profile file. |
 | `diff_profile` | Compare a local profile file against the installed user preset, key by key — changed, added, and removed values plus which side is newer. |

@@ -3,6 +3,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 35,
@@ -12,6 +13,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 35,
@@ -21,6 +23,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -30,6 +33,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -39,6 +43,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -48,6 +53,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 35,
@@ -57,6 +63,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 35,
@@ -66,6 +73,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -75,6 +83,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -84,6 +93,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "min": 0,
     "max": 120,
     "default": 45,
@@ -100,6 +110,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed for overhang",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 100,
@@ -109,6 +120,7 @@
     "type": "int",
     "vector": true,
     "label": "Ironing fan speed",
+    "unit": "%",
     "min": -1,
     "max": 100,
     "default": -1,
@@ -118,6 +130,7 @@
     "type": "float",
     "vector": true,
     "label": "Pre start fan time",
+    "unit": "s",
     "min": 0,
     "max": 5,
     "default": 0,
@@ -127,6 +140,7 @@
     "type": "enum",
     "vector": true,
     "label": "Cooling overhang threshold",
+    "unit": "",
     "enum": [
       "0%",
       "10%",
@@ -135,13 +149,13 @@
       "75%",
       "95%"
     ],
-    "default": "(int)Overhang_threshold_bridge",
     "description": "Overhang ratio (per extruder position) above which the part-cooling fan is forced to its overhang speed. Expressed as line-width overhang percentage; 0% cools every line, 95% only near-bridges. Lower thresholds improve overhang surfaces on heat-sensitive materials like PLA; keep high for warp-prone ABS."
   },
   "overhang_threshold_participating_cooling": {
     "type": "enum",
     "vector": true,
     "label": "Overhang threshold for participating cooling",
+    "unit": "",
     "enum": [
       "0%",
       "10%",
@@ -150,7 +164,6 @@
       "75%",
       "100%"
     ],
-    "default": "(int) Overhang_threshold_participating_cooling_bridge",
     "description": "Overhang ratio above which lines count toward layer-time cooling calculations (per extruder position). At 100% only bridges participate; lower values make overhanging lines trigger slowdown-for-cooling earlier. Tune together with overhang_fan_threshold."
   },
   "compatible_printers": {
@@ -199,13 +212,14 @@
       "uniform_cooling",
       "consistent_surface"
     ],
-    "default": "(int)cslUniformCooling",
+    "default": "uniform_cooling",
     "description": "Strategy used when layer time falls below the cooling threshold: 'uniform_cooling' slows the whole layer evenly, 'consistent_surface' preserves outer-wall speed for a uniform sheen and slows other features harder. Per extruder position."
   },
   "cooling_perimeter_transition_distance": {
     "type": "float",
     "vector": true,
     "label": "Perimeter transition distance",
+    "unit": "mm",
     "min": 0,
     "max": 50,
     "default": 10,
@@ -222,6 +236,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 60,
@@ -231,6 +246,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 80,
@@ -240,6 +256,7 @@
     "type": "int",
     "vector": true,
     "label": "For the first",
+    "unit": "layers",
     "min": 0,
     "max": 1000,
     "default": 1,
@@ -258,6 +275,7 @@
     "type": "int",
     "vector": true,
     "label": "For the first",
+    "unit": "layers",
     "min": 0,
     "max": 1000,
     "default": 1,
@@ -267,6 +285,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 0,
@@ -276,6 +295,7 @@
     "type": "float",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 0,
@@ -330,6 +350,7 @@
     "type": "int",
     "vector": true,
     "label": "Layer time",
+    "unit": "s",
     "min": 0,
     "max": 1000,
     "default": 60,
@@ -355,6 +376,7 @@
     "type": "int",
     "vector": true,
     "label": "Flush temperature",
+    "unit": "°C",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -364,6 +386,7 @@
     "type": "float",
     "vector": true,
     "label": "Flush volumetric speed",
+    "unit": "mm³/s",
     "nullable": true,
     "min": 0,
     "max": 200,
@@ -374,6 +397,7 @@
     "type": "float",
     "vector": true,
     "label": "Max volumetric speed",
+    "unit": "mm³/s",
     "nullable": true,
     "min": 0,
     "max": 200,
@@ -384,6 +408,7 @@
     "type": "float",
     "vector": true,
     "label": "Extruder change",
+    "unit": "mm³/s",
     "nullable": true,
     "min": -1,
     "max": 200,
@@ -394,6 +419,7 @@
     "type": "float",
     "vector": true,
     "label": "Hotend change",
+    "unit": "mm³/s",
     "nullable": true,
     "min": -1,
     "max": 200,
@@ -404,6 +430,7 @@
     "type": "float",
     "vector": true,
     "label": "Minimal purge on wipe tower",
+    "unit": "mm³",
     "min": 0,
     "default": 15,
     "description": "Minimum volume (mm3) purged on the wipe tower when switching TO this filament, regardless of computed flush volume. Guards against undersized flush matrices leaving old color/material in the nozzle. Default 15."
@@ -412,6 +439,7 @@
     "type": "float",
     "vector": true,
     "label": "Diameter",
+    "unit": "mm",
     "min": 0,
     "default": 1.75,
     "description": "Nominal filament diameter (mm) used to convert extrusion lengths to volume. Wrong value scales all extrusion: too small causes over-extrusion, too large under-extrusion. Measure stock if flow is off. Standard 1.75; some machines 2.85."
@@ -435,6 +463,7 @@
     "type": "percent",
     "vector": true,
     "label": "Shrinkage",
+    "unit": "%",
     "min": 10,
     "default": 100,
     "description": "Material shrinkage compensation (%). 100 = no shrinkage; below 100 the slicer scales XY up so cooled parts hit nominal size (e.g. ABS ~99.5, ASA/PA lower). Measure a calibration cube to derive. Affects dimensional accuracy only."
@@ -465,13 +494,14 @@
       "Medium",
       "High"
     ],
-    "default": "fmsNone",
+    "default": "None",
     "description": "Stickiness class of a metal-fill material (None/Low/Medium/High), used to adapt handling of tacky metal-loaded filaments. Leave None for ordinary polymers."
   },
   "filament_density": {
     "type": "float",
     "vector": true,
     "label": "Density",
+    "unit": "g/cm³",
     "min": 0,
     "default": 0,
     "description": "Material density in g/cm3. Used for weight and cost estimates in the slice summary; no effect on toolpaths. Typical: PLA ~1.24, PETG ~1.27, ABS ~1.04."
@@ -499,13 +529,14 @@
       "external",
       "all"
     ],
-    "default": 0,
+    "default": "none",
     "description": "Filament-level scarf seam preference: 'none' keeps ordinary seams, 'external' applies scarf joints to visible outer walls only, 'all' to every wall. Scarf seams ramp the seam over a distance to hide it; effective on glossy materials where seam bumps show most."
   },
   "filament_scarf_length": {
     "type": "float",
     "vector": true,
     "label": "Scarf length",
+    "unit": "mm",
     "min": 0,
     "default": 10,
     "description": "Length (mm) of the scarf joint seam ramp for this filament when scarf seams are enabled. Longer spreads the seam transition, hiding it better on glossy materials; shorter keeps the seam compact. Default 10."
@@ -514,6 +545,7 @@
     "type": "float",
     "vector": true,
     "label": "Extruder change",
+    "unit": "mm",
     "min": 0,
     "default": 10,
     "description": "Filament length (mm) extruded from the outgoing extruder during an extruder change to relieve melt pressure and reduce oozing before the swap. Dual-extruder machines. Default 10; raise if change points leave strings or blobs."
@@ -522,6 +554,7 @@
     "type": "float",
     "vector": true,
     "label": "Hotend change",
+    "unit": "mm",
     "min": 0,
     "default": 10,
     "description": "Filament length (mm) extruded from the outgoing nozzle during a hotend change, so the parked hotend oozes less. Hotend-swap counterpart of filament_change_length. Default 10 mm."
@@ -551,6 +584,7 @@
     "type": "float",
     "vector": true,
     "label": "Filament change",
+    "unit": "mm³",
     "min": 1,
     "default": 45,
     "description": "Volume (mm3) primed on the wipe tower after a filament change to restore steady flow before printing resumes. Raise if first extrusions after a swap are thin or discolored; lower to save material. Default 45."
@@ -559,6 +593,7 @@
     "type": "float",
     "vector": true,
     "label": "Hotend change",
+    "unit": "mm³",
     "min": 1,
     "default": 60,
     "description": "Volume (mm3) primed on the wipe tower after a hotend change (dual-nozzle machines) before the incoming nozzle prints on the model. More than a plain filament change since the whole melt zone restarts. Default 60."
@@ -567,6 +602,7 @@
     "type": "float",
     "vector": true,
     "label": "Preheat temperature delta",
+    "unit": "°C",
     "nullable": true,
     "default": 0,
     "description": "Offset (C) applied when preheating this filament's nozzle ahead of a toolchange on dual-extruder machines. Negative holds the waiting nozzle cooler to limit ooze/degradation; 0 preheats straight to print temperature."
@@ -575,6 +611,7 @@
     "type": "float",
     "vector": true,
     "label": "Wipe tower cooling",
+    "unit": "°C",
     "nullable": true,
     "default": 10,
     "description": "Nozzle temperature drop (deg C) allowed before printing on the prime tower after a filament change; cooler entry reduces sag and stringing of purged material. Developer-mode, per filament, default 10."
@@ -583,6 +620,7 @@
     "type": "float",
     "vector": true,
     "label": "Interface layer pre-extrusion distance",
+    "unit": "mm",
     "min": 0,
     "default": 10,
     "description": "Travel distance (mm) covered while pre-extruding before printing a prime tower interface layer with this filament. Spreads the priming line so flow is stable when the interface starts. Works with the pre-extrusion length. Default 10."
@@ -591,6 +629,7 @@
     "type": "float",
     "vector": true,
     "label": "Interface layer pre-extrusion length",
+    "unit": "mm",
     "min": 0,
     "default": 0,
     "description": "Filament length (mm) pre-extruded before a prime tower interface layer. Primes the nozzle so the interface bonds instead of starting under-extruded; helps towers mixing very different-viscosity materials. 0 disables."
@@ -599,6 +638,7 @@
     "type": "float",
     "vector": true,
     "label": "Tower ironing area",
+    "unit": "mm²",
     "min": 0,
     "default": 4,
     "description": "Ironing area (mm2) applied on prime tower surfaces for this filament. Flattens the tower top so the next material bonds and the tower stays stable. 0 disables flat ironing (line ironing may remain), improving stability for some materials."
@@ -607,6 +647,7 @@
     "type": "float",
     "vector": true,
     "label": "Interface layer purge length",
+    "unit": "mm",
     "min": 0,
     "default": 20,
     "description": "Purge volume (mm3) flushed when printing a prime tower interface layer with this filament. Ensures the interface is pure material for reliable adhesion between tower sections. Default 20; raise if interfaces delaminate."
@@ -615,6 +656,7 @@
     "type": "int",
     "vector": true,
     "label": "Interface layer print temperature",
+    "unit": "°C",
     "min": -1,
     "default": -1,
     "description": "Nozzle temperature (C) for printing prime tower interface layers with this filament. -1 = use normal print temperature. Dedicated interface temp improves layer bonding between dissimilar materials and reduces tower collapse."
@@ -630,6 +672,7 @@
     "type": "float",
     "vector": true,
     "label": "Extruder change",
+    "unit": "s",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -639,6 +682,7 @@
     "type": "float",
     "vector": true,
     "label": "Hotend change",
+    "unit": "s",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -648,6 +692,7 @@
     "type": "int",
     "vector": true,
     "label": "Extruder change",
+    "unit": "°C",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -657,6 +702,7 @@
     "type": "int",
     "vector": true,
     "label": "Hotend change",
+    "unit": "°C",
     "nullable": true,
     "min": 0,
     "default": 0,
@@ -666,6 +712,7 @@
     "type": "float",
     "vector": true,
     "label": "Price",
+    "unit": "money/kg",
     "min": 0,
     "default": 0,
     "description": "Filament price per kilogram. Feeds only the cost estimate shown after slicing; no effect on toolpaths or print behavior."
@@ -681,6 +728,7 @@
     "type": "int",
     "vector": true,
     "label": "Initial layer",
+    "unit": "°C",
     "nullable": true,
     "min": 0,
     "default": 200,
@@ -705,6 +753,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 100,
@@ -714,6 +763,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 20,
@@ -723,6 +773,7 @@
     "type": "int",
     "vector": true,
     "label": "Fan speed",
+    "unit": "%",
     "min": 0,
     "max": 100,
     "default": 0,
@@ -732,6 +783,7 @@
     "type": "float",
     "vector": true,
     "label": "Min print speed",
+    "unit": "mm/s",
     "min": 0,
     "default": 10,
     "description": "Speed floor (mm/s) for cooling slowdown, per filament. Layer-time slowdown never drops below this, preventing crawl speeds that cause heat soak, blobbing, and nozzle dwell marks. Default 10 mm/s; raise for heat-sensitive materials like PETG."
@@ -748,6 +800,7 @@
     "type": "float",
     "vector": true,
     "label": "Retraction distance when extruder change",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "max": 10,
@@ -757,6 +810,7 @@
   "filament_extruder_variant": {
     "type": "string",
     "vector": true,
+    "label": "Filament's extruder variant",
     "default": "Direct Drive Standard",
     "description": "Names the extruder/hotend hardware variant each vector entry of this filament profile targets (e.g. Direct Drive Standard). Selects which variant-specific values apply; informational for matching, not a print-quality lever."
   },
@@ -764,6 +818,7 @@
     "type": "float",
     "vector": true,
     "label": "length when change hotend",
+    "unit": "mm",
     "nullable": true,
     "min": 0,
     "max": 18,
@@ -774,6 +829,7 @@
     "type": "int",
     "vector": true,
     "label": "Layer time",
+    "unit": "s",
     "min": 0,
     "max": 1000,
     "default": 5,
@@ -790,6 +846,7 @@
     "type": "int",
     "vector": true,
     "label": "Chamber temperature",
+    "unit": "°C",
     "min": 0,
     "max": 80,
     "default": 0,
@@ -799,6 +856,7 @@
     "type": "int",
     "vector": true,
     "label": "Other layers",
+    "unit": "°C",
     "nullable": true,
     "min": 0,
     "default": 200,
@@ -808,6 +866,7 @@
     "type": "int",
     "vector": true,
     "label": "Min",
+    "unit": "°C",
     "min": 0,
     "default": 190,
     "description": "Lower bound (°C) of the filament's usable nozzle temperature range. Slicer warns when configured nozzle temps fall below it. Printing under it risks underextrusion, poor layer bonding, extruder skipping."
@@ -816,6 +875,7 @@
     "type": "int",
     "vector": true,
     "label": "Max",
+    "unit": "°C",
     "min": 0,
     "default": 240,
     "description": "Upper bound (°C) of the filament's usable nozzle temperature range. Slicer warns when configured nozzle temps exceed it. Set from manufacturer spec; printing above risks degradation, stringing, heat creep."
@@ -831,6 +891,7 @@
     "type": "float",
     "vector": true,
     "label": "Circle Compensation Speed",
+    "unit": "mm/s",
     "min": 0,
     "default": 200,
     "description": "Calibration reference speed, mm/s, the circular contour compensation model assumes for this filament; does not command actual print speed. Change only when recalibrating compensation coefficients with new test prints."
@@ -853,6 +914,7 @@
     "type": "float",
     "vector": true,
     "label": "Contour Coef 3",
+    "unit": "mm",
     "default": -0.11,
     "description": "Circular compensation: additional polynomial term of the inner-hole diameter correction model for this filament. Calibrated per material from test prints."
   },
@@ -874,6 +936,7 @@
     "type": "float",
     "vector": true,
     "label": "Hole Coef 3",
+    "unit": "mm",
     "default": 0.28,
     "description": "Constant term in mm of auto circular-hole compensation formula coef1*speed + coef2*diameter + coef3. Sets the base enlargement applied to detected circular holes. Default 0.28. Per-filament."
   },
@@ -881,6 +944,7 @@
     "type": "float",
     "vector": true,
     "label": "Contour limit min",
+    "unit": "mm",
     "default": -0.04,
     "description": "Lower clamp, mm, on the automatic inner-hole/contour diameter correction. Prevents the compensation polynomial from over-shrinking features; negative values allow slight reduction."
   },
@@ -888,6 +952,7 @@
     "type": "float",
     "vector": true,
     "label": "Contour limit max",
+    "unit": "mm",
     "default": 0.05,
     "description": "Upper clamp, mm, on the automatic inner-hole/contour diameter correction. Prevents the compensation polynomial from over-enlarging features on out-of-range diameters."
   },
@@ -895,6 +960,7 @@
     "type": "float",
     "vector": true,
     "label": "Hole limit min",
+    "unit": "mm",
     "default": 0.08,
     "description": "Lower clamp in mm on the computed circular-hole enlargement from the hole_coef formula. Guarantees a minimum widening so holes never print undersized when compensation is active. Default 0.08. Per-filament."
   },
@@ -902,6 +968,7 @@
     "type": "float",
     "vector": true,
     "label": "Hole limit max",
+    "unit": "mm",
     "default": 0.25,
     "description": "Upper clamp in mm on the computed circular-hole enlargement from the hole_coef formula. Prevents over-widening small holes. Default 0.25. Per-filament."
   },
@@ -909,6 +976,7 @@
     "type": "float",
     "vector": true,
     "label": "Diameter limit",
+    "unit": "mm",
     "default": 50,
     "description": "Per-filament upper bound (mm) for auto circle contour-hole compensation: circular holes/contours above this diameter are left uncorrected. Acts with enable_circle_compensation and the hole limit values. Default 50."
   },
@@ -972,6 +1040,7 @@
     "type": "float",
     "vector": true,
     "label": "Length",
+    "unit": "mm",
     "default": 0.8,
     "nullable": true,
     "description": "Per-extruder override of the printer profile's retraction length (mm) for this filament; a 'nil' element keeps the printer value. Flexible and oozy materials often need more than the printer default; direct-drive typically 0.4-1.2 mm, bowden 2-6 mm."
@@ -980,6 +1049,7 @@
     "type": "float",
     "vector": true,
     "label": "Z hop when retract",
+    "unit": "mm",
     "min": 0,
     "max": 5,
     "default": 0.4,
@@ -996,7 +1066,7 @@
       "Slope Lift",
       "Spiral Lift"
     ],
-    "default": "ZHopType::zhtSpiral",
+    "default": "Spiral Lift",
     "nullable": true,
     "description": "Per-extruder override of the printer's Z hop trajectory for this filament ('Auto Lift', 'Normal Lift', 'Slope Lift', 'Spiral Lift'); 'nil' keeps the printer value. Slope/Spiral reduce stringing and ooze marks on sticky materials by moving diagonally while lifting."
   },
@@ -1004,6 +1074,7 @@
     "type": "float",
     "vector": true,
     "label": "Retraction Speed",
+    "unit": "mm/s",
     "default": 30,
     "nullable": true,
     "description": "Per-extruder override of the printer's retraction speed (mm/s) for this filament; 'nil' keeps the printer value. Soft filaments (TPU) need slower retracts to avoid stretching and grinding; rigid materials tolerate fast retracts."
@@ -1012,6 +1083,7 @@
     "type": "float",
     "vector": true,
     "label": "Deretraction Speed",
+    "unit": "mm/s",
     "default": 0,
     "nullable": true,
     "description": "Per-extruder override of the speed for re-priming after retraction (mm/s) for this filament; 'nil' keeps the printer value, 0 means use retraction speed. Slower deretraction helps materials that swell in the melt zone re-prime without blobs."
@@ -1020,6 +1092,7 @@
     "type": "float",
     "vector": true,
     "label": "Extra length on restart",
+    "unit": "mm",
     "default": 0,
     "nullable": true,
     "description": "Per-extruder override of extra filament (mm) extruded when restarting after retraction; 'nil' keeps the printer value. Positive compensates ooze losses on leaky materials; negative counters blobbing. Keep within a few tenths of a millimeter."
@@ -1028,6 +1101,7 @@
     "type": "float",
     "vector": true,
     "label": "Travel distance threshold",
+    "unit": "mm",
     "default": 2,
     "nullable": true,
     "description": "Per-extruder override of the minimum travel distance (mm) that triggers a retraction for this filament; 'nil' keeps the printer value. Raise for materials where frequent retracts cause grinding; lower for stringy materials needing retracts even on short hops."
@@ -1036,6 +1110,7 @@
     "type": "float",
     "vector": true,
     "label": "Wipe Distance",
+    "unit": "mm",
     "min": 0,
     "default": 2,
     "nullable": true,
@@ -1061,6 +1136,7 @@
     "type": "percent",
     "vector": true,
     "label": "Retract amount before wipe",
+    "unit": "%",
     "default": 100,
     "nullable": true,
     "description": "Per-extruder override of how much of the retraction (percent) happens before the wipe move for this filament; 'nil' keeps the printer value. Higher values reduce material available to smear during the wipe; 100% retracts fully first."
@@ -1095,6 +1171,7 @@
     "type": "float",
     "vector": true,
     "label": "Bridge",
+    "unit": "mm/s",
     "min": 0,
     "default": 25,
     "nullable": true,
@@ -1103,6 +1180,8 @@
   "filament_overhang_1_4_speed": {
     "type": "float",
     "vector": true,
+    "label": "10%",
+    "unit": "mm/s",
     "min": 0,
     "default": 0,
     "nullable": true,
@@ -1111,6 +1190,8 @@
   "filament_overhang_2_4_speed": {
     "type": "float",
     "vector": true,
+    "label": "25%",
+    "unit": "mm/s",
     "min": 0,
     "default": 0,
     "nullable": true,
@@ -1119,6 +1200,8 @@
   "filament_overhang_3_4_speed": {
     "type": "float",
     "vector": true,
+    "label": "50%",
+    "unit": "mm/s",
     "min": 0,
     "default": 0,
     "nullable": true,
@@ -1127,6 +1210,8 @@
   "filament_overhang_4_4_speed": {
     "type": "float",
     "vector": true,
+    "label": "75%",
+    "unit": "mm/s",
     "min": 0,
     "default": 0,
     "nullable": true,
@@ -1136,6 +1221,7 @@
     "type": "float",
     "vector": true,
     "label": "100%",
+    "unit": "mm/s",
     "min": 0,
     "default": 10,
     "nullable": true,

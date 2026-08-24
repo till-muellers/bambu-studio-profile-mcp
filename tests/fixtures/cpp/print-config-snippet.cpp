@@ -5,6 +5,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("layer_height", coFloat);
     def->label = L("Layer height");
+    def->sidetext = L("mm");
     def->tooltip = L("Slicing height for each layer. Smaller layer height means more accurate and more printing time");
     def->min = 0.04;
     def->max = 1.0;
@@ -29,6 +30,7 @@ void PrintConfigDef::init_fff_params()
 
     def = this->add("outer_wall_speed", coFloats);
     def->label = L("Outer wall speed");
+    def->sidetext = L("mm" "/s");
     def->tooltip = L("Speed of outer wall which is outermost and visible. It's used to be slower "
         "than inner wall speed to get better quality.");
     def->min = 0;
@@ -93,6 +95,8 @@ void PrintConfigDef::init_fff_params()
     def->label = L("Z Hop Type");
     def->enum_values.push_back("Auto Lift");
     def->enum_values.push_back("Normal Lift");
+    def->enum_values.push_back("Slope Lift");
+    def->enum_values.push_back("Spiral Lift");
     def->nullable = true;
     def->set_default_value(new ConfigOptionEnumsGenericNullable{ ZHopType::zhtSpiral });
 
@@ -105,6 +109,71 @@ void PrintConfigDef::init_fff_params()
     def->min = 0;
     def->nullable = true;
     def->set_default_value(new ConfigOptionFloatsNullable{25});
+
+    def = this->add("overhang_fan_threshold", coEnums);
+    def->label = L("Cooling overhang threshold");
+    def->enum_values.push_back("0%");
+    def->enum_values.push_back("10%");
+    def->set_default_value(new ConfigOptionEnumsGenericNullable{ (int)Overhang_threshold_bridge });
+
+    def = this->add("scarf_seam_type", coEnum);
+    def->label = L("Scarf seam type");
+    def->enum_values.push_back("none");
+    def->enum_values.push_back("external");
+    def->set_default_value(new ConfigOptionEnum<SeamScarfType>(0));
+
+    def = this->add("printable_area", coPoints);
+    def->label = L("Printable area");
+    def->set_default_value(new ConfigOptionPoints{ Vec2d(0, 0) });
+
+    def = this->add("best_object_pos", coPoint);
+    def->label = L("Best object position");
+
+    {
+        struct AxisDefault {
+            std::string         name;
+            std::vector<double> max_feedrate;
+            std::vector<double> max_acceleration;
+            std::vector<double> max_jerk;
+        };
+        std::vector<AxisDefault> axes {
+            // name, max_feedrate,  max_acceleration, max_jerk
+            { "x", { 500., 200. }, {  1000., 1000. }, { 10. , 10.  } },
+            { "z", {  12.,  12. }, {   500.,  200. }, {  0.2,  0.4 } }
+        };
+        for (const AxisDefault &axis : axes) {
+            def = this->add("machine_max_speed_" + axis.name, coFloats);
+            def->sidetext = L("mm/s");
+            def->min = 0;
+            def->nullable = true;
+            def->set_default_value(new ConfigOptionFloatsNullable(axis.max_feedrate));
+
+            def = this->add("machine_max_acceleration_" + axis.name, coFloats);
+            def->sidetext = "mm/s²";
+            def->min = 0;
+            def->nullable = true;
+            def->set_default_value(new ConfigOptionFloatsNullable(axis.max_acceleration));
+
+            def = this->add("machine_max_jerk_" + axis.name, coFloats);
+            def->sidetext = L("mm/s");
+            def->min = 0;
+            def->nullable = true;
+            def->set_default_value(new ConfigOptionFloatsNullable(axis.max_jerk));
+        }
+    }
+
+void PrintConfigDef::init_extruder_option_keys()
+{
+    m_extruder_option_keys = {
+        "nozzle_diameter", "retraction_length",
+        // BBS
+        "wipe" /*, "legacy_extruder_key" */
+    };
+
+    m_extruder_retract_keys = {
+        "retraction_length", "wipe"
+    };
+}
 
 const std::vector<std::string> filament_extruder_override_keys = {
     // floats

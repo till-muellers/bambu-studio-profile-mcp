@@ -46,6 +46,8 @@ export interface SchemaOption {
   default?: unknown;
   label?: string;
   description?: string;
+  /** Unit the value is expressed in, as Bambu Studio shows it beside the field ("mm", "mm/s", "°C"). */
+  unit?: string;
   /** True when Bambu Studio marks this option nullable (def->nullable = true); "nil" is then a legal element/value. */
   nullable?: boolean;
 }

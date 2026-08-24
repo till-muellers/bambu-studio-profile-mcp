@@ -2,13 +2,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { strings } from "../strings.js";
 import { resolveProfile } from "../resolver.js";
-import type { ProfileKind, ResolvedProfile } from "../types.js";
+import type { ReadableProfileKind, ResolvedProfile } from "../types.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { projectKeys } from "./project-keys.js";
 
 export async function handleResolve(
   deps: ToolDeps,
-  kind: ProfileKind,
+  kind: ReadableProfileKind,
   args: { vendor: string; name: string; keys?: string[] }
 ): Promise<ResolvedProfile> {
   const cfg = await deps.config.require();
@@ -45,7 +45,7 @@ export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ProfileKind; vendor: string; name: string; keys?: string[] }) => {
+    async (args: { kind: ReadableProfileKind; vendor: string; name: string; keys?: string[] }) => {
       try {
         const result = await handleResolve(deps, args.kind, args);
         return {

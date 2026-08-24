@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CircularInheritanceError, ProfileNotFoundError } from "../src/errors.js";
 import { resolveProfile } from "../src/resolver.js";
-import type { ProfileHit, ProfileKind, ProfileStore, RawProfile } from "../src/types.js";
+import type { ProfileHit, ReadableProfileKind, ProfileStore, RawProfile } from "../src/types.js";
 
 /** In-memory store; keys are profile names. */
 function fakeStore(profiles: Record<string, RawProfile & { source?: "user" | "system" }>): ProfileStore {
   return {
-    async findProfile(_kind: ProfileKind, _vendor: string, name: string): Promise<ProfileHit | null> {
+    async findProfile(_kind: ReadableProfileKind, _vendor: string, name: string): Promise<ProfileHit | null> {
       const p = profiles[name];
       if (!p) return null;
       const { source, ...profile } = p;

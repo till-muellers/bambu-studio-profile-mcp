@@ -20,6 +20,7 @@ TypeScript MCP server (stdio) for Bambu Studio printing profiles. Specs and plan
 - `schema/*.schema.json` are GENERATED — never hand-edit. Facts come from the parser; descriptions come from `schema/descriptions.json` only.
 - `schema/descriptions.json` is original, project-authored text. Clean-room rule: author from key/label/type/range facts plus FDM domain knowledge; BambuStudio tooltip text (it lives in PrintConfig.cpp) must never enter an authoring prompt or the shipped files.
 - `src/types.ts` and `src/errors.ts` are locked contracts — extend additively only, with review.
+- Readable and writable preset kinds are separate domain types, each declared as its own literal union: `ReadableProfileKind` (process, filament, machine) and `WritableProfileKind` (process, filament). Neither derives from the other. Machine presets are Bambu Studio's to write; every authoring, install, and removal path takes `WritableProfileKind`.
 - Tool handlers are plain exported functions (`handleX(deps, args)`); registerTool callbacks stay thin. Tools register via `server.registerTool()` only.
 - Bambu Studio directories are read-only for every tool except `import_profile`/`remove_profile`, which touch only `user/<userId>/<kind>/` under their safety contracts (`from: "User"` checks, validation before any write).
 - Preset names never carry path separators or dot segments — `userPresetPaths` is the guard; route any new user-store path building through it.

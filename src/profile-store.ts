@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { VendorNotFoundError } from "./errors.js";
-import type { ProfileHit, ProfileKind, ProfileStore, RawProfile, ServerConfig } from "./types.js";
+import type { ProfileHit, ReadableProfileKind, ProfileStore, RawProfile, ServerConfig } from "./types.js";
 
 const READ_CHUNK_SIZE = 64;
 
@@ -89,7 +89,7 @@ async function listVendorDirNames(profilesDir: string): Promise<string[]> {
  */
 export async function listProfiles(
   cfg: ServerConfig,
-  kind: ProfileKind,
+  kind: ReadableProfileKind,
   vendor?: string
 ): Promise<ProfileListing[]> {
   const userDir = join(cfg.userDataDir, "user", cfg.userId, kind);
@@ -199,7 +199,7 @@ export async function listFilaments(cfg: ServerConfig): Promise<{ id: string; na
 export class FsProfileStore implements ProfileStore {
   constructor(private readonly cfg: ServerConfig) {}
 
-  async findProfile(kind: ProfileKind, vendor: string, name: string): Promise<ProfileHit | null> {
+  async findProfile(kind: ReadableProfileKind, vendor: string, name: string): Promise<ProfileHit | null> {
     const userDir = join(this.cfg.userDataDir, "user", this.cfg.userId, kind);
     const userHit = await scanDirForName(userDir, name);
     if (userHit) return { ...userHit, source: "user" };

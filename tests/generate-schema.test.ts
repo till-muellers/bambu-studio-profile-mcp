@@ -3,9 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   applyDescriptions,
+  parseAxisLimitOptions,
+  parseExtruderOptionKeys,
   parseOptionList,
   parsePrintConfig,
+  parsePrinterOptionList,
   parseStringVector,
+  resolveEnumDefault,
   synthesizeFilamentOverrides,
 } from "../scripts/generate-schema/parse.js";
 import type { SchemaOption } from "../src/types.js";
@@ -44,7 +48,7 @@ describe("filament override synthesis", () => {
       type: "enum",
       vector: true,
       nullable: true,
-      enum: ["Auto Lift", "Normal Lift"],
+      enum: ["Auto Lift", "Normal Lift", "Slope Lift", "Spiral Lift"],
     });
     expect(options.filament_wipe).toMatchObject({ type: "bool", vector: true, nullable: true });
     expect(options.filament_bridge_speed).toMatchObject({
@@ -91,6 +95,15 @@ describe("parsePrintConfig (smoke test)", () => {
 
     expect(options.precise_z_height).toMatchObject({ type: "bool", default: false });
     expect(options.exclude_object).toMatchObject({ type: "bool", default: true });
+  });
+
+  it("maps the point family onto the 'XxY' string form preset files use, without a default", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.printable_area).toMatchObject({ type: "string", vector: true });
+    expect(options.printable_area.default).toBeUndefined();
+    expect(options.best_object_pos).toMatchObject({ type: "string", vector: false });
   });
 
   it("extracts enum values declared via enum_values.emplace_back(...)", async () => {
@@ -178,6 +191,186 @@ describe("parseOptionList", () => {
     const source = await readFile(PRESET_FIXTURE, "utf8");
 
     expect(parseOptionList(source, "sla_print_options")).toEqual([]);
+  });
+});
+
+describe("parsePrinterOptionList", () => {
+  it("unions the printer and machine-limits static vectors", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    expect(parsePrinterOptionList(source)).toEqual([
+      "printer_technology",
+      "printable_area",
+      "printer_model",
+      "nozzle_type",
+      "z_hop_types",
+      "machine_max_speed_x",
+      "machine_max_speed_y",
+    ]);
+  });
+
+  it("drops commented-out keys from both vectors", async () => {
+    const source = await readFile(PRESET_FIXTURE, "utf8");
+
+    const keys = parsePrinterOptionList(source);
+    expect(keys).not.toContain("bed_shape");
+    expect(keys).not.toContain("legacy_option");
+  });
+
+  it("returns an empty array when neither vector is present", () => {
+    expect(parsePrinterOptionList("// nothing here")).toEqual([]);
+  });
+});
+
+describe("option units", () => {
+  it("carries def->sidetext into unit, concatenating adjacent literals", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.layer_height.unit).toBe("mm");
+    expect(options.outer_wall_speed.unit).toBe("mm/s");
+  });
+
+  it("omits unit for options that declare no sidetext", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.wall_loops.unit).toBeUndefined();
+    expect(options.enable_support.unit).toBeUndefined();
+  });
+
+  it("reads an unlocalized sidetext literal too", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parseAxisLimitOptions(source);
+
+    expect(options.machine_max_speed_x.unit).toBe("mm/s");
+    expect(options.machine_max_acceleration_x.unit).toBe("mm/s²");
+  });
+
+  it("carries the unit onto synthesized filament overrides", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    synthesizeFilamentOverrides(options, [], ["filament_bridge_speed"]);
+
+    expect(options.bridge_speed.unit).toBeUndefined();
+    options.outer_wall_speed.unit = "mm/s";
+    synthesizeFilamentOverrides(options, ["filament_outer_wall_speed"], []);
+    expect(options.filament_outer_wall_speed.unit).toBe("mm/s");
+  });
+});
+
+describe("resolveEnumDefault", () => {
+  const zHop = ["Auto Lift", "Normal Lift", "Slope Lift", "Spiral Lift"];
+
+  it("resolves a scoped enum constant by its identifier, separators and case ignored", () => {
+    expect(resolveEnumDefault("ZHopType::zhtSpiral", zHop)).toBe("Spiral Lift");
+    expect(resolveEnumDefault("PrintSequence::ByLayer", ["by layer", "by object"])).toBe("by layer");
+  });
+
+  it("resolves a bare enum constant the same way", () => {
+    expect(resolveEnumDefault("btAutoBrim", ["auto_brim", "no_brim"])).toBe("auto_brim");
+    expect(resolveEnumDefault("stNormalAuto", ["normal(auto)", "tree(auto)"])).toBe("normal(auto)");
+  });
+
+  it("indexes the enum for a plain integer default, stripping an (int) cast", () => {
+    expect(resolveEnumDefault("0", ["none", "external", "all"])).toBe("none");
+    expect(resolveEnumDefault("(int) 2", ["none", "external", "all"])).toBe("all");
+    expect(resolveEnumDefault("3", ["none", "external", "all"])).toBeUndefined();
+  });
+
+  it("returns undefined when nothing matches exactly, rather than guessing a near neighbour", () => {
+    expect(resolveEnumDefault("(int)Overhang_threshold_bridge", ["0%", "10%", "25%"])).toBeUndefined();
+    // ipRectilinear must not be talked into "alignedrectilinear".
+    expect(resolveEnumDefault("ipRectilinear", ["concentric", "alignedrectilinear"])).toBeUndefined();
+    expect(resolveEnumDefault("NozzleVolumeType::nvtStandard", [])).toBeUndefined();
+  });
+});
+
+describe("enum defaults in parsePrintConfig", () => {
+  it("resolves an enum constant default to the enum token it names", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.z_hop_types.default).toBe("Spiral Lift");
+    expect(options.brim_type.default).toBe("auto_brim");
+    expect(options.wall_generator.default).toBe("classic");
+  });
+
+  it("resolves a numeric enum default by index", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.scarf_seam_type.default).toBe("none");
+  });
+
+  it("omits the default entirely when the enum constant resolves to nothing", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+
+    expect(options.overhang_fan_threshold.type).toBe("enum");
+    expect("default" in options.overhang_fan_threshold).toBe(false);
+    expect("default" in options.top_surface_pattern).toBe(false);
+  });
+
+  it("carries the resolved default onto synthesized filament overrides", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+    const options = parsePrintConfig(source);
+    synthesizeFilamentOverrides(
+      options,
+      parseStringVector(source, "filament_extruder_override_keys"),
+      parseStringVector(source, "filament_overhang_override_keys")
+    );
+
+    expect(options.filament_z_hop_types.default).toBe("Spiral Lift");
+  });
+});
+
+describe("parseExtruderOptionKeys", () => {
+  it("reads the m_extruder_option_keys brace-init list, ignoring comments", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const keys = parseExtruderOptionKeys(source);
+    expect(keys).toEqual(["nozzle_diameter", "retraction_length", "wipe"]);
+    expect(keys).not.toContain("legacy_extruder_key");
+  });
+
+  it("returns an empty array when the assignment is absent", () => {
+    expect(parseExtruderOptionKeys("// nothing here")).toEqual([]);
+  });
+});
+
+describe("parseAxisLimitOptions", () => {
+  it("expands the machine-limit axis loop into one option per axis and family", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const options = parseAxisLimitOptions(source);
+    expect(Object.keys(options).sort()).toEqual([
+      "machine_max_acceleration_x",
+      "machine_max_acceleration_z",
+      "machine_max_jerk_x",
+      "machine_max_jerk_z",
+      "machine_max_speed_x",
+      "machine_max_speed_z",
+    ]);
+  });
+
+  it("carries the per-axis facts, including the default drawn from the named struct field", async () => {
+    const source = await readFile(PRINT_CONFIG_FIXTURE, "utf8");
+
+    const options = parseAxisLimitOptions(source);
+    expect(options.machine_max_speed_x).toMatchObject({
+      type: "float",
+      vector: true,
+      nullable: true,
+      min: 0,
+      default: [500, 200],
+    });
+    expect(options.machine_max_jerk_z).toMatchObject({ type: "float", default: [0.2, 0.4] });
+    expect(options.machine_max_acceleration_z).toMatchObject({ default: [500, 200] });
+  });
+
+  it("returns an empty record when the axis loop is absent", () => {
+    expect(parseAxisLimitOptions("// nothing here")).toEqual({});
   });
 });
 

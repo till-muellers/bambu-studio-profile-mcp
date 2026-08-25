@@ -11,6 +11,7 @@ import { registerCompareTool } from "./tools/compare.js";
 import { registerDiffTool } from "./tools/diff.js";
 import { registerInitConfigTool } from "./tools/init-config.js";
 import { registerImportTools } from "./tools/import.js";
+import { registerLintTool } from "./tools/lint.js";
 import { registerListTools } from "./tools/list.js";
 import { registerResolveTools } from "./tools/resolve.js";
 import { registerResolveFromFileTool } from "./tools/resolve-from-file.js";
@@ -31,6 +32,7 @@ export function buildServer(deps: ToolDeps): McpServer {
   registerDiffTool(server, deps);
   registerResolveFromFileTool(server, deps);
   registerCompareTool(server, deps);
+  registerLintTool(server, deps);
   return server;
 }
 

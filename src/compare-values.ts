@@ -1,7 +1,4 @@
-/**
- * Structural equality over profile values: bare strings, string arrays, and the nested objects a
- * profile file may carry. Two values are equal when their shape and every leaf match by identity.
- */
+/** Structural equality over the JSON shapes profile values take: scalars, arrays, plain objects. */
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (Array.isArray(a) && Array.isArray(b)) {

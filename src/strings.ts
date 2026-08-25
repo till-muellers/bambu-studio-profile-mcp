@@ -370,6 +370,45 @@ export const strings = {
           "side states them, flagged in the result's note",
       },
     },
+    // Source: src/tools/lint.ts registerLintTool(...)
+    lintProfile: {
+      title: "Lint profile",
+      description:
+        "Check a profile file in a caller-chosen directory for mechanical defects: overrides the " +
+        "inherits chain already resolves to the same value, vector arrays whose column count differs " +
+        "from the printer's, values whose shape contradicts the option schema, keys the schema lacks, " +
+        "and \"nil\" columns that restate a value the file already spells out. Reads " +
+        "<outputDir>/<name>.json and resolves its 'inherits' chain across the configured user preset " +
+        "store and the vendor's system profiles. Bambu Studio's directories stay untouched.\n\n" +
+        "Returns: { kind, name, path, clean, findings: [{ check, key, detail }], skipped: [{ check, " +
+        "reason }] } — clean is true when findings is empty. check is one of parent-equal-override, " +
+        "column-count, scalar-vector-mismatch, unknown-key, nil-equals-parent; findings come grouped " +
+        "by check in that order, by key within each. skipped names the checks this call had too " +
+        "little information to run, each with the reason: column-count lands there whenever " +
+        "machineName is omitted or the named machine preset states no printer_extruder_variant, so a " +
+        "column count is reported only where a printer defines it.\n\n" +
+        "Errors: file missing or unparseable; file lacking an 'inherits' field; vendor not found; " +
+        "inherits target not found; circular or unresolvable inherits chain; machine preset not " +
+        "found; config missing (run init_config first).\n\n" +
+        "Fix a finding with update_profile (single keys) or write_profile (the whole override set), " +
+        "then install the file with import_profile. To see the resulting values rather than the " +
+        "defects, use resolve_from_file.",
+      inputs: {
+        kind: "Profile type to lint; selects the option schema the file's keys are checked against",
+        vendor:
+          "Vendor id from list_vendors, e.g. 'BBL'; names the system store the file's inherits chain " +
+          "is resolved against",
+        outputDir: "Directory containing the local profile file",
+        name: "Name the linted profile carries; also the file name (<name>.json) unless sourceName says otherwise",
+        sourceName: "Local file name (without .json) when it differs from name",
+        machineName:
+          "Exact name of the machine preset the column count is measured against, e.g. 'Bambu Lab X1 " +
+          "Carbon 0.4 nozzle'. Resolved under the same vendor; its printer_extruder_variant fixes how " +
+          "many elements every vector option needs, and it supplies the columns the filament_* " +
+          "override family's \"nil\" elements read. Omit it to have the column-count check reported " +
+          "under skipped",
+      },
+    },
   },
   errors: {
     // Source: src/errors.ts — each function returns the exact current message
@@ -469,6 +508,17 @@ export const strings = {
       `Vector columns still holding "nil" were compared verbatim: ${keys.join(", ")}. A "nil" column ` +
       `carries the value its parent supplies; pass machineName to resolve the filament_* override ` +
       `family's columns against a machine preset.`,
+    // Source: src/tools/lint.ts handleLint — finding details and skipped reasons
+    lintParentEqualOverride: (value: unknown): string =>
+      `the inherits chain already resolves this key to ${JSON.stringify(value)}; the override is dead weight`,
+    lintColumnCount: (actual: number, expected: number, machineName: string): string =>
+      `the array carries ${actual} columns; '${machineName}' has ${expected}`,
+    lintNilEqualsParent: (index: number, value: unknown, statedAt: number): string =>
+      `column ${index} resolves to ${JSON.stringify(value)}, the value column ${statedAt} already states`,
+    lintColumnCountNeedsMachine:
+      "pass machineName to measure vector arrays against that printer's printer_extruder_variant.",
+    lintColumnCountNoVariant: (machineName: string): string =>
+      `machine preset '${machineName}' resolves printer_extruder_variant to a non-array value.`,
   },
   formats: {
     // Source: src/tools/deps.ts toToolError

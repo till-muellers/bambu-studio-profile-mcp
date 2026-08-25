@@ -163,7 +163,7 @@ Configuration persists per project in `.bambu-studio-profile-mcp\config.json`. A
 
 ## Tools
 
-The read tools (`list_profiles`, `list_parameters`, `resolve_profile`, `resolve_from_file`, `compare_profiles`) accept kind `process`, `filament`, or `machine`. Machine presets are Bambu Studio's to write, so `write_profile`, `update_profile`, `diff_profile`, `import_profile`, and `remove_profile` accept `process` and `filament`.
+The read tools (`list_profiles`, `list_parameters`, `resolve_profile`, `resolve_from_file`, `compare_profiles`) accept kind `process`, `filament`, or `machine`. Machine presets are Bambu Studio's to write, so `write_profile`, `update_profile`, `diff_profile`, `lint_profile`, `import_profile`, and `remove_profile` accept `process` and `filament`.
 
 | Tool | Purpose |
 | --- | --- |
@@ -176,6 +176,7 @@ The read tools (`list_profiles`, `list_parameters`, `resolve_profile`, `resolve_
 | `resolve_from_file` | Resolve a local process, filament, or machine profile file's fully-merged active settings before it is installed; `keys` projects the result down to the options asked for, `machineName` resolves the `filament_*` override family's `"nil"` columns. |
 | `write_profile` | Create a process or filament profile file in a caller-chosen directory from a base profile plus validated overrides. |
 | `update_profile` | Atomically upsert and delete keys in a previously written profile file. |
+| `lint_profile` | Check a local process or filament profile file for mechanical defects — overrides the chain already resolves to, column counts that miss the printer's, shapes the schema contradicts, unknown keys, and `"nil"` columns restating a value the file already spells out. Checks lacking a `machineName` come back under `skipped`. |
 | `compare_profiles` | Compare any two process, filament, or machine profiles — each side an installed or system preset, or a local profile file. Mode `resolved` compares the settings each side ends up with once its `inherits` chain is walked, `raw` the keys each side declares; `machineName` resolves the `filament_*` override family's `"nil"` columns, and a `note` flags columns that were compared verbatim. |
 | `diff_profile` | Compare a local profile file against the installed user preset, key by key — changed, added, and removed values plus which side is newer. |
 | `import_profile` | Install a written profile into Bambu Studio's user preset store (`.info` sidecar synthesized; overwrite requires an explicit flag; Studio sees it after a restart). |

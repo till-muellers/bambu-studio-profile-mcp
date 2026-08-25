@@ -215,7 +215,9 @@ export const strings = {
         "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, unit?, " +
         "label?, description?, nullable? }] } — key is the option key. type names the value's domain " +
         "(string, int, float, percent, bool, enum) while values are written as strings, so an int " +
-        "option takes \"255\". vector: true means the option takes a string array with one " +
+        "option takes \"255\" and a percent option \"25%\"; int, float, and percent options also " +
+        "accept a JSON number, and bool options a JSON boolean or \"0\", \"1\", \"true\", \"false\". " +
+        "vector: true means the option takes a string array with one " +
         "element per (extruder × hotend-variant) position of the target profile — see the profile's " +
         "print_extruder_variant/filament_extruder_variant, or the machine profile's " +
         "printer_extruder_variant, in resolve_profile's settings; vector: false means a single string " +

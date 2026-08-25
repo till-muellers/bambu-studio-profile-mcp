@@ -18,9 +18,11 @@ export const strings = {
         "kind to learn how many elements a per-extruder array needs. A \"nil\" vector column carries " +
         "the value its parent supplies for that column, and settings shows that value: nilResolved " +
         "maps key -> column indices filled from a parent, nilUnresolved maps key -> column indices " +
-        "still \"nil\" because a parent value for them was out of reach. Each field appears only " +
-        "when it has an entry. The filament_* override family reads its columns from the machine " +
-        "preset named by machineName, matching the key with the filament_ prefix stripped. With " +
+        "left as \"nil\". Each field appears only when it has an entry. For most keys that parent is " +
+        "the next profile up the inherits chain. The filament_* override family is the exception: its " +
+        "parent is the machine preset supplied as machineName, matched by the key with the filament_ " +
+        "prefix stripped — supply machineName to resolve those columns, and they stay \"nil\" under " +
+        "nilUnresolved whenever it is absent. With " +
         "keys given, settings carries exactly the requested keys and missingKeys lists the requested " +
         "keys the resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
@@ -281,10 +283,12 @@ export const strings = {
         "object, path } — settings is the flat merged key->value map, matching resolve_profile's shape; " +
         "path is the file that was read. A \"nil\" vector column carries the value its parent supplies " +
         "for that column, and settings shows that value: nilResolved maps key -> column indices filled " +
-        "from a parent, nilUnresolved maps key -> column indices still \"nil\" because a parent value " +
-        "for them was out of reach. Each field appears only when it has an entry. The filament_* " +
-        "override family reads its columns from the machine preset named by machineName, matching the " +
-        "key with the filament_ prefix stripped. With keys given, settings carries exactly the " +
+        "from a parent, nilUnresolved maps key -> column indices left as \"nil\". Each field appears " +
+        "only when it has an entry. For most keys that parent is the next profile up the inherits " +
+        "chain. The filament_* override family is the exception: its parent is the machine preset " +
+        "supplied as machineName, matched by the key with the filament_ prefix stripped — supply " +
+        "machineName to resolve those columns, and they stay \"nil\" under nilUnresolved whenever it " +
+        "is absent. With keys given, settings carries exactly the " +
         "requested keys and missingKeys lists the requested keys the merged result lacks; the inherits " +
         "chain is walked in full either way.\n\n" +
         "Errors: file missing or unparseable; file lacking an 'inherits' field; vendor not found; " +

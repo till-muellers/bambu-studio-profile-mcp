@@ -8,27 +8,35 @@ export const strings = {
         "profile's 'inherits' chain across the configured user preset store and the vendor's system " +
         "profiles, merging settings root-first so a more specific profile's values override its " +
         "ancestors'.\n\n" +
-        "Returns: { vendor, name, kind, chain: string[] (root-first), settings: object } — settings is " +
-        "the flat merged key->value map; scalar options are bare strings like \"0.2\", per-extruder " +
-        "options are string arrays like [\"250\",\"500\",\"500\"]. settings also includes " +
-        "print_extruder_variant (process), filament_extruder_variant (filament), or " +
+        "Returns: { vendor, name, kind, chain: string[] (profile names, root-first), settings: object, " +
+        "nilResolved?: object, nilUnresolved?: object, missingKeys?: string[] } — vendor, name and " +
+        "kind echo the arguments; nilResolved, " +
+        "nilUnresolved and missingKeys sit at the top level beside settings, each present when it has " +
+        "an entry. settings holds option key->value pairs only: scalar options are bare strings like " +
+        "\"0.2\", per-extruder options are string arrays like [\"250\",\"500\",\"500\"]. settings also " +
+        "includes print_extruder_variant (process), filament_extruder_variant (filament), or " +
         "printer_extruder_variant (machine), which names what " +
         "each position of every other vector option's array means for this profile. The machine " +
         "profile's printer_extruder_variant is the authoritative column count: resolve the machine " +
-        "kind to learn how many elements a per-extruder array needs. A \"nil\" vector column carries " +
-        "the value its parent supplies for that column, and settings shows that value: nilResolved " +
-        "maps key -> column indices filled from a parent, nilUnresolved maps key -> column indices " +
-        "left as \"nil\". Each field appears only when it has an entry. For most keys that parent is " +
-        "the next profile up the inherits chain. The filament_* override family is the exception: its " +
-        "parent is the machine preset supplied as machineName, matched by the key with the filament_ " +
-        "prefix stripped — supply machineName to resolve those columns, and they stay \"nil\" under " +
-        "nilUnresolved whenever it is absent. With " +
-        "keys given, settings carries exactly the requested keys and missingKeys lists the requested " +
-        "keys the resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
+        "kind to learn how many elements a per-extruder array needs.\n\n" +
+        "A vector option may hold the literal string \"nil\" in a column, meaning the column takes its " +
+        "value from that option's parent. For every family except filament_*, the parent is the next " +
+        "profile up the inherits chain. For the filament_* family, the parent is the machine preset " +
+        "named by machineName, and the value comes from that preset's key with the filament_ prefix " +
+        "stripped. A column filled from its parent appears in settings with the parent's value and in " +
+        "nilResolved under its option key with its column index; with machineName omitted, filament_* " +
+        "columns keep the literal string \"nil\" in settings and appear in nilUnresolved under their " +
+        "option key with their column indices.\n\n" +
+        "With keys given, settings carries exactly the requested keys and missingKeys lists the " +
+        "requested keys the resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
         "missing (run init_config first).\n\n" +
-        "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +
-        "a profile's effective settings before creating a variant of it with write_profile.",
+        "Discover valid vendor and name values with list_vendors and list_profiles. Profiles in the " +
+        "configured user preset store and the vendor's system profiles resolve here; a profile file " +
+        "sitting in a caller-chosen directory before installation resolves with resolve_from_file, and " +
+        "import_profile installs it into Bambu Studio. Typical use: inspect a profile's effective " +
+        "settings before creating a variant of it with write_profile; list_parameters explains what " +
+        "each settings key means and which values it accepts.",
       inputs: {
         kind:
           "Profile type to resolve; 'machine' reads the printer preset Bambu Studio owns, whose " +
@@ -59,18 +67,23 @@ export const strings = {
         "content wholesale — kvps is always the complete override set; use update_profile to change an " +
         "existing file incrementally. Every kvps key and value is validated against the option schema " +
         "before anything is written; all violations are reported together.\n\n" +
-        "Returns: { vendor, name, kind, created (false when an existing file was overwritten), path, " +
-        "inherits, overrides }\n\n" +
+        "Returns: { vendor, name, kind, created (true for a newly written file, false when an existing " +
+        "file was overwritten), path (the file that was written), inherits (the baseProfile the file " +
+        "now inherits from), overrides (the kvps map exactly as passed, which is the file's complete " +
+        "override set) }\n\n" +
         "Errors: baseProfile not found or unresolvable; schema violations listed per key; config " +
         "missing (run init_config first).\n\n" +
         "Typical flow to extend an existing profile: find it with list_profiles, inspect its effective " +
         "settings with resolve_profile, look up valid option keys and value ranges with list_parameters, " +
-        "then call write_profile with only the changed keys as kvps. For a vector option, resolve the " +
+        "then call write_profile with only the changed keys as kvps. import_profile installs a file " +
+        "written here into Bambu Studio's user preset store. For a vector option, resolve the " +
         "base profile first, copy the existing array for that key, modify only the positions you mean " +
         "to change, and pass the full-length array back — a shorter array is accepted but Bambu Studio " +
         "broadcast-resizes it (repeating the last value), which is rarely what you want.",
       inputs: {
-        kind: "Profile type to create",
+        kind:
+          "Profile type to create; machine presets stay Bambu Studio's to write and are readable " +
+          "through resolve_profile",
         vendor: "Vendor id from list_vendors, e.g. 'BBL'; names the system store baseProfile is resolved against",
         name: "Name of the profile to create; also the output filename (<name>.json)",
         baseProfile: "Exact name of the existing profile to inherit from, as returned by list_profiles",
@@ -93,23 +106,36 @@ export const strings = {
         "Incrementally edit a profile file previously created by write_profile: upsert the `set` keys and " +
         "delete the `remove` keys in one atomic, validated step. Keys not mentioned stay unchanged. The " +
         "file's name and inherits stay as they are.\n\n" +
-        "Returns: { name, kind, path, set (applied set keys), removed (applied remove keys), overrides " +
-        "(the file's final key->value map excluding name/inherits) }\n\n" +
+        "Returns: { name, kind, path (the file that was rewritten), set (applied set keys), removed " +
+        "(applied remove keys), overrides (the file's final key->value map excluding name/inherits) " +
+        "}\n\n" +
         "Errors: file not found in outputDir (create it with write_profile first); schema violations, " +
         "reserved keys in set/remove, and unknown remove keys are all listed together; nothing to do when " +
         "both set and remove are omitted; config missing (run init_config first).\n\n" +
-        "write_profile replaces a file wholesale; update_profile is the tool for incremental changes.",
+        "write_profile replaces a file wholesale; update_profile is the tool for incremental changes. " +
+        "Placing a file on a different base profile happens in write_profile: read the current " +
+        "overrides here, then recreate the file with the new baseProfile and the complete override " +
+        "set as kvps. resolve_from_file reports the settings the file resolves to, including the " +
+        "variant array that fixes the length of every vector value.",
       inputs: {
-        kind: "Profile type; selects the validation schema",
+        kind:
+          "Profile type; selects the validation schema. Machine presets stay Bambu Studio's to write " +
+          "and are readable through resolve_profile",
         name: "Name of the existing profile file, <name>.json in outputDir",
         outputDir: "Directory containing the profile file",
         set:
           "Object mapping option key to value, validated against schema/<kind>.schema.json. Scalar options " +
           "take a single string like \"0.2\" or \"100%\"; vector (per-extruder) options take a string array " +
-          "with one element per position of the base profile's variant list. \"nil\" as an element keeps the " +
-          "base value at that position and is valid only on options list_parameters marks nullable: true. " +
-          "Existing keys are overwritten, new keys are added. 'name' and 'inherits' are reserved.",
-        remove: "Override keys to delete from the file; each key must already exist in the file.",
+          "with one element per position of the variant list of the base profile named by the file's " +
+          "'inherits' value; resolve the file with resolve_from_file and read its print_extruder_variant " +
+          "(process) or filament_extruder_variant (filament) array for the required length. \"nil\" as an " +
+          "element keeps the base value at that position and is valid only on options list_parameters " +
+          "marks nullable: true. " +
+          "Existing keys are overwritten, new keys are added. 'name' and 'inherits' are reserved. " +
+          "Omit it to make this call a pure removal.",
+        remove:
+          "Override keys to delete from the file; each key must already exist in the file. Omit it " +
+          "to make this call a pure upsert.",
       },
     },
     // Source: src/tools/init-config.ts registerInitConfigTool(...)
@@ -122,8 +148,11 @@ export const strings = {
         `<userDataDir>\\BambuStudio.conf's app.preset_folder, the logged-in account's preset folder). ` +
         `Takes effect immediately — no server restart needed. Configuration persists per project in ` +
         `.bambu-studio-profile-mcp/config.json, resolved from CLAUDE_PROJECT_DIR under Claude Code, the ` +
-        `working directory otherwise, or the BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR override.\n\n` +
-        `Returns: { installDir, userDataDir, userId, persistedTo }\n\n` +
+        `working directory otherwise, or the BAMBU_STUDIO_PROFILE_MCP_CONFIG_DIR override. Each call ` +
+        `stores a complete configuration: values passed in are used as given, omitted values are ` +
+        `auto-detected afresh, and the result becomes the stored configuration for every field.\n\n` +
+        `Returns: { installDir, userDataDir, userId, persistedTo } — the three values now in force, ` +
+        `plus the config.json path they were written to.\n\n` +
         `Errors: each invalid or undetectable value is reported (including userId when BambuStudio.conf ` +
         `is missing, unparseable, or lacks app.preset_folder); nothing is persisted on failure.`,
       inputs: {
@@ -142,13 +171,25 @@ export const strings = {
         "Discover the process, filament, or machine profiles available in the user preset store and the vendors' " +
         "system stores.\n\n" +
         "Returns: { kind, profiles: [{ name, source: \"user\"|\"system\", vendor?, inherits? }] } — " +
-        "user presets carry no vendor field; inherits names a profile's parent.\n\n" +
+        "name is the exact preset name the other tools take, source names the store the row came " +
+        "from, vendor appears on system rows and names the vendor shipping the profile, and inherits " +
+        "appears where the profile declares a parent and names it.\n\n" +
         "Errors: vendor not found (only when vendor is given); config missing (run init_config first).\n\n" +
-        "Results feed the vendor/name/baseProfile arguments of resolve_profile and write_profile.",
+        "Results feed the vendor/name arguments of resolve_profile; process and filament rows also " +
+        "feed the vendor/name/baseProfile arguments of write_profile, and rows with source \"user\" " +
+        "are the presets remove_profile deletes. list_filaments lists the filament products the " +
+        "filament presets are built around.",
       inputs: {
-        kind: "Profile type to list; 'machine' lists the printer presets Bambu Studio owns",
-        vendor: "Vendor id from list_vendors, e.g. 'BBL'; omit to search every vendor",
-        search: "Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'",
+        kind:
+          "Profile type to list; 'machine' lists the printer presets Bambu Studio maintains, readable " +
+          "through resolve_profile",
+        vendor:
+          "Vendor id from list_vendors, e.g. 'BBL'; scopes the system rows to that vendor, and omit it " +
+          "to search every vendor. User rows appear whatever vendor is given, since a user preset " +
+          "belongs to the user store rather than to a vendor",
+        search:
+          "Case-insensitive substring filter on the profile name, e.g. 'PETG' or '0.16'; omit it to " +
+          "list every profile of that kind",
         source:
           "Restrict the rows to one store: 'user' for the user preset store, 'system' for the vendors' " +
           "shipped profiles; omit to get both",
@@ -157,33 +198,50 @@ export const strings = {
     listVendors: {
       title: "List vendors",
       description:
-        "List the profile vendors shipped with Bambu Studio.\n\n" +
-        "Returns: { vendors: [{ id, name }] }, sorted by id — id (e.g. 'BBL') is the value the vendor " +
-        "arguments of resolve_profile, write_profile, and list_profiles expect; name is the display " +
-        "name (e.g. 'Bambulab').\n\n" +
-        "Errors: config missing (run init_config first).",
+        "List the profile-shipping vendors bundled with Bambu Studio — the organizations whose system " +
+        "preset libraries Studio installs.\n\n" +
+        "Returns: { vendors: [{ id, name }] }, sorted by id — id (e.g. 'BBL') is the value every " +
+        "tool's vendor argument takes, among them resolve_profile, write_profile, and list_profiles; " +
+        "name is that vendor's display name (e.g. 'Bambulab').\n\n" +
+        "Errors: config missing (run init_config first).\n\n" +
+        "For filament products and their labels, call list_filaments.",
     },
     listParameters: {
       title: "List parameters",
       description:
         "Discover the option keys valid for process, filament, or machine profiles, with their value type, " +
-        "range/enum, default, and (where Bambu Studio provides them) the GUI label and description. " +
+        "range/enum, default, and (where Bambu Studio provides them) the GUI label, unit, and description. " +
         "Search by name or by what a setting does — the filter matches key, label, and description.\n\n" +
-        "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, label?, " +
-        "description?, nullable? }] } — vector: true means the option takes a string array with one " +
+        "Returns: { kind, parameters: [{ key, type, vector, enum?, min?, max?, default?, unit?, " +
+        "label?, description?, nullable? }] } — key is the option key. type names the value's domain " +
+        "(string, int, float, percent, bool, enum) while values are written as strings, so an int " +
+        "option takes \"255\" and a percent option \"25%\"; int, float, and percent options also " +
+        "accept a JSON number, and bool options a JSON boolean or \"0\", \"1\", \"true\", \"false\". " +
+        "vector: true means the option takes a string array with one " +
         "element per (extruder × hotend-variant) position of the target profile — see the profile's " +
         "print_extruder_variant/filament_extruder_variant, or the machine profile's " +
-        "printer_extruder_variant, in resolve_profile's settings; vector: false " +
-        "a single value. Options marked nullable: true accept \"nil\" as an element (or as the whole " +
-        "value) to keep the base/printer value at that position.\n\n" +
+        "printer_extruder_variant, in resolve_profile's settings; vector: false means a single string " +
+        "like \"0.2\". enum, min, max, default, unit, label, and description appear where the option " +
+        "declares them: enum lists the only accepted values, min and max state the bounds to respect, " +
+        "default is the value Bambu Studio starts from, unit is the unit the value is expressed in " +
+        "(e.g. 'mm', 'mm/s'), and label and description are the GUI texts. Where enum is absent, any " +
+        "value of the option's type is accepted; where min or max is absent, that direction is " +
+        "unbounded. Options marked nullable: true accept the literal string \"nil\" as an element " +
+        "(or as the whole value) to keep the base/printer value at that position; options listing no " +
+        "nullable expect a concrete value in every position.\n\n" +
         "Errors: config missing (run init_config first).\n\n" +
-        "Results feed the kvps argument of write_profile: use key as the kvps key and respect " +
-        "type/vector/enum/min/max/nullable when choosing the value.",
+        "Results for process and filament feed the kvps argument of write_profile and the set " +
+        "argument of update_profile: use key as the kvps key and respect " +
+        "type/vector/enum/min/max/nullable when choosing the value. Machine keys describe the printer " +
+        "presets Bambu Studio maintains; read their values with resolve_profile.",
       inputs: {
         kind:
-          "Profile type whose option schema to list; 'machine' lists the printer option keys, which " +
-          "write_profile and update_profile leave to Bambu Studio",
-        search: "Case-insensitive substring matched against key, label, and description, e.g. 'seam' or 'temperature'",
+          "Profile type whose option schema to list; 'machine' lists the printer option keys Bambu " +
+          "Studio maintains, readable through resolve_profile, while write_profile and update_profile " +
+          "take process and filament",
+        search:
+          "Case-insensitive substring matched against key, label, and description, e.g. 'seam' or " +
+          "'temperature'; omit it to list every option of that kind",
       },
     },
     listFilaments: {
@@ -192,10 +250,12 @@ export const strings = {
         "List the distinct filament products known to Bambu Studio: every filament_id found across the " +
         "user store and all vendors' filament profiles, with a display name.\n\n" +
         "Returns: { filaments: [{ id, name }] }, sorted by id, deduplicated — id is the product code " +
-        "(e.g. 'GFB00'), name the human-readable filament name (e.g. 'Bambu ABS').\n\n" +
+        "(e.g. 'GFB00'), name is that product's human-readable label (e.g. 'Bambu ABS').\n\n" +
         "Errors: config missing (run init_config first).\n\n" +
-        "Use it to see which filaments exist, then find their concrete profiles by name via " +
-        "list_profiles with kind 'filament'.",
+        "Use it to see which filaments exist, then call list_profiles with kind 'filament' to list the " +
+        "filament presets; preset names are separate strings (e.g. 'Bambu ABS @BBL X1C') and are the " +
+        "values resolve_profile and write_profile take. For the profile-shipping vendors and the ids " +
+        "the vendor arguments take, call list_vendors.",
     },
     // Source: src/tools/import.ts registerImportTools(...)
     importProfile: {
@@ -209,15 +269,20 @@ export const strings = {
         "first and its inherits chain is resolved; nothing is installed when any check fails. " +
         "Replacing an existing preset requires overwrite: true and only ever replaces presets whose " +
         "own 'from' field is \"User\".\n\n" +
-        "Returns: { kind, name, path, infoPath, overwritten, note } — note states that Bambu Studio " +
-        "sees the preset after a restart.\n\n" +
+        "Returns: { kind, name, path, infoPath, overwritten, note } — path is the installed preset " +
+        "JSON and infoPath its .info sidecar, overwritten is true when an existing preset was " +
+        "replaced, and note states that Bambu Studio sees the preset after a restart.\n\n" +
         "Errors: source missing or unparseable; schema violations listed per key; vendor or inherits " +
         "target not found; target exists without overwrite; target's 'from' is not \"User\" (refused " +
         "regardless of flags); config missing (run init_config first).\n\n" +
         "Typical flow: write_profile into an outputDir, then import_profile with the same " +
-        "outputDir/name. Remove an installed preset again with remove_profile.",
+        "outputDir/name. Check the source first with lint_profile, or read the settings it resolves " +
+        "to with resolve_from_file. remove_profile deletes an installed user preset from " +
+        "user/<userId>/<kind>/.",
       inputs: {
-        kind: "Profile type to import",
+        kind:
+          "Profile type to import; process and filament presets are the ones callers author, machine " +
+          "presets stay Bambu Studio's",
         vendor:
           "Vendor id from list_vendors, e.g. 'BBL'; names the system store the source's inherits chain is resolved against",
         outputDir: "Directory containing the source file written by write_profile",
@@ -234,14 +299,20 @@ export const strings = {
         "When the preset has a cloud record (populated setting_id in its sidecar) it is still " +
         "removed locally and the result flags cloudRecord: true, since Bambu Studio's sync may " +
         "restore it.\n\n" +
-        "Returns: { kind, name, removedJson, removedInfo, cloudRecord, note } — removedInfo is null " +
-        "when no sidecar existed; note states that Bambu Studio sees the change after a restart.\n\n" +
+        "Returns: { kind, name, removedJson, removedInfo, cloudRecord, note } — removedJson is the " +
+        "deleted preset JSON's path and removedInfo the deleted sidecar's, null when no sidecar " +
+        "existed; cloudRecord is true when the sidecar carried a populated setting_id; note states " +
+        "that Bambu Studio sees the change after a restart, and adds the sync warning while " +
+        "cloudRecord is true.\n\n" +
         "Errors: preset not found; a stray sidecar without its JSON; the preset's 'from' is not " +
         "\"User\" or its JSON is unparseable (refused regardless of flags); config missing (run " +
         "init_config first).\n\n" +
-        "Discover installed user presets with list_profiles (source \"user\").",
+        "Discover installed user presets with list_profiles (source \"user\"). import_profile " +
+        "installs a preset into the same store.",
       inputs: {
-        kind: "Profile type to remove",
+        kind:
+          "Profile type to remove; process and filament presets are the ones callers install, " +
+          "machine presets stay Bambu Studio's",
         name: "Name of the user preset to remove from user/<userId>/<kind>/",
       },
     },
@@ -251,22 +322,34 @@ export const strings = {
         "Compare a profile file in a caller-chosen directory against the preset currently installed " +
         "in Bambu Studio's user preset store (user/<userId>/<kind>/), flat key by key. Reads back " +
         "values hand-tuned in Bambu Studio and surfaces drift between a project's profile files and " +
-        "the installed presets. Both sides inherit equivalently, so the files' own keys are compared " +
-        "directly; 'inherits' is compared too, while identity and synthesized metadata (name, from, " +
-        "version, settings ids) are skipped.\n\n" +
-        "Returns: { identical, changed: [{key, source, installed}], onlyInSource: [{key, value}], " +
-        "onlyInstalled: [{key, value}], source: {path, modifiedAt}, installed: {path, modifiedAt}, " +
-        "newer } — modifiedAt is the file's ISO 8601 mtime and newer says which side changed last " +
-        "(\"source\", \"installed\", or \"same\").\n\n" +
+        "the installed presets. The comparison is flat over the keys each side declares itself, " +
+        "'inherits' among them: a differing 'inherits' lands in changed as an ordinary key while each " +
+        "side's parent chain stays outside the comparison. Identity and synthesized metadata (name, " +
+        "from, version, settings ids) are skipped. kind and name locate the installed side under " +
+        "user/<userId>/<kind>/, outputDir plus sourceName locate the file.\n\n" +
+        "Returns: { kind, name, identical: boolean, changed: [{key, source, installed}], onlyInSource: " +
+        "[{key, value}], onlyInstalled: [{key, value}], source: {path, modifiedAt}, installed: {path, " +
+        "modifiedAt}, newer } — kind and name echo the arguments; identical is true exactly when " +
+        "changed, onlyInSource and onlyInstalled are all empty, so keys both sides carry with equal " +
+        "values stay out of the three arrays; source and installed carry each side's path plus its " +
+        "modifiedAt, the file's ISO 8601 mtime, and newer says " +
+        "which side changed last (\"source\", \"installed\", or \"same\").\n\n" +
         "Errors: source file missing or unparseable; preset absent from the user store; config " +
         "missing (run init_config first).\n\n" +
         "Sync drift back with update_profile (project file) or import_profile with overwrite " +
-        "(installed preset). Discover installed presets with list_profiles (source \"user\").",
+        "(installed preset). compare_profiles takes any two endpoints — a user preset, a vendor system " +
+        "preset, or a local file — across process, filament, and machine profiles, and its mode " +
+        "'resolved' compares the settings each side ends up with once its inherits chain is walked. " +
+        "Discover installed user presets with list_profiles.",
       inputs: {
-        kind: "Profile type to compare",
+        kind:
+          "Profile type to compare; compare_profiles covers machine profiles as well as process and " +
+          "filament",
         name: "Name of the installed preset in user/<userId>/<kind>/",
         outputDir: "Directory containing the local profile file",
-        sourceName: "Local file name (without .json) when it differs from the installed preset's name",
+        sourceName:
+          "Local file name (without .json) when it differs from the installed preset's name; omit it " +
+          "and the file is read as <outputDir>/<name>.json",
       },
     },
     // Source: src/tools/resolve-from-file.ts registerResolveFromFileTool(...)
@@ -279,8 +362,10 @@ export const strings = {
         "keys on top, so the file's values override its ancestors'. Identity and synthesized metadata " +
         "(name, from, version, settings ids) stay out of the merged settings. Bambu Studio's " +
         "directories stay untouched.\n\n" +
-        "Returns: { vendor, name, kind, chain: string[] (root-first, ending with this file), settings: " +
-        "object, path } — settings is the flat merged key->value map, matching resolve_profile's shape; " +
+        "Returns: { vendor, name, kind, chain: string[] (profile names, root-first, ending with the " +
+        "name argument), settings: object, path, nilResolved?: object, nilUnresolved?: object, " +
+        "missingKeys?: string[] } — vendor, name and kind echo the arguments, settings is the flat " +
+        "merged key->value map matching resolve_profile's shape, and " +
         "path is the file that was read. A \"nil\" vector column carries the value its parent supplies " +
         "for that column, and settings shows that value: nilResolved maps key -> column indices filled " +
         "from a parent, nilUnresolved maps key -> column indices left as \"nil\". Each field appears " +
@@ -305,7 +390,9 @@ export const strings = {
           "is resolved against",
         outputDir: "Directory containing the local profile file",
         name: "Name the resolved profile carries; also the file name (<name>.json) unless sourceName says otherwise",
-        sourceName: "Local file name (without .json) when it differs from name",
+        sourceName:
+          "Local file name (without .json) when it differs from name; omit it and the file is read " +
+          "as <outputDir>/<name>.json",
         keys:
           "Option keys to keep in settings, e.g. ['layer_height','wall_loops']; omit for the whole " +
           "merged map. Applied after the chain and the file's own keys are merged, so inheritance still " +
@@ -330,10 +417,15 @@ export const strings = {
         "once its 'inherits' chain is walked; mode 'raw' compares the keys each side declares itself. " +
         "Identity and synthesized metadata (name, from, version, settings ids) stay out of the " +
         "comparison; 'inherits' takes part in raw mode. Bambu Studio's directories stay untouched.\n\n" +
-        "Returns: { mode, left: {label, path}, right: {label, path}, identical, changed: [{key, left, " +
-        "right}], onlyLeft: [{key, value}], onlyRight: [{key, value}] } — label names the endpoint and " +
+        "Returns: { mode, left: {label, path?}, right: {label, path?}, identical: boolean, changed: " +
+        "[{key, left, right}], onlyLeft: [{key, value}], onlyRight: [{key, value}], note?: string } — " +
+        "mode echoes the mode the comparison ran in; label names the endpoint and " +
         "path appears for a file endpoint, naming the file that was read. changed lists the keys both " +
-        "sides carry with differing values, onlyLeft and onlyRight the keys one side carries alone. A " +
+        "sides carry with differing values, onlyLeft and onlyRight the keys one side carries alone; keys " +
+        "both sides carry with equal values stay out of all three arrays and are reported only " +
+        "through identical, which is true exactly when the three arrays are all empty. In " +
+        "resolved mode a key a side takes from its inherits chain counts among that side's keys, so a " +
+        "parent's key sits on both sides when the other side inherits it. The " +
         "note field appears when the compared values still held \"nil\" vector columns: those columns " +
         "were compared as the literal \"nil\", and machineName resolves the filament_* override " +
         "family's columns against a machine preset.\n\n" +
@@ -381,7 +473,8 @@ export const strings = {
         "<outputDir>/<name>.json and resolves its 'inherits' chain across the configured user preset " +
         "store and the vendor's system profiles. Bambu Studio's directories stay untouched.\n\n" +
         "Returns: { kind, name, path, clean, findings: [{ check, key, detail }], skipped: [{ check, " +
-        "reason }] } — clean is true when findings is empty. check is one of parent-equal-override, " +
+        "reason }] } — kind and name echo the arguments, path is the file that was read, and clean is " +
+        "true when findings is empty. check is one of parent-equal-override, " +
         "column-count, scalar-vector-mismatch, unknown-key, nil-equals-parent; findings come grouped " +
         "by check in that order, by key within each. skipped names the checks this call had too " +
         "little information to run, each with the reason: column-count lands there whenever " +
@@ -394,13 +487,17 @@ export const strings = {
         "then install the file with import_profile. To see the resulting values rather than the " +
         "defects, use resolve_from_file.",
       inputs: {
-        kind: "Profile type to lint; selects the option schema the file's keys are checked against",
+        kind:
+          "Profile type to lint; selects the option schema the file's keys are checked against. " +
+          "Machine profiles are readable through resolve_profile and resolve_from_file",
         vendor:
           "Vendor id from list_vendors, e.g. 'BBL'; names the system store the file's inherits chain " +
           "is resolved against",
         outputDir: "Directory containing the local profile file",
         name: "Name the linted profile carries; also the file name (<name>.json) unless sourceName says otherwise",
-        sourceName: "Local file name (without .json) when it differs from name",
+        sourceName:
+          "Local file name (without .json) when it differs from name; omit it and the file is read " +
+          "as <outputDir>/<name>.json",
         machineName:
           "Exact name of the machine preset the column count is measured against, e.g. 'Bambu Lab X1 " +
           "Carbon 0.4 nozzle'. Resolved under the same vendor; its printer_extruder_variant fixes how " +

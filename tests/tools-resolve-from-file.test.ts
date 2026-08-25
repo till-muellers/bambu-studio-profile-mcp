@@ -165,6 +165,49 @@ describe("handleResolveFromFile", () => {
     expect(result.settings.nozzle_temperature).toEqual(["230", "230"]);
   });
 
+  it("resolves the file's own nil columns against its inherits chain", async () => {
+    await writeSource("Partial PLA", {
+      name: "Partial PLA",
+      inherits: "Generic PLA @BBL X1C",
+      nozzle_temperature: ["230", "nil"],
+    });
+
+    const result = await handleResolveFromFile(deps(), "filament", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Partial PLA",
+    });
+
+    // The chain supplies one column only, so the second stays nil and is reported.
+    expect(result.settings.nozzle_temperature).toEqual(["230", "nil"]);
+    expect(result.nilUnresolved).toEqual({ nozzle_temperature: [1] });
+  });
+
+  it("fills a file's filament override nil columns from the named machine preset", async () => {
+    await writeSource("Retract PLA", {
+      name: "Retract PLA",
+      inherits: "Generic PLA @BBL X1C",
+      filament_retraction_length: ["1.5", "nil", "nil"],
+    });
+
+    const withMachine = await handleResolveFromFile(deps(), "filament", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Retract PLA",
+      machineName: "Bambu Lab X1 Carbon 0.4 nozzle",
+    });
+    expect(withMachine.settings.filament_retraction_length).toEqual(["1.5", "1.2", "0.8"]);
+    expect(withMachine.nilResolved).toEqual({ filament_retraction_length: [1, 2] });
+
+    const withoutMachine = await handleResolveFromFile(deps(), "filament", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Retract PLA",
+    });
+    expect(withoutMachine.settings.filament_retraction_length).toEqual(["1.5", "nil", "nil"]);
+    expect(withoutMachine.nilUnresolved).toEqual({ filament_retraction_length: [1, 2] });
+  });
+
   it("fails on a missing file, malformed JSON, and a non-object file", async () => {
     await expect(
       handleResolveFromFile(deps(), "process", { vendor: "BBL", outputDir: outDir, name: "Ghost" })

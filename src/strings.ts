@@ -15,9 +15,16 @@ export const strings = {
         "printer_extruder_variant (machine), which names what " +
         "each position of every other vector option's array means for this profile. The machine " +
         "profile's printer_extruder_variant is the authoritative column count: resolve the machine " +
-        "kind to learn how many elements a per-extruder array needs. With keys given, " +
-        "settings carries exactly the requested keys and missingKeys lists the requested keys the " +
-        "resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
+        "kind to learn how many elements a per-extruder array needs. A \"nil\" vector column carries " +
+        "the value its parent supplies for that column, and settings shows that value: nilResolved " +
+        "maps key -> column indices filled from a parent, nilUnresolved maps key -> column indices " +
+        "left as \"nil\". Each field appears only when it has an entry. For most keys that parent is " +
+        "the next profile up the inherits chain. The filament_* override family is the exception: its " +
+        "parent is the machine preset supplied as machineName, matched by the key with the filament_ " +
+        "prefix stripped — supply machineName to resolve those columns, and they stay \"nil\" under " +
+        "nilUnresolved whenever it is absent. With " +
+        "keys given, settings carries exactly the requested keys and missingKeys lists the requested " +
+        "keys the resolved profile lacks; the inherits chain is walked in full either way.\n\n" +
         "Errors: vendor not found; profile not found; circular or unresolvable inherits chain; config " +
         "missing (run init_config first).\n\n" +
         "Discover valid vendor and name values with list_vendors and list_profiles. Typical use: inspect " +
@@ -34,6 +41,12 @@ export const strings = {
           "Option keys to keep in settings, e.g. ['layer_height','wall_loops']; omit for the whole " +
           "merged map. Applied after the chain is merged, so inherited values still decide each key's " +
           "value. Keys absent from the resolved profile come back in missingKeys",
+        machineName:
+          "Exact name of the machine preset whose columns the filament_* override family reads, e.g. " +
+          "'Bambu Lab X1 Carbon 0.4 nozzle'. Resolved under the same vendor. Give it to see what a " +
+          "\"nil\" column of filament_retraction_length, filament_wipe, or any other filament_* " +
+          "override becomes on that printer; omit it to keep those columns as the profile states them, " +
+          "listed in nilUnresolved",
       },
     },
     // Source: src/tools/write.ts registerWriteTools(...)
@@ -268,9 +281,16 @@ export const strings = {
         "directories stay untouched.\n\n" +
         "Returns: { vendor, name, kind, chain: string[] (root-first, ending with this file), settings: " +
         "object, path } — settings is the flat merged key->value map, matching resolve_profile's shape; " +
-        "path is the file that was read. With keys given, settings carries exactly the requested keys " +
-        "and missingKeys lists the requested keys the merged result lacks; the inherits chain is walked " +
-        "in full either way.\n\n" +
+        "path is the file that was read. A \"nil\" vector column carries the value its parent supplies " +
+        "for that column, and settings shows that value: nilResolved maps key -> column indices filled " +
+        "from a parent, nilUnresolved maps key -> column indices left as \"nil\". Each field appears " +
+        "only when it has an entry. For most keys that parent is the next profile up the inherits " +
+        "chain. The filament_* override family is the exception: its parent is the machine preset " +
+        "supplied as machineName, matched by the key with the filament_ prefix stripped — supply " +
+        "machineName to resolve those columns, and they stay \"nil\" under nilUnresolved whenever it " +
+        "is absent. With keys given, settings carries exactly the " +
+        "requested keys and missingKeys lists the requested keys the merged result lacks; the inherits " +
+        "chain is walked in full either way.\n\n" +
         "Errors: file missing or unparseable; file lacking an 'inherits' field; vendor not found; " +
         "inherits target not found; circular or unresolvable inherits chain; config missing (run " +
         "init_config first).\n\n" +
@@ -290,6 +310,12 @@ export const strings = {
           "Option keys to keep in settings, e.g. ['layer_height','wall_loops']; omit for the whole " +
           "merged map. Applied after the chain and the file's own keys are merged, so inheritance still " +
           "decides each key's value. Keys absent from the merged result come back in missingKeys",
+        machineName:
+          "Exact name of the machine preset whose columns the filament_* override family reads, e.g. " +
+          "'Bambu Lab X1 Carbon 0.4 nozzle'. Resolved under the same vendor. Give it to see what a " +
+          "\"nil\" column of filament_retraction_length, filament_wipe, or any other filament_* " +
+          "override becomes on that printer; omit it to keep those columns as the file states them, " +
+          "listed in nilUnresolved",
       },
     },
   },

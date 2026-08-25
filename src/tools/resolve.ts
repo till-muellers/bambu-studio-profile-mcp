@@ -4,19 +4,20 @@ import { strings } from "../strings.js";
 import { resolveProfile } from "../resolver.js";
 import type { ReadableProfileKind, ResolvedProfile } from "../types.js";
 import { toToolError, type ToolDeps } from "./deps.js";
-import { projectKeys } from "./project-keys.js";
+import { nilResolutionOptions } from "./nil-options.js";
+import { projectResolved } from "./project-keys.js";
 
 export async function handleResolve(
   deps: ToolDeps,
   kind: ReadableProfileKind,
-  args: { vendor: string; name: string; keys?: string[] }
+  args: { vendor: string; name: string; keys?: string[]; machineName?: string }
 ): Promise<ResolvedProfile> {
   const cfg = await deps.config.require();
   const store = deps.storeFactory(cfg);
-  const resolved = await resolveProfile(store, kind, args.vendor, args.name);
+  const options = await nilResolutionOptions(deps, store, kind, args.vendor, args.machineName);
+  const resolved = await resolveProfile(store, kind, args.vendor, args.name, options);
   if (args.keys === undefined) return resolved;
-  const { settings, missingKeys } = projectKeys(resolved.settings, args.keys);
-  return { ...resolved, settings, missingKeys };
+  return projectResolved(resolved, args.keys);
 }
 
 const resolveInputShape = {
@@ -34,6 +35,11 @@ const resolveInputShape = {
     .min(1)
     .optional()
     .describe(strings.tools.resolveProfile.inputs.keys),
+  machineName: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(strings.tools.resolveProfile.inputs.machineName),
 };
 
 export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
@@ -45,7 +51,13 @@ export function registerResolveTools(server: McpServer, deps: ToolDeps): void {
       inputSchema: resolveInputShape,
       annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async (args: { kind: ReadableProfileKind; vendor: string; name: string; keys?: string[] }) => {
+    async (args: {
+      kind: ReadableProfileKind;
+      vendor: string;
+      name: string;
+      keys?: string[];
+      machineName?: string;
+    }) => {
       try {
         const result = await handleResolve(deps, args.kind, args);
         return {

@@ -44,6 +44,10 @@ export interface ResolvedProfile {
   settings: Record<string, unknown>;
   /** Present when a key projection was requested: the requested keys the resolved settings lack. */
   missingKeys?: string[];
+  /** Key -> vector column indices whose value came from a parent rather than the profile itself. */
+  nilResolved?: Record<string, number[]>;
+  /** Key -> vector column indices still "nil" because no parent supplied a value at that index. */
+  nilUnresolved?: Record<string, number[]>;
 }
 
 export type SchemaType = "string" | "int" | "float" | "bool" | "enum" | "percent";

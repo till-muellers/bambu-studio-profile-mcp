@@ -69,3 +69,100 @@ describe("resolveProfile", () => {
     );
   });
 });
+
+describe("resolveProfile nil columns", () => {
+  it("takes the parent's element for a nil column and reports the index", async () => {
+    const store = fakeStore({
+      root: { name: "root", outer_wall_speed: ["12", "12", "12"] },
+      child: { name: "child", inherits: "root", outer_wall_speed: ["22", "22", "nil"] },
+    });
+    const result = await resolveProfile(store, "process", "BBL", "child");
+    expect(result.settings.outer_wall_speed).toEqual(["22", "22", "12"]);
+    expect(result.nilResolved).toEqual({ outer_wall_speed: [2] });
+    expect(result.nilUnresolved).toBeUndefined();
+  });
+
+  it("resolves an all-nil array entirely from the parent", async () => {
+    const store = fakeStore({
+      root: { name: "root", outer_wall_speed: ["12", "13", "14"] },
+      child: { name: "child", inherits: "root", outer_wall_speed: ["nil", "nil", "nil"] },
+    });
+    const result = await resolveProfile(store, "process", "BBL", "child");
+    expect(result.settings.outer_wall_speed).toEqual(["12", "13", "14"]);
+    expect(result.nilResolved).toEqual({ outer_wall_speed: [0, 1, 2] });
+  });
+
+  it("carries a grandparent value through a middle level that is itself nil", async () => {
+    const store = fakeStore({
+      root: { name: "root", outer_wall_speed: ["12", "12", "12"] },
+      middle: { name: "middle", inherits: "root", outer_wall_speed: ["18", "18", "nil"] },
+      leaf: { name: "leaf", inherits: "middle", outer_wall_speed: ["22", "nil", "nil"] },
+    });
+    const result = await resolveProfile(store, "process", "BBL", "leaf");
+    expect(result.settings.outer_wall_speed).toEqual(["22", "18", "12"]);
+    expect(result.nilResolved).toEqual({ outer_wall_speed: [1, 2] });
+  });
+
+  it("leaves a nil column past the parent array's end unresolved", async () => {
+    const store = fakeStore({
+      root: { name: "root", outer_wall_speed: ["12", "12"] },
+      child: { name: "child", inherits: "root", outer_wall_speed: ["22", "nil", "nil"] },
+    });
+    const result = await resolveProfile(store, "process", "BBL", "child");
+    expect(result.settings.outer_wall_speed).toEqual(["22", "12", "nil"]);
+    expect(result.nilResolved).toEqual({ outer_wall_speed: [1] });
+    expect(result.nilUnresolved).toEqual({ outer_wall_speed: [2] });
+  });
+
+  it("reports a nil column the root itself declares", async () => {
+    const store = fakeStore({ solo: { name: "solo", outer_wall_speed: ["22", "nil"] } });
+    const result = await resolveProfile(store, "process", "BBL", "solo");
+    expect(result.settings.outer_wall_speed).toEqual(["22", "nil"]);
+    expect(result.nilUnresolved).toEqual({ outer_wall_speed: [1] });
+    expect(result.nilResolved).toBeUndefined();
+  });
+
+  it("omits both report fields when no column is nil", async () => {
+    const store = fakeStore({ solo: { name: "solo", outer_wall_speed: ["22", "23"] } });
+    const result = await resolveProfile(store, "process", "BBL", "solo");
+    expect(result.nilResolved).toBeUndefined();
+    expect(result.nilUnresolved).toBeUndefined();
+  });
+
+  it("fills a machine-deferred key from the machine's prefix-stripped key", async () => {
+    const store = fakeStore({
+      root: { name: "root", filament_retraction_length: ["0.5", "0.5", "0.5"] },
+      child: { name: "child", inherits: "root", filament_retraction_length: ["1.5", "nil", "nil"] },
+    });
+    const result = await resolveProfile(store, "filament", "BBL", "child", {
+      machineDeferredKeys: new Set(["filament_retraction_length"]),
+      machineSettings: { retraction_length: ["0.8", "1.2", "0.9"] },
+    });
+    expect(result.settings.filament_retraction_length).toEqual(["1.5", "1.2", "0.9"]);
+    expect(result.nilResolved).toEqual({ filament_retraction_length: [1, 2] });
+    expect(result.nilUnresolved).toBeUndefined();
+  });
+
+  it("leaves a machine-deferred nil column unresolved without machine settings", async () => {
+    const store = fakeStore({
+      root: { name: "root", filament_retraction_length: ["0.5", "0.5", "0.5"] },
+      child: { name: "child", inherits: "root", filament_retraction_length: ["1.5", "nil", "nil"] },
+    });
+    const result = await resolveProfile(store, "filament", "BBL", "child", {
+      machineDeferredKeys: new Set(["filament_retraction_length"]),
+    });
+    expect(result.settings.filament_retraction_length).toEqual(["1.5", "nil", "nil"]);
+    expect(result.nilUnresolved).toEqual({ filament_retraction_length: [1, 2] });
+    expect(result.nilResolved).toBeUndefined();
+  });
+
+  it("leaves a machine-deferred nil column unresolved when the machine lacks the key", async () => {
+    const store = fakeStore({ child: { name: "child", filament_bridge_speed: ["nil", "nil"] } });
+    const result = await resolveProfile(store, "filament", "BBL", "child", {
+      machineDeferredKeys: new Set(["filament_bridge_speed"]),
+      machineSettings: { retraction_length: ["0.8"] },
+    });
+    expect(result.settings.filament_bridge_speed).toEqual(["nil", "nil"]);
+    expect(result.nilUnresolved).toEqual({ filament_bridge_speed: [0, 1] });
+  });
+});

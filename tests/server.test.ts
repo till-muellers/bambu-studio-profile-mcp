@@ -61,13 +61,14 @@ async function connectedClientAndServer(
 }
 
 describe("bambu-studio-profile-mcp server", () => {
-  it("exposes exactly the twelve tools", async () => {
+  it("exposes exactly the thirteen tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "diff_profile",
       "import_profile",
       "init_config",
+      "lint_profile",
       "list_filaments",
       "list_parameters",
       "list_profiles",
@@ -240,6 +241,10 @@ describe("bambu-studio-profile-mcp server", () => {
         name: "diff_profile",
         arguments: { kind: "machine", name: "Nope", outputDir: join(FIXTURES, "unused") },
       },
+      {
+        name: "lint_profile",
+        arguments: { kind: "machine", vendor: "BBL", name: "Nope", outputDir: join(FIXTURES, "unused") },
+      },
     ];
     for (const call of calls) {
       const result = await client.callTool(call);
@@ -247,6 +252,42 @@ describe("bambu-studio-profile-mcp server", () => {
       const text = (result.content as { text: string }[])[0].text;
       expect(text, `${call.name} must reject kind machine at the schema`).toContain("kind");
       expect(text).toContain("validation");
+    }
+  });
+
+  it("serves lint_profile end-to-end over the protocol", async () => {
+    const client = await connectedClient();
+    const tmp = await mkdtemp(join(tmpdir(), "ppm-server-lint-"));
+    try {
+      await writeFile(
+        join(tmp, "Linted.json"),
+        JSON.stringify({
+          name: "Linted",
+          inherits: "0.20mm Standard @BBL X1C",
+          wall_loops: "3",
+          bogus_key: "1",
+        }),
+        "utf8"
+      );
+
+      const result = await client.callTool({
+        name: "lint_profile",
+        arguments: { kind: "process", vendor: "BBL", outputDir: tmp, name: "Linted" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(result.structuredContent).toMatchObject({
+        kind: "process",
+        name: "Linted",
+        path: join(tmp, "Linted.json"),
+        clean: false,
+        findings: [
+          { check: "parent-equal-override", key: "wall_loops", detail: expect.any(String) },
+          { check: "unknown-key", key: "bogus_key", detail: expect.any(String) },
+        ],
+        skipped: [{ check: "column-count", reason: expect.stringContaining("machineName") }],
+      });
+    } finally {
+      await rm(tmp, { recursive: true, force: true });
     }
   });
 

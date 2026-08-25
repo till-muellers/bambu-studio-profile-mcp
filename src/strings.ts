@@ -318,6 +318,58 @@ export const strings = {
           "listed in nilUnresolved",
       },
     },
+    // Source: src/tools/compare.ts registerCompareTool(...)
+    compareProfiles: {
+      title: "Compare profiles",
+      description:
+        "Compare any two process, filament, or machine profiles against each other, flat key by key. " +
+        "Each side is either a preset Bambu Studio has installed or the vendor ships, named by " +
+        "'preset', or a profile file in a caller-chosen directory, named by 'outputDir' plus 'name'; " +
+        "the two sides mix freely, so a file compares against a preset as readily as two presets " +
+        "compare against each other. Mode 'resolved' compares the settings each side ends up with " +
+        "once its 'inherits' chain is walked; mode 'raw' compares the keys each side declares itself. " +
+        "Identity and synthesized metadata (name, from, version, settings ids) stay out of the " +
+        "comparison; 'inherits' takes part in raw mode. Bambu Studio's directories stay untouched.\n\n" +
+        "Returns: { mode, left: {label, path}, right: {label, path}, identical, changed: [{key, left, " +
+        "right}], onlyLeft: [{key, value}], onlyRight: [{key, value}] } — label names the endpoint and " +
+        "path appears for a file endpoint, naming the file that was read. changed lists the keys both " +
+        "sides carry with differing values, onlyLeft and onlyRight the keys one side carries alone. A " +
+        "note field appears when the compared values still held \"nil\" vector columns: those columns " +
+        "were compared as the literal \"nil\", and machineName resolves the filament_* override " +
+        "family's columns against a machine preset.\n\n" +
+        "Errors: an endpoint's preset missing from the user and system stores; an endpoint's file " +
+        "missing, unparseable, or, in resolved mode, lacking an 'inherits' field; vendor not found; " +
+        "circular or unresolvable inherits chain; config missing (run init_config first). Each message " +
+        "names the side it came from.\n\n" +
+        "diff_profile answers the narrower question of whether one project file has drifted from the " +
+        "installed preset of the same name, with file timestamps and a verdict on which side changed " +
+        "last; compare_profiles takes any two endpoints. Discover names with list_profiles, and read " +
+        "one side's settings in full with resolve_profile or resolve_from_file.",
+      inputs: {
+        kind: "Profile type both endpoints are read as",
+        vendor:
+          "Vendor id from list_vendors, e.g. 'BBL'; names the system store both endpoints resolve " +
+          "their names and inherits chains against",
+        left:
+          "The endpoint reported as the left side: { preset: '<name>' } for an installed or system " +
+          "preset, or { outputDir: '<directory>', name: '<file name without .json>' } for a local file",
+        right:
+          "The endpoint reported as the right side, in the same two shapes as left: { preset: " +
+          "'<name>' } or { outputDir: '<directory>', name: '<file name without .json>' }",
+        preset: "Exact name of a preset in the user store or the vendor's system profiles, from list_profiles",
+        outputDir: "Directory containing the local profile file",
+        name: "Local file name without .json; also the label this endpoint carries in the result",
+        mode:
+          "'resolved' compares the settings each side ends up with once its inherits chain is walked; " +
+          "'raw' compares the keys each side declares itself. Defaults to 'resolved'",
+        machineName:
+          "Exact name of the machine preset whose columns the filament_* override family reads in " +
+          "resolved mode, e.g. 'Bambu Lab X1 Carbon 0.4 nozzle'. Resolved under the same vendor. Give " +
+          "it to compare what a \"nil\" column of filament_retraction_length, filament_wipe, or any " +
+          "other filament_* override becomes on that printer; omit it to compare those columns as each " +
+          "side states them, flagged in the result's note",
+      },
+    },
   },
   errors: {
     // Source: src/errors.ts — each function returns the exact current message
@@ -410,6 +462,13 @@ export const strings = {
     resolveFileNotObject: (path: string): string => `Profile file '${path}' does not contain a JSON object.`,
     resolveFileMissingInherits: (path: string): string =>
       `Profile file '${path}' has no 'inherits' field; resolution needs a parent profile to start from.`,
+    // Source: src/tools/compare.ts handleCompare
+    compareEndpointFailed: (side: "left" | "right", message: string): string =>
+      `The ${side} endpoint could not be read: ${message}`,
+    compareNilVerbatim: (keys: string[]): string =>
+      `Vector columns still holding "nil" were compared verbatim: ${keys.join(", ")}. A "nil" column ` +
+      `carries the value its parent supplies; pass machineName to resolve the filament_* override ` +
+      `family's columns against a machine preset.`,
   },
   formats: {
     // Source: src/tools/deps.ts toToolError

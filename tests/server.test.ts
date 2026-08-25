@@ -61,10 +61,11 @@ async function connectedClientAndServer(
 }
 
 describe("bambu-studio-profile-mcp server", () => {
-  it("exposes exactly the twelve tools", async () => {
+  it("exposes exactly the thirteen tools", async () => {
     const client = await connectedClient();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
+      "compare_profiles",
       "diff_profile",
       "import_profile",
       "init_config",
@@ -421,5 +422,38 @@ describe("bambu-studio-profile-mcp server", () => {
     } finally {
       await rm(tmp, { recursive: true, force: true });
     }
+  });
+  it("serves compare_profiles end-to-end over the protocol", async () => {
+    const client = await connectedClient();
+    const resolved = await client.callTool({
+      name: "compare_profiles",
+      arguments: {
+        kind: "process",
+        vendor: "BBL",
+        left: { preset: "0.20mm Standard @BBL X1C" },
+        right: { preset: "My Custom Draft" },
+      },
+    });
+    expect(resolved.isError).toBeFalsy();
+    expect(resolved.structuredContent).toMatchObject({
+      mode: "resolved",
+      left: { label: "0.20mm Standard @BBL X1C" },
+      right: { label: "My Custom Draft" },
+      identical: false,
+      changed: [{ key: "layer_height", left: "0.2", right: "0.28" }],
+    });
+
+    const raw = await client.callTool({
+      name: "compare_profiles",
+      arguments: {
+        kind: "machine",
+        vendor: "BBL",
+        mode: "raw",
+        left: { preset: "Bambu Lab X1 Carbon 0.4 nozzle" },
+        right: { preset: "fdm_machine_common" },
+      },
+    });
+    expect(raw.isError).toBeFalsy();
+    expect(raw.structuredContent).toMatchObject({ mode: "raw", identical: false });
   });
 });

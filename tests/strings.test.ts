@@ -22,6 +22,15 @@ describe("strings module", () => {
     expect(strings.errors.configMissing).toContain("init_config");
   });
 
+  it("exposes the lint tool strings", () => {
+    expect(strings.tools.lintProfile.title).toBe("Lint profile");
+    expect(strings.messages.lintParentEqualOverride("3")).toContain("3");
+    expect(strings.messages.lintColumnCount(2, 3, "X1C")).toContain("X1C");
+    expect(strings.messages.lintNilEqualsParent(1, "1.2", 0)).toContain("1.2");
+    expect(strings.messages.lintColumnCountNeedsMachine).toContain("machineName");
+    expect(strings.messages.lintColumnCountNoVariant("X1C")).toContain("X1C");
+  });
+
   it("exposes the import/remove tool strings", () => {
     expect(strings.tools.importProfile.title).toBe("Import profile");
     expect(strings.tools.removeProfile.title).toBe("Remove profile");

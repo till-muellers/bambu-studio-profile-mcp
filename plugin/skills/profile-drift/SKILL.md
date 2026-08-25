@@ -7,14 +7,14 @@ description: Use when Bambu Studio presets may have been hand-tuned in the slice
 
 Project profile files and the installed user presets drift apart whenever someone tunes in
 Bambu Studio or edits files without reinstalling. `diff_profile` is the instrument;
-reconciliation goes in exactly one direction per key, chosen deliberately.
+reconciliation goes in exactly one direction per key, chosen deliberately. Any other pair —
+a file against a vendor system preset, two system presets, two files — is `compare_profiles`
+instead; profile-authoring's tool decision matrix gives its arguments.
 
 ## Recipe
 
 1. **Diff**: `diff_profile` with the preset name and the project's profile directory
-   (`sourceName` when the file name differs). The result lists only real differences —
-   `changed` (both values), `onlyInSource`, `onlyInstalled` — plus both files' mtimes and
-   `newer`, which side changed last. `identical: true` ends the task.
+   (`sourceName` when the file name differs). `identical: true` ends the task.
 2. **Interpret**:
    - `newer: "installed"` with changed keys → someone tuned in Studio. These are the
      hand-tuned values to harvest: apply them to the project file with `update_profile`
@@ -43,6 +43,5 @@ reconciliation goes in exactly one direction per key, chosen deliberately.
 
 - Overwriting the installed preset while `newer` says "installed" without harvesting
   first — that deletes the user's hand-tuning.
-- Editing the project file to match a diff from memory instead of the `diff_profile`
-  values.
+- Editing the project file to match a diff from memory instead of the tool's values.
 - Assuming the repo copy matches after any Studio-side import or save.

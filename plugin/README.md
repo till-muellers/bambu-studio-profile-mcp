@@ -4,9 +4,10 @@ Claude Code plugin for Bambu Studio printing-profile work. Installing it registe
 `bambu-profiles` MCP server (`npx -y bambu-studio-profile-mcp`) and adds three skills:
 
 - **profile-workspace-init** — configure the server, elicit the target printer, probe the
-  preset stores, and record the project's printing facts in its `CLAUDE.md`.
+  machine preset for its extruder-variant columns, and record the project's printing facts
+  in its `CLAUDE.md`.
 - **profile-authoring** — author schema-validated minimal-delta presets and install them,
-  with mechanical verification of inheritance scope, array shapes, and delta rationale.
+  carrying the tool decision matrix that maps each question to the tool answering it.
 - **profile-drift** — detect and reconcile drift between project profile files and the
   presets installed in Bambu Studio, harvesting hand-tuned values.
 

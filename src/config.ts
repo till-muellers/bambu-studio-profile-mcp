@@ -69,11 +69,13 @@ export async function detectDefaultPaths(): Promise<DetectedPaths> {
 }
 
 /**
- * Best-effort read of the logged-in account's preset folder name from BambuStudio.conf. Never throws.
- * The real file is JSON followed by a non-JSON trailer line (a "# MD5 checksum ..." comment), so the
- * content is trimmed to the outermost {...} span before parsing; a leading BOM is stripped as well.
+ * Best-effort read of BambuStudio.conf's `app` object. Never throws. The file is JSON followed by a
+ * non-JSON trailer line (a "# MD5 checksum ..." comment), so the content is trimmed to the outermost
+ * {...} span before parsing; a leading BOM is stripped as well.
  */
-export async function readPresetFolder(userDataDir: string): Promise<string | undefined> {
+export async function readAppSection(
+  userDataDir: string
+): Promise<Record<string, unknown> | undefined> {
   const confPath = join(userDataDir, "BambuStudio.conf");
   if (!existsSync(confPath)) return undefined;
   try {
@@ -83,12 +85,31 @@ export async function readPresetFolder(userDataDir: string): Promise<string | un
     const end = text.lastIndexOf("}");
     if (start === -1 || end === -1 || end < start) return undefined;
     const raw: unknown = JSON.parse(text.slice(start, end + 1));
-    const presetFolder = (raw as { app?: { preset_folder?: unknown } })?.app?.preset_folder;
-    if (typeof presetFolder === "string" && presetFolder.length > 0) return presetFolder;
-    return undefined;
+    const app = (raw as { app?: unknown })?.app;
+    if (typeof app !== "object" || app === null || Array.isArray(app)) return undefined;
+    return app as Record<string, unknown>;
   } catch {
     return undefined;
   }
+}
+
+function appString(app: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = app?.[key];
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+/** The logged-in account's preset folder name (BambuStudio.conf's app.preset_folder). */
+export async function readPresetFolder(userDataDir: string): Promise<string | undefined> {
+  return appString(await readAppSection(userDataDir), "preset_folder");
+}
+
+/**
+ * The version of the Bambu Studio application that last ran: BambuStudio.conf's app.version, which
+ * Studio writes as SLIC3R_VERSION on every startup. One release stale between an update and the
+ * next launch.
+ */
+export async function readAppVersion(userDataDir: string): Promise<string | undefined> {
+  return appString(await readAppSection(userDataDir), "version");
 }
 
 export async function validateConfigPaths(cfg: ServerConfig): Promise<string[]> {

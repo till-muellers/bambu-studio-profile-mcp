@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigManager, resolveConfigDir, validateConfigPaths } from "../src/config.js";
+import { ConfigManager, readAppVersion, readPresetFolder, resolveConfigDir, validateConfigPaths } from "../src/config.js";
 import { ConfigMissingError } from "../src/errors.js";
 
 const FIXTURES = join(import.meta.dirname, "fixtures");
@@ -99,5 +99,35 @@ describe("validateConfigPaths", () => {
     const problems = await validateConfigPaths({ ...VALID, userId: "99999" });
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain("99999");
+  });
+});
+
+describe("readAppVersion", () => {
+  it("reads app.version from a conf carrying the MD5 trailer", async () => {
+    expect(await readAppVersion(join(FIXTURES, "userdata"))).toBe("02.08.02.60");
+  });
+
+  it("returns undefined when the conf has no app.version", async () => {
+    await writeFile(
+      join(dir, "BambuStudio.conf"),
+      '{"app":{"preset_folder":"x"}}\n# MD5 checksum DEADBEEF\n',
+      "utf8"
+    );
+    expect(await readAppVersion(dir)).toBeUndefined();
+  });
+
+  it("returns undefined when the conf is absent", async () => {
+    expect(await readAppVersion(dir)).toBeUndefined();
+  });
+
+  it("returns undefined when the conf is not parseable", async () => {
+    await writeFile(join(dir, "BambuStudio.conf"), "{not json\n", "utf8");
+    expect(await readAppVersion(dir)).toBeUndefined();
+  });
+});
+
+describe("readPresetFolder", () => {
+  it("still reads app.preset_folder", async () => {
+    expect(await readPresetFolder(join(FIXTURES, "userdata"))).toBe("1234567890");
   });
 });

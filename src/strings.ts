@@ -262,19 +262,24 @@ export const strings = {
       title: "Import profile",
       description:
         "Install a profile file into Bambu Studio's user preset store (user/<userId>/<kind>/), " +
-        "synthesizing the metadata Bambu Studio expects (from, version, settings id) and a minimal " +
+        "writing the metadata Bambu Studio expects (from, version, settings id) and a minimal " +
         ".info sidecar. Sources written by write_profile and Studio-shaped preset files both work: " +
         "metadata keys already present in the source (from, version, settings id) are ignored and " +
-        "regenerated. The source's remaining keys are fully re-validated against the option schema " +
-        "first and its inherits chain is resolved; nothing is installed when any check fails. " +
-        "Replacing an existing preset requires overwrite: true and only ever replaces presets whose " +
-        "own 'from' field is \"User\".\n\n" +
-        "Returns: { kind, name, path, infoPath, overwritten, note } — path is the installed preset " +
-        "JSON and infoPath its .info sidecar, overwritten is true when an existing preset was " +
-        "replaced, and note states that Bambu Studio sees the preset after a restart.\n\n" +
+        "replaced with values this tool writes. The version comes from the vendor bundle index " +
+        "(resources/profiles/<vendor>.json); when that index supplies none, the preset carries a " +
+        "fallback version instead. The source's remaining keys are fully re-validated against the " +
+        "option schema first and its inherits chain is resolved; nothing is installed when any check " +
+        "fails. Replacing an existing preset requires overwrite: true and only ever replaces presets " +
+        "whose own 'from' field is \"User\".\n\n" +
+        "Returns: { kind, name, path, infoPath, overwritten, version, versionSource, metadataWritten, " +
+        "note } — path is the installed preset JSON and infoPath its .info sidecar, overwritten is " +
+        "true when an existing preset was replaced, version is the value written and versionSource " +
+        "is \"vendor\" or \"fallback\", metadataWritten lists the metadata keys the installed file " +
+        "carries, and note states that Bambu Studio sees the preset after a restart.\n\n" +
         "Errors: source missing or unparseable; schema violations listed per key; vendor or inherits " +
         "target not found; target exists without overwrite; target's 'from' is not \"User\" (refused " +
-        "regardless of flags); config missing (run init_config first).\n\n" +
+        "regardless of flags); the written preset is not loadable by Bambu Studio; config missing " +
+        "(run init_config first).\n\n" +
         "Typical flow: write_profile into an outputDir, then import_profile with the same " +
         "outputDir/name. Check the source first with lint_profile, or read the settings it resolves " +
         "to with resolve_from_file. remove_profile deletes an installed user preset from " +
@@ -566,15 +571,21 @@ export const strings = {
     // Source: src/user-presets.ts
     invalidProfileName: (name: string): string =>
       `Invalid profile name '${name}': must be a plain filename without path separators.`,
-    studioRestartNote: "Bambu Studio picks this up after a restart.",
+    studioRestartNote:
+      "Bambu Studio reads user presets at startup, so it picks this up after a restart. A preset " +
+      "whose compatible_printers excludes the selected machine stays hidden until that machine is selected.",
     cloudRecordWarning: "A cloud record exists for this preset; Bambu Studio's sync may restore it.",
     // Source: src/tools/import.ts handleImport
     importSourceNotFound: (path: string): string => `Source profile '${path}' not found. Create it with write_profile first.`,
     importSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
     importSourceNotObject: (path: string): string => `Source profile '${path}' does not contain a JSON object.`,
     importSourceMissingInherits: (path: string): string => `Source profile '${path}' has no 'inherits' field.`,
-    importMetadataRegenerated: (keys: string[]): string =>
-      `Metadata keys in the source file were ignored and regenerated: ${keys.join(", ")}.`,
+    importMetadataWritten: (keys: string[]): string =>
+      `Metadata written into the installed preset: ${keys.join(", ")}.`,
+    importVersionFallback: (version: string, vendor: string): string =>
+      `Vendor '${vendor}' supplies no usable bundle version, so the preset carries ${version}.`,
+    importNotLoadable: (path: string, reason: string): string =>
+      `Installed preset '${path}' ${reason} The file was written; remove it with remove_profile.`,
     importTargetExists: (path: string): string => `Target preset '${path}' already exists. Pass overwrite: true to replace it.`,
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,

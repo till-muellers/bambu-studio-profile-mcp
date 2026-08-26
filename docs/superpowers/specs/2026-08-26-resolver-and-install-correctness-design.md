@@ -29,6 +29,12 @@ leading zeros per component: the vendor index `"02.08.00.04"` becomes the preset
 key yields `""`, `Semver::parse("")` fails, and the load loop `continue`s. That branch logs
 nothing. A user preset without a parseable `version` does not exist as far as Studio is concerned.
 
+**Application version.** `GUI_App.cpp:3246` — Studio writes `app.version` into
+`<userDataDir>\BambuStudio.conf` as `SLIC3R_VERSION` on every startup, the same constant the
+preset-load major check compares against. Nothing else reads a preset's own `version`: it is
+parsed at load, held on the `Preset`, and written back out on save (`Preset.cpp:690`) and cloud
+upload (`Preset.cpp:1635`).
+
 **Include.** `PresetBundle.cpp:4860-4899` — a preset's config is built as: the `inherits` parent's
 resolved config, then each `include` target in listed order, then the file's own keys
 (`config.apply(config_src)`, line 4908). Include targets are applied through
@@ -57,9 +63,17 @@ vendor: it reads `<installDir>/resources/profiles/<vendor>.json`, takes `version
 leading zeros from each dot-separated component.
 
 `import_profile` takes `version` from that reader. When the vendor index is missing, unparseable,
-carries no `version`, or carries one that does not normalize to a Semver, the import **fails and
-writes nothing**. A preset without a version is invisible; writing one anyway is worse than an
-error.
+carries no `version`, or carries one that does not normalize to a Semver, the import writes
+`0.0.0` and reports that it did.
+
+`0.0.0` always loads: Studio rejects a preset only when its major exceeds the application's
+(`Preset.cpp:1428`), and nothing else reads `preset.version` — it is parsed at load, stored,
+and written back out on save and cloud upload. The value persists, because every Studio save
+rewrites `this->version.to_string()`; a preset carrying `0.0.0` therefore stays marked as one
+installed without a determinable bundle version.
+
+The `ImportResult` names the version written and whether it came from the vendor index or the
+fallback. A substituted version is never silent.
 
 `resolvedBase.settings.version` is not a version source — system presets do not carry the key.
 
@@ -116,11 +130,17 @@ one column from the `inherits` chain alone and to two once its include is applie
 A shared predicate answers one question: would Studio load this installed preset? It holds when
 the file parses, carries a `version`, and that `version` parses as a Semver.
 
-Studio additionally rejects a preset whose major version exceeds the running application's
-(`Preset.cpp:1428-1431`). The server does not know the running application's version, so the
-predicate does not evaluate that condition. Presets this server writes take the vendor bundle's
-version, which the installed Studio ships, so the condition cannot be the cause of a rejection for
-them.
+Studio additionally rejects a preset whose major version exceeds the application's
+(`Preset.cpp:1428-1431`). The application version is `app.version` in
+`<userDataDir>\BambuStudio.conf`, written as `SLIC3R_VERSION` on every startup
+(`GUI_App.cpp:3246`) — the same constant the rejection compares against. `src/config.ts` already
+reads that file for `app.preset_folder`; the reader is generalized to return `app.version` too.
+
+That value is the version of the application that last ran, so it is one release stale between a
+Studio update and the next launch. The predicate evaluates the major condition when the value is
+available and skips it when it is not — a missing `app.version` never makes a preset unloadable.
+The result states which of the two it applied, so `loadable: false` always means a checked
+rejection rather than an unknown.
 
 `diff_profile` gains `loadable: boolean` plus a reason when false. `identical: true` can no longer
 be read as "installed and working" while the preset is invisible.
@@ -144,9 +164,13 @@ All new user-facing text lives in `src/strings.ts`.
 
 ## Testing
 
-- Vendor version: normalization of `02.08.00.04` → `2.8.0.4`; import fails and writes nothing when
-  the vendor index has no usable version; an imported preset's `version` parses as a Semver. The
-  regression test the current suite lacks: import against a parent chain carrying no `version`.
+- Vendor version: normalization of `02.08.00.04` → `2.8.0.4`; import falls back to `0.0.0` and
+  reports the fallback when the vendor index has no usable version; an imported preset's `version`
+  parses as a Semver. The regression test the current suite lacks: import against a parent chain
+  carrying no `version`.
+- Application version: `app.version` read from a `BambuStudio.conf` fixture including the MD5
+  trailer; a conf without it leaves the major condition unevaluated rather than failing the
+  preset.
 - Include: a fixture chain where an include target supplies a key the `inherits` chain lacks, one
   where the file's own keys override the include, one where the include overrides the parent, one
   where an include target carries `"nil"` columns filled from the parent, and one whose include

@@ -579,6 +579,11 @@ export const strings = {
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
     importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
+    // Source: src/versions.ts evaluateLoadability
+    versionMissingOrUnparseable: (value: unknown): string =>
+      `carries no parseable version (${JSON.stringify(value)}); Bambu Studio skips such a preset silently.`,
+    versionMajorAhead: (presetVersion: string, appVersion: string): string =>
+      `version ${presetVersion} is a major version ahead of Bambu Studio ${appVersion}; Bambu Studio skips the preset.`,
     // Source: src/tools/import.ts handleRemove
     diffSourceNotFound: (path: string): string => `Source profile '${path}' not found.`,
     diffSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,

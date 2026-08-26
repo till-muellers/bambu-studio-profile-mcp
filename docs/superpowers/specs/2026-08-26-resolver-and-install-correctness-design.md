@@ -158,8 +158,6 @@ its own — a preset whose `compatible_printers` excludes the selected machine s
 - `SchemaOption.perVariant?: boolean`
 - `ResolvedProfile.included?: Record<string, string[]>`
 
-`src/errors.ts` gains the error the vendor-version failure raises.
-
 All new user-facing text lives in `src/strings.ts`.
 
 ## Testing
@@ -192,3 +190,7 @@ resolve) are a separate design.
 `filament_flush_temp_fast` ships in the BBL vendor bundle and is absent from
 `schema/filament.schema.json`. Regenerating the schema against the newest production release
 resolves it as a side effect; no separate work item.
+
+Regeneration adds options this newer release defines, and `schema/descriptions.json` has no entry
+for them, so they ship without a description. Authoring those is separate work under the clean-room
+rule.

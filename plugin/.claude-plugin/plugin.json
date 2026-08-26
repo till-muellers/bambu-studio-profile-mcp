@@ -1,6 +1,6 @@
 {
   "name": "bambu-studio-profiles",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Work with Bambu Studio printing profiles: resolve, author, install, and reconcile process and filament presets through the bambu-profiles MCP server.",
   "author": {
     "name": "Till Müllers",

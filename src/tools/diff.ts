@@ -1,11 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
+import { readProfileFile, type ProfileFileMessages } from "../profile-file.js";
 import { strings } from "../strings.js";
-import type { WritableProfileKind, RawProfile } from "../types.js";
+import type { WritableProfileKind } from "../types.js";
 import { SYNTHESIZED_METADATA_KEYS, userPresetPaths } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
@@ -29,23 +29,17 @@ export interface DiffResult {
   newer: "source" | "installed" | "same";
 }
 
-async function readProfile(
-  path: string,
-  notFound: (path: string) => string,
-  notJson: (path: string) => string
-): Promise<RawProfile> {
-  if (!existsSync(path)) throw new Error(notFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(notJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(notJson(path));
-  }
-  return parsed as RawProfile;
-}
+const SOURCE_MESSAGES: ProfileFileMessages = {
+  notFound: strings.messages.diffSourceNotFound,
+  notJson: strings.messages.diffSourceNotJson,
+  notObject: strings.messages.diffSourceNotObject,
+};
+
+const INSTALLED_MESSAGES: ProfileFileMessages = {
+  notFound: strings.messages.diffInstalledNotFound,
+  notJson: strings.messages.diffInstalledNotJson,
+  notObject: strings.messages.diffInstalledNotObject,
+};
 
 export async function handleDiff(
   deps: ToolDeps,
@@ -56,16 +50,8 @@ export async function handleDiff(
   const { jsonPath: installedPath } = userPresetPaths(cfg, kind, args.name);
   const sourcePath = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
 
-  const source = await readProfile(
-    sourcePath,
-    strings.messages.diffSourceNotFound,
-    strings.messages.diffSourceNotJson
-  );
-  const installed = await readProfile(
-    installedPath,
-    strings.messages.diffInstalledNotFound,
-    strings.messages.diffInstalledNotJson
-  );
+  const source = await readProfileFile(sourcePath, SOURCE_MESSAGES);
+  const installed = await readProfileFile(installedPath, INSTALLED_MESSAGES);
 
   const changed: DiffResult["changed"] = [];
   const onlyInSource: DiffResult["onlyInSource"] = [];

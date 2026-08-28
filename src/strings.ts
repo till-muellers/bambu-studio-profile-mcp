@@ -598,9 +598,13 @@ export const strings = {
     // Source: src/tools/import.ts handleRemove
     diffSourceNotFound: (path: string): string => `Source profile '${path}' not found.`,
     diffSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
+    diffSourceNotObject: (path: string): string =>
+      `Source profile '${path}' does not contain a JSON object.`,
     diffInstalledNotFound: (path: string): string =>
       `No preset installed at '${path}'. Install one with import_profile, or check the name with list_profiles.`,
     diffInstalledNotJson: (path: string): string => `Installed preset '${path}' is not valid JSON.`,
+    diffInstalledNotObject: (path: string): string =>
+      `Installed preset '${path}' does not contain a JSON object.`,
     removeStraySidecar: (jsonPath: string, infoPath: string): string =>
       `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`,
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,

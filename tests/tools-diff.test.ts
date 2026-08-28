@@ -133,6 +133,25 @@ describe("handleDiff", () => {
     expect(result.changed).toEqual([{ key: "layer_height", source: "0.12", installed: "0.2" }]);
   });
 
+  it("distinguishes unparseable files from JSON that is not an object", async () => {
+    await writeInstalled("Shaped", { name: "Shaped", inherits: "base" });
+    await writeFile(join(outDir, "Shaped.json"), "[1, 2]\n", "utf8");
+    await expect(handleDiff(deps(), "process", { name: "Shaped", outputDir: outDir })).rejects.toThrow(
+      /Source profile .* does not contain a JSON object\./
+    );
+
+    await writeFile(join(outDir, "Shaped.json"), "not json\n", "utf8");
+    await expect(handleDiff(deps(), "process", { name: "Shaped", outputDir: outDir })).rejects.toThrow(
+      /Source profile .* is not valid JSON\./
+    );
+
+    await writeSource("Shaped", { name: "Shaped", inherits: "base" });
+    await writeFile(join(userStore, "user", "u1", "process", "Shaped.json"), "\"scalar\"\n", "utf8");
+    await expect(handleDiff(deps(), "process", { name: "Shaped", outputDir: outDir })).rejects.toThrow(
+      /Installed preset .* does not contain a JSON object\./
+    );
+  });
+
   it("fails on missing source, missing installed preset, and traversal names", async () => {
     await writeInstalled("Lonely", { name: "Lonely", inherits: "base" });
     await expect(handleDiff(deps(), "process", { name: "Lonely", outputDir: outDir })).rejects.toThrow(/not found/i);

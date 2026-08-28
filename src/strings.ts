@@ -589,6 +589,8 @@ export const strings = {
     importTargetExists: (path: string): string => `Target preset '${path}' already exists. Pass overwrite: true to replace it.`,
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    importTargetNotObject: (path: string): string =>
+      `Target preset '${path}' does not contain a JSON object.`,
     importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
     // Source: src/versions.ts evaluateLoadability
     versionMissingOrUnparseable: (value: unknown): string =>

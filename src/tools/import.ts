@@ -48,6 +48,11 @@ const IMPORT_SOURCE_MESSAGES: InheritingProfileFileMessages = {
   missingInherits: strings.messages.importSourceMissingInherits,
 };
 
+const IMPORT_TARGET_MESSAGES: ProfileObjectMessages = {
+  notJson: strings.messages.importTargetUnparseable,
+  notObject: strings.messages.importTargetNotObject,
+};
+
 export async function handleImport(
   deps: ToolDeps,
   kind: WritableProfileKind,
@@ -72,13 +77,8 @@ export async function handleImport(
     if (!args.overwrite) {
       throw new Error(strings.messages.importTargetExists(jsonPath));
     }
-    let existing: unknown;
-    try {
-      existing = JSON.parse(await readFile(jsonPath, "utf8"));
-    } catch {
-      throw new Error(strings.messages.importTargetUnparseable(jsonPath));
-    }
-    if ((existing as RawProfile).from !== "User") {
+    const existing = await readParsedProfile(jsonPath, IMPORT_TARGET_MESSAGES);
+    if (existing.from !== "User") {
       throw new Error(strings.messages.importTargetNotUser(jsonPath));
     }
   }

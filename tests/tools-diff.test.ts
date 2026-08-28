@@ -152,6 +152,14 @@ describe("handleDiff", () => {
     );
   });
 
+  it("reports a source it cannot read as unparseable, having no separate message for it", async () => {
+    await writeInstalled("Blocked", { name: "Blocked", inherits: "base" });
+    await mkdir(join(outDir, "Blocked.json"));
+    await expect(handleDiff(deps(), "process", { name: "Blocked", outputDir: outDir })).rejects.toThrow(
+      /Source profile .* is not valid JSON\./
+    );
+  });
+
   it("fails on missing source, missing installed preset, and traversal names", async () => {
     await writeInstalled("Lonely", { name: "Lonely", inherits: "base" });
     await expect(handleDiff(deps(), "process", { name: "Lonely", outputDir: outDir })).rejects.toThrow(/not found/i);

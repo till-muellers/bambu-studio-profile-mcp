@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ConfigManager } from "../src/config.js";
 import { ConfigMissingError, SchemaValidationError } from "../src/errors.js";
 import { FsProfileStore } from "../src/profile-store.js";
+import { strings } from "../src/strings.js";
 import { writeProfileFile } from "../src/profile-store.js";
 import type { ToolDeps } from "../src/tools/deps.js";
 import { handleUpdate } from "../src/tools/update.js";
@@ -199,6 +200,19 @@ describe("handleUpdate", () => {
         set: { layer_height: "0.2" },
       })
     ).rejects.toThrow(new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  });
+
+  it("reports a file it cannot read apart from one it cannot parse", async () => {
+    await mkdir(outDir, { recursive: true });
+    const path = join(outDir, "Unreadable.json");
+    await mkdir(path);
+    await expect(
+      handleUpdate(deps(), "process", {
+        name: "Unreadable",
+        outputDir: outDir,
+        set: { layer_height: "0.2" },
+      })
+    ).rejects.toThrow(strings.messages.sourceNotReadable(path));
   });
 
   it("rejects an invalid set value and writes nothing", async () => {

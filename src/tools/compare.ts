@@ -1,12 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
 import { ProfileNotFoundError } from "../errors.js";
+import { PROFILE_FILE_MESSAGES, readProfileFile } from "../profile-file.js";
 import { strings } from "../strings.js";
-import type { ReadableProfileKind, RawProfile } from "../types.js";
+import type { ReadableProfileKind } from "../types.js";
 import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { handleResolve } from "./resolve.js";
@@ -67,20 +66,6 @@ function comparableKeys(values: Record<string, unknown>): Record<string, unknown
   return kept;
 }
 
-async function readProfileFile(path: string): Promise<RawProfile> {
-  if (!existsSync(path)) throw new Error(strings.messages.resolveFileNotFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(strings.messages.resolveFileNotJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.resolveFileNotObject(path));
-  }
-  return parsed as RawProfile;
-}
-
 /** Reads one endpoint's declared keys, without walking its inherits chain. */
 async function loadRaw(
   deps: ToolDeps,
@@ -89,7 +74,7 @@ async function loadRaw(
 ): Promise<LoadedEndpoint> {
   if (isFileEndpoint(endpoint)) {
     const path = join(endpoint.outputDir, `${endpoint.name}.json`);
-    const profile = await readProfileFile(path);
+    const profile = await readProfileFile(path, PROFILE_FILE_MESSAGES);
     return { info: { label: endpoint.name, path }, values: comparableKeys(profile), nilKeys: [] };
   }
   const cfg = await deps.config.require();

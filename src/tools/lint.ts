@@ -1,9 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
+import { PROFILE_FILE_MESSAGES, readInheritingProfileFile } from "../profile-file.js";
 import { loadChain, mergeChain, NIL, resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { ProfileSchema, RawProfile, WritableProfileKind } from "../types.js";
@@ -44,24 +43,6 @@ export interface LintResult {
   clean: boolean;
   findings: LintFinding[];
   skipped: LintSkipped[];
-}
-
-async function readOverrides(path: string): Promise<RawProfile & { inherits: string }> {
-  if (!existsSync(path)) throw new Error(strings.messages.resolveFileNotFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(strings.messages.resolveFileNotJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.resolveFileNotObject(path));
-  }
-  const source = parsed as RawProfile;
-  if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(strings.messages.resolveFileMissingInherits(path));
-  }
-  return source as RawProfile & { inherits: string };
 }
 
 /** The file's own content keys: identity and synthesized metadata stay out of every check. */
@@ -182,7 +163,7 @@ export async function handleLint(
 ): Promise<LintResult> {
   const cfg = await deps.config.require();
   const path = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
-  const source = await readOverrides(path);
+  const source = await readInheritingProfileFile(path, PROFILE_FILE_MESSAGES);
   const overrides = overrideKeys(source);
 
   const store = deps.storeFactory(cfg);

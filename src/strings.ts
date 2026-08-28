@@ -595,7 +595,7 @@ export const strings = {
       `carries no parseable version (${JSON.stringify(value)}); Bambu Studio skips such a preset silently.`,
     versionMajorAhead: (presetVersion: string, appVersion: string): string =>
       `version ${presetVersion} is a major version ahead of Bambu Studio ${appVersion}; Bambu Studio skips the preset.`,
-    // Source: src/tools/import.ts handleRemove
+    // Source: src/tools/diff.ts handleDiff
     diffSourceNotFound: (path: string): string => `Source profile '${path}' not found.`,
     diffSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
     diffSourceNotObject: (path: string): string =>
@@ -605,6 +605,7 @@ export const strings = {
     diffInstalledNotJson: (path: string): string => `Installed preset '${path}' is not valid JSON.`,
     diffInstalledNotObject: (path: string): string =>
       `Installed preset '${path}' does not contain a JSON object.`,
+    // Source: src/tools/import.ts handleRemove
     removeStraySidecar: (jsonPath: string, infoPath: string): string =>
       `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`,
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,

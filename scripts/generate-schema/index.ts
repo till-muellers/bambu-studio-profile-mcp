@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Usage: npx tsx scripts/generate-schema/index.ts <path-to-BambuStudio-checkout>
- * Writes schema/process.schema.json and schema/filament.schema.json.
+ * Writes schema/process.schema.json, schema/filament.schema.json and schema/machine.schema.json.
  */
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";

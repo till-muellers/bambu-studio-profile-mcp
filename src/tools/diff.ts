@@ -68,12 +68,9 @@ export async function handleDiff(
   }
 
   const [sourceStat, installedStat] = await Promise.all([stat(sourcePath), stat(installedPath)]);
-  const newer =
-    sourceStat.mtimeMs > installedStat.mtimeMs
-      ? "source"
-      : sourceStat.mtimeMs < installedStat.mtimeMs
-        ? "installed"
-        : "same";
+  let newer: DiffResult["newer"] = "same";
+  if (sourceStat.mtimeMs > installedStat.mtimeMs) newer = "source";
+  else if (sourceStat.mtimeMs < installedStat.mtimeMs) newer = "installed";
 
   return {
     kind,

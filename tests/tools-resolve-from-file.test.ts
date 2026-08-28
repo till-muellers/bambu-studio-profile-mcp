@@ -118,7 +118,7 @@ describe("handleResolveFromFile", () => {
       name: "Installed Shape",
     });
 
-    expect(result.settings.version).toBe("2.7.0.8");
+    expect(result.settings.version).toBeUndefined();
     expect(result.settings.from).toBeUndefined();
     expect(result.settings.print_settings_id).toBeUndefined();
     expect(result.settings.filament_settings_id).toBeUndefined();

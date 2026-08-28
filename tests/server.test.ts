@@ -442,7 +442,8 @@ describe("bambu-studio-profile-mcp server", () => {
         arguments: { kind: "process", vendor: "BBL", outputDir: outDir, name: "Proto Draft" },
       });
       expect(imported.isError).toBeFalsy();
-      expect(imported.structuredContent).toMatchObject({ kind: "process", overwritten: false });
+      expect(imported.structuredContent).toMatchObject({ kind: "process", overwritten: false, versionSource: "vendor" });
+      expect(imported.structuredContent?.version).toBe("2.8.0.4");
 
       const diffed = await client.callTool({
         name: "diff_profile",

@@ -68,7 +68,7 @@ describe("handleImport", () => {
       name: "Imported Draft",
       inherits: "0.20mm Standard @BBL X1C",
       from: "User",
-      version: "2.7.0.8",
+      version: "2.8.0.4",
       print_settings_id: "Imported Draft",
       layer_height: "0.16",
     });
@@ -79,7 +79,7 @@ describe("handleImport", () => {
     );
   });
 
-  it("omits version and uses the filament settings-id shape when the chain has no version", async () => {
+  it("writes the vendor bundle version and the filament settings-id shape", async () => {
     await writeSource("Hot PLA", {
       name: "Hot PLA",
       inherits: "Generic PLA @BBL X1C",
@@ -92,11 +92,11 @@ describe("handleImport", () => {
     });
     const onDisk = JSON.parse(await readFile(result.path, "utf8"));
     expect(onDisk.filament_settings_id).toEqual(["Hot PLA"]);
-    expect(onDisk).not.toHaveProperty("version");
+    expect(onDisk.version).toBe("2.8.0.4");
     expect(onDisk).not.toHaveProperty("print_settings_id");
   });
 
-  it("ignores and regenerates Studio metadata keys in the source", async () => {
+  it("ignores and replaces Studio metadata keys in the source", async () => {
     await writeSource("Repo Preset", {
       name: "Repo Preset",
       inherits: "0.20mm Standard @BBL X1C",
@@ -108,16 +108,16 @@ describe("handleImport", () => {
     const result = await handleImport(deps(), "process", { ...PROCESS_ARGS, outputDir: outDir, name: "Repo Preset" });
     const onDisk = JSON.parse(await readFile(result.path, "utf8"));
     expect(onDisk.from).toBe("User");
-    expect(onDisk.version).toBe("2.7.0.8");
+    expect(onDisk.version).toBe("2.8.0.4");
     expect(onDisk.print_settings_id).toBe("Repo Preset");
     expect(onDisk.layer_height).toBe("0.16");
-    expect(result.note).toMatch(/regenerated/);
+    expect(result.metadataWritten.sort()).toEqual(["from", "print_settings_id", "version"]);
     expect(result.note).toContain("from");
     expect(result.note).toContain("version");
     expect(result.note).toContain("print_settings_id");
   });
 
-  it("regenerates a stale filament_settings_id and keeps the note silent without metadata", async () => {
+  it("replaces a stale filament_settings_id and names the metadata it wrote", async () => {
     await writeSource("Fresh PLA", {
       name: "Fresh PLA",
       inherits: "Generic PLA @BBL X1C",
@@ -127,7 +127,8 @@ describe("handleImport", () => {
     const result = await handleImport(deps(), "filament", { vendor: "BBL", outputDir: outDir, name: "Fresh PLA" });
     const onDisk = JSON.parse(await readFile(result.path, "utf8"));
     expect(onDisk.filament_settings_id).toEqual(["Fresh PLA"]);
-    expect(result.note).toMatch(/regenerated/);
+    expect(result.metadataWritten.sort()).toEqual(["filament_settings_id", "from", "version"]);
+    expect(result.note).toContain("filament_settings_id");
 
     await writeSource("Plain PLA", {
       name: "Plain PLA",
@@ -135,7 +136,96 @@ describe("handleImport", () => {
       nozzle_temperature: ["230"],
     });
     const plain = await handleImport(deps(), "filament", { vendor: "BBL", outputDir: outDir, name: "Plain PLA" });
-    expect(plain.note).not.toMatch(/regenerated/);
+    expect(plain.metadataWritten.sort()).toEqual(["filament_settings_id", "from", "version"]);
+  });
+
+  it("writes the vendor bundle version, normalized", async () => {
+    await writeSource("Imported Draft", {
+      name: "Imported Draft",
+      inherits: "0.20mm Standard @BBL X1C",
+      layer_height: "0.16",
+    });
+    const result = await handleImport(deps(), "process", { ...PROCESS_ARGS, outputDir: outDir });
+    const installed = JSON.parse(await readFile(result.path, "utf8"));
+    expect(installed.version).toBe("2.8.0.4");
+    expect(result.version).toBe("2.8.0.4");
+    expect(result.versionSource).toBe("vendor");
+  });
+
+  it("writes a version even though no preset in the parent chain carries one", async () => {
+    await writeSource("Imported Draft", {
+      name: "Imported Draft",
+      inherits: "0.20mm Standard @BBL X1C",
+      layer_height: "0.16",
+    });
+    const result = await handleImport(deps(), "process", { ...PROCESS_ARGS, outputDir: outDir });
+    const chainRoot = JSON.parse(
+      await readFile(
+        join(FIXTURES, "install", "resources", "profiles", "BBL", "process", "fdm_process_common.json"),
+        "utf8"
+      )
+    );
+    expect(chainRoot.version).toBeUndefined();
+    expect(JSON.parse(await readFile(result.path, "utf8")).version).toBe("2.8.0.4");
+  });
+
+  it("falls back to 0.0.0 and says so when the vendor index carries no version", async () => {
+    const install = join(tmp, "install");
+    await mkdir(join(install, "resources", "profiles", "BBL", "process"), { recursive: true });
+    await writeFile(
+      join(install, "resources", "profiles", "BBL.json"),
+      JSON.stringify({ name: "Bambulab" }),
+      "utf8"
+    );
+    await writeFile(
+      join(install, "resources", "profiles", "BBL", "process", "base.json"),
+      JSON.stringify({ name: "base", layer_height: "0.2" }),
+      "utf8"
+    );
+    await writeSource("Fallback Draft", { name: "Fallback Draft", inherits: "base", layer_height: "0.16" });
+    const fallbackDeps: ToolDeps = {
+      ...deps(),
+      config: new TempConfig({ installDir: install, userDataDir: userStore, userId: "u1" }),
+    };
+    const result = await handleImport(fallbackDeps, "process", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Fallback Draft",
+      overwrite: false,
+    });
+    expect(result.version).toBe("0.0.0");
+    expect(result.versionSource).toBe("fallback");
+    expect(JSON.parse(await readFile(result.path, "utf8")).version).toBe("0.0.0");
+  });
+
+  it("reports the metadata keys it wrote, not the keys stripped from the source", async () => {
+    await writeSource("Imported Draft", {
+      name: "Imported Draft",
+      inherits: "0.20mm Standard @BBL X1C",
+      from: "System",
+      layer_height: "0.16",
+    });
+    const result = await handleImport(deps(), "process", { ...PROCESS_ARGS, outputDir: outDir });
+    const installed = JSON.parse(await readFile(result.path, "utf8"));
+    expect(result.metadataWritten.sort()).toEqual(["from", "print_settings_id", "version"]);
+    for (const key of result.metadataWritten) expect(installed[key]).toBeDefined();
+  });
+
+  it("writes filament_settings_id and a version for a filament preset", async () => {
+    await writeSource("Imported Filament", {
+      name: "Imported Filament",
+      inherits: "Generic PLA @BBL X1C",
+      nozzle_temperature: ["215"],
+    });
+    const result = await handleImport(deps(), "filament", {
+      vendor: "BBL",
+      outputDir: outDir,
+      name: "Imported Filament",
+      overwrite: false,
+    });
+    const installed = JSON.parse(await readFile(result.path, "utf8"));
+    expect(installed.version).toBe("2.8.0.4");
+    expect(installed.filament_settings_id).toEqual(["Imported Filament"]);
   });
 
   it("installs nil columns verbatim: import writes file content, not resolved values", async () => {

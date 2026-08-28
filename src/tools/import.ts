@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { z } from "zod";
+import { readAppVersion } from "../config.js";
 import { SchemaValidationError } from "../errors.js";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
@@ -14,6 +15,7 @@ import {
   parseSettingId,
   userPresetPaths,
 } from "../user-presets.js";
+import { evaluateLoadability, readVendorVersion, FALLBACK_PRESET_VERSION } from "../versions.js";
 import { loadSchema, validateKvps } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
@@ -23,6 +25,12 @@ export interface ImportResult {
   path: string;
   infoPath: string;
   overwritten: boolean;
+  /** Version written into the preset. */
+  version: string;
+  /** Where that version came from. */
+  versionSource: "vendor" | "fallback";
+  /** Metadata keys the installed file carries. */
+  metadataWritten: string[];
   note: string;
 }
 
@@ -51,7 +59,6 @@ export async function handleImport(
     throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
   }
 
-  const regenerated = SYNTHESIZED_METADATA_KEYS.filter((key) => key in source);
   const skipped = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
   const kvps = Object.fromEntries(Object.entries(source).filter(([key]) => !skipped.has(key)));
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
@@ -59,7 +66,7 @@ export async function handleImport(
   if (violations.length > 0) throw new SchemaValidationError(violations);
 
   const store = deps.storeFactory(cfg);
-  const resolvedBase = await resolveProfile(store, kind, args.vendor, source.inherits);
+  await resolveProfile(store, kind, args.vendor, source.inherits);
 
   const { jsonPath, infoPath } = userPresetPaths(cfg, kind, args.name);
   const overwritten = existsSync(jsonPath);
@@ -78,12 +85,16 @@ export async function handleImport(
     }
   }
 
-  const version = resolvedBase.settings.version;
+  const vendorVersion = await readVendorVersion(cfg, args.vendor);
+  const version = vendorVersion ?? FALLBACK_PRESET_VERSION;
+  const versionSource: "vendor" | "fallback" = vendorVersion === undefined ? "fallback" : "vendor";
+  const settingsIdKey = kind === "process" ? "print_settings_id" : "filament_settings_id";
+
   const body: Record<string, unknown> = {
     name: args.name,
     inherits: source.inherits,
     from: "User",
-    ...(typeof version === "string" ? { version } : {}),
+    version,
     ...(kind === "process"
       ? { print_settings_id: args.name }
       : { filament_settings_id: [args.name] }),
@@ -93,11 +104,32 @@ export async function handleImport(
   await writeFile(jsonPath, JSON.stringify(body, null, 4) + "\n", "utf8");
   await writeFile(infoPath, formatInfoSidecar(Math.floor(Date.now() / 1000)), "utf8");
 
+  const written: unknown = JSON.parse(await readFile(jsonPath, "utf8"));
+  const loadability = evaluateLoadability(
+    (written as RawProfile).version,
+    await readAppVersion(cfg.userDataDir)
+  );
+  if (!loadability.ok) {
+    throw new Error(strings.messages.importNotLoadable(jsonPath, loadability.reason ?? ""));
+  }
+
+  const metadataWritten = ["from", "version", settingsIdKey];
   const note =
-    regenerated.length > 0
-      ? `${strings.messages.importMetadataRegenerated(regenerated)} ${STUDIO_RESTART_NOTE}`
-      : STUDIO_RESTART_NOTE;
-  return { kind, name: args.name, path: jsonPath, infoPath, overwritten, note };
+    versionSource === "fallback"
+      ? `${strings.messages.importMetadataWritten(metadataWritten)} ` +
+        `${strings.messages.importVersionFallback(version, args.vendor)} ${STUDIO_RESTART_NOTE}`
+      : `${strings.messages.importMetadataWritten(metadataWritten)} ${STUDIO_RESTART_NOTE}`;
+  return {
+    kind,
+    name: args.name,
+    path: jsonPath,
+    infoPath,
+    overwritten,
+    version,
+    versionSource,
+    metadataWritten,
+    note,
+  };
 }
 
 export interface RemoveResult {

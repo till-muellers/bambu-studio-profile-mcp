@@ -83,7 +83,7 @@ export async function handleUpdate(
 
   const removeToCheck = remove.filter((key) => !reservedInRemove.includes(key as (typeof RESERVED_KEYS)[number]));
   for (const key of removeToCheck) {
-    if (!(key in body) || key === "name" || key === "inherits") {
+    if (!(key in body)) {
       violations.push({ key, reason: strings.violations.keyNotPresent });
     }
   }

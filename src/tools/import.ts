@@ -5,6 +5,10 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { readAppVersion } from "../config.js";
 import { SchemaValidationError } from "../errors.js";
+import {
+  readInheritingProfileFile,
+  type InheritingProfileFileMessages,
+} from "../profile-file.js";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { WritableProfileKind, RawProfile } from "../types.js";
@@ -35,6 +39,13 @@ export interface ImportResult {
   note: string;
 }
 
+const IMPORT_SOURCE_MESSAGES: InheritingProfileFileMessages = {
+  notFound: strings.messages.importSourceNotFound,
+  notJson: strings.messages.importSourceNotJson,
+  notObject: strings.messages.importSourceNotObject,
+  missingInherits: strings.messages.importSourceMissingInherits,
+};
+
 export async function handleImport(
   deps: ToolDeps,
   kind: WritableProfileKind,
@@ -43,22 +54,7 @@ export async function handleImport(
   const cfg = await deps.config.require();
 
   const sourcePath = join(args.outputDir, `${args.name}.json`);
-  if (!existsSync(sourcePath)) {
-    throw new Error(strings.messages.importSourceNotFound(sourcePath));
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(sourcePath, "utf8"));
-  } catch {
-    throw new Error(strings.messages.importSourceNotJson(sourcePath));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.importSourceNotObject(sourcePath));
-  }
-  const source = parsed as RawProfile;
-  if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
-  }
+  const source = await readInheritingProfileFile(sourcePath, IMPORT_SOURCE_MESSAGES);
 
   const kvps = omitKeys(source, CONTENT_SKIP_KEYS);
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));

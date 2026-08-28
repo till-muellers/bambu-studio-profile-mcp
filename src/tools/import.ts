@@ -9,9 +9,10 @@ import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { WritableProfileKind, RawProfile } from "../types.js";
 import {
+  CONTENT_SKIP_KEYS,
   STUDIO_RESTART_NOTE,
-  SYNTHESIZED_METADATA_KEYS,
   formatInfoSidecar,
+  omitKeys,
   parseSettingId,
   userPresetPaths,
 } from "../user-presets.js";
@@ -59,8 +60,7 @@ export async function handleImport(
     throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
   }
 
-  const skipped = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
-  const kvps = Object.fromEntries(Object.entries(source).filter(([key]) => !skipped.has(key)));
+  const kvps = omitKeys(source, CONTENT_SKIP_KEYS);
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
   const violations = validateKvps(schema, kvps);
   if (violations.length > 0) throw new SchemaValidationError(violations);

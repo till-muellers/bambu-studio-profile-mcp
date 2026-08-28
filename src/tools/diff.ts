@@ -6,11 +6,8 @@ import { deepEqual } from "../compare-values.js";
 import { readProfileFile, type ProfileFileMessages } from "../profile-file.js";
 import { strings } from "../strings.js";
 import type { WritableProfileKind } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS, userPresetPaths } from "../user-presets.js";
+import { COMPARISON_SKIP_KEYS, omitKeys, userPresetPaths } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
-
-/** Identity plus synthesized metadata. 'inherits' is absent deliberately: a changed base is drift. */
-const SKIPPED_KEYS = new Set<string>(["name", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface DiffFileInfo {
   path: string;
@@ -50,15 +47,17 @@ export async function handleDiff(
   const { jsonPath: installedPath } = userPresetPaths(cfg, kind, args.name);
   const sourcePath = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
 
-  const source = await readProfileFile(sourcePath, SOURCE_MESSAGES);
-  const installed = await readProfileFile(installedPath, INSTALLED_MESSAGES);
+  const source = omitKeys(await readProfileFile(sourcePath, SOURCE_MESSAGES), COMPARISON_SKIP_KEYS);
+  const installed = omitKeys(
+    await readProfileFile(installedPath, INSTALLED_MESSAGES),
+    COMPARISON_SKIP_KEYS
+  );
 
   const changed: DiffResult["changed"] = [];
   const onlyInSource: DiffResult["onlyInSource"] = [];
   const onlyInstalled: DiffResult["onlyInstalled"] = [];
   const keys = [...new Set([...Object.keys(source), ...Object.keys(installed)])].sort();
   for (const key of keys) {
-    if (SKIPPED_KEYS.has(key)) continue;
     const inSource = key in source;
     const inInstalled = key in installed;
     if (inSource && !inInstalled) onlyInSource.push({ key, value: source[key] });

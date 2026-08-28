@@ -6,13 +6,10 @@ import { ProfileNotFoundError } from "../errors.js";
 import { PROFILE_FILE_MESSAGES, readProfileFile } from "../profile-file.js";
 import { strings } from "../strings.js";
 import type { ReadableProfileKind } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
+import { COMPARISON_SKIP_KEYS, omitKeys } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { handleResolve } from "./resolve.js";
 import { handleResolveFromFile } from "./resolve-from-file.js";
-
-/** Identity plus synthesized metadata; 'inherits' stays in, since a different base is a difference. */
-const SKIPPED_KEYS = new Set<string>(["name", ...SYNTHESIZED_METADATA_KEYS]);
 
 export type CompareMode = "raw" | "resolved";
 
@@ -57,13 +54,9 @@ function isFileEndpoint(endpoint: CompareEndpoint): endpoint is { outputDir: str
   return "outputDir" in endpoint;
 }
 
+/** The keys a comparison covers: identity and synthesized metadata stay out. */
 function comparableKeys(values: Record<string, unknown>): Record<string, unknown> {
-  const kept: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(values)) {
-    if (SKIPPED_KEYS.has(key)) continue;
-    kept[key] = value;
-  }
-  return kept;
+  return omitKeys(values, COMPARISON_SKIP_KEYS);
 }
 
 /** Reads one endpoint's declared keys, without walking its inherits chain. */

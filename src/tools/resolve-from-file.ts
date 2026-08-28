@@ -5,13 +5,10 @@ import { PROFILE_FILE_MESSAGES, readInheritingProfileFile } from "../profile-fil
 import { loadChain, mergeChain } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { ReadableProfileKind, RawProfile, ResolvedProfile } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
+import { CONTENT_SKIP_KEYS, omitKeys } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { nilResolutionOptions } from "./nil-options.js";
 import { projectResolved } from "./project-keys.js";
-
-/** Identity plus synthesized metadata; never part of merged settings. */
-const SKIPPED_KEYS = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface ResolvedFileProfile extends ResolvedProfile {
   /** The file the overrides were read from. */
@@ -38,11 +35,7 @@ export async function handleResolveFromFile(
   const store = deps.storeFactory(cfg);
   const options = await nilResolutionOptions(deps, store, kind, args.vendor, args.machineName);
   const baseChain = await loadChain(store, kind, args.vendor, source.inherits);
-  const fileLayer: RawProfile = { name: args.name };
-  for (const [key, value] of Object.entries(source)) {
-    if (SKIPPED_KEYS.has(key)) continue;
-    fileLayer[key] = value;
-  }
+  const fileLayer: RawProfile = { name: args.name, ...omitKeys(source, CONTENT_SKIP_KEYS) };
 
   const result: ResolvedFileProfile = {
     vendor: args.vendor,

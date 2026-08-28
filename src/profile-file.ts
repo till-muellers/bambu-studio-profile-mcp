@@ -3,13 +3,17 @@ import { readFile } from "node:fs/promises";
 import { strings } from "./strings.js";
 import type { RawProfile } from "./types.js";
 
-/** One message per failure mode a profile-file read distinguishes. */
-export interface ProfileFileMessages {
-  notFound: (path: string) => string;
+/** One message per failure mode a profile file already known to exist distinguishes. */
+export interface ProfileObjectMessages {
   notJson: (path: string) => string;
   notObject: (path: string) => string;
   /** Set by callers that report a file they cannot read apart from one they cannot parse. */
   notReadable?: (path: string) => string;
+}
+
+/** Adds the message for a file the reader must locate itself. */
+export interface ProfileFileMessages extends ProfileObjectMessages {
+  notFound: (path: string) => string;
 }
 
 /** Adds the message for a file that must name the parent it overrides. */
@@ -26,7 +30,7 @@ export const PROFILE_FILE_MESSAGES: InheritingProfileFileMessages = {
 };
 
 /** Reads the text of a profile file; a read failure reports notReadable where the caller sets it. */
-async function readProfileText(path: string, messages: ProfileFileMessages): Promise<string> {
+async function readProfileText(path: string, messages: ProfileObjectMessages): Promise<string> {
   try {
     return await readFile(path, "utf8");
   } catch {
@@ -34,13 +38,12 @@ async function readProfileText(path: string, messages: ProfileFileMessages): Pro
   }
 }
 
-/** Reads a profile file as a JSON object. */
-export async function readProfileFile(
+/** Parses the text of a profile file as a JSON object. */
+export function parseProfileObject(
+  text: string,
   path: string,
-  messages: ProfileFileMessages
-): Promise<RawProfile> {
-  if (!existsSync(path)) throw new Error(messages.notFound(path));
-  const text = await readProfileText(path, messages);
+  messages: ProfileObjectMessages
+): RawProfile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -51,6 +54,23 @@ export async function readProfileFile(
     throw new Error(messages.notObject(path));
   }
   return parsed as RawProfile;
+}
+
+/** Reads a profile file as a JSON object, leaving its existence to the caller. */
+export async function readParsedProfile(
+  path: string,
+  messages: ProfileObjectMessages
+): Promise<RawProfile> {
+  return parseProfileObject(await readProfileText(path, messages), path, messages);
+}
+
+/** Reads a profile file as a JSON object. */
+export async function readProfileFile(
+  path: string,
+  messages: ProfileFileMessages
+): Promise<RawProfile> {
+  if (!existsSync(path)) throw new Error(messages.notFound(path));
+  return readParsedProfile(path, messages);
 }
 
 /** Reads a profile file that must name a non-empty parent in 'inherits'. */

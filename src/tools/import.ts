@@ -7,7 +7,9 @@ import { readAppVersion } from "../config.js";
 import { SchemaValidationError } from "../errors.js";
 import {
   readInheritingProfileFile,
+  readParsedProfile,
   type InheritingProfileFileMessages,
+  type ProfileObjectMessages,
 } from "../profile-file.js";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
@@ -137,6 +139,11 @@ export interface RemoveResult {
   note: string;
 }
 
+const REMOVE_MESSAGES: ProfileObjectMessages = {
+  notJson: strings.messages.removeUnparseable,
+  notObject: strings.messages.removeNotObject,
+};
+
 export async function handleRemove(
   deps: ToolDeps,
   kind: WritableProfileKind,
@@ -153,13 +160,8 @@ export async function handleRemove(
     throw new Error(strings.messages.removeNotFound(jsonPath));
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(jsonPath, "utf8"));
-  } catch {
-    throw new Error(strings.messages.removeUnparseable(jsonPath));
-  }
-  if ((parsed as RawProfile).from !== "User") {
+  const installed = await readParsedProfile(jsonPath, REMOVE_MESSAGES);
+  if (installed.from !== "User") {
     throw new Error(strings.messages.removeNotUser(jsonPath));
   }
 

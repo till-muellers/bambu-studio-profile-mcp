@@ -611,6 +611,7 @@ export const strings = {
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,
     removeUnparseable: (path: string): string =>
       `Refusing to remove '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    removeNotObject: (path: string): string => `Preset '${path}' does not contain a JSON object.`,
     removeNotUser: (path: string): string => `Refusing to remove '${path}': its 'from' field is not "User".`,
     // Source: src/tools/resolve-from-file.ts handleResolveFromFile
     resolveFileNotFound: (path: string): string =>

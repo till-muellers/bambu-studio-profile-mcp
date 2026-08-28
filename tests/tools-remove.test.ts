@@ -87,6 +87,14 @@ describe("handleRemove", () => {
     expect(existsSync(join(processDir, "Murky.json"))).toBe(true);
   });
 
+  it("refuses a preset json that parses to something other than an object", async () => {
+    await writeFile(join(processDir, "Listy.json"), "[1, 2, 3]", "utf8");
+    await expect(handleRemove(deps(), "process", { name: "Listy" })).rejects.toThrow(
+      /does not contain a JSON object\./
+    );
+    expect(existsSync(join(processDir, "Listy.json"))).toBe(true);
+  });
+
   it("errors on a stray sidecar without its json", async () => {
     await writeFile(join(processDir, "Stray.info"), formatInfoSidecar(1), "utf8");
     await expect(handleRemove(deps(), "process", { name: "Stray" })).rejects.toThrow(/Stray\.info/);

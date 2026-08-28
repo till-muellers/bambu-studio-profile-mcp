@@ -90,7 +90,7 @@ describe("handleRemove", () => {
   it("refuses a preset json that parses to something other than an object", async () => {
     await writeFile(join(processDir, "Listy.json"), "[1, 2, 3]", "utf8");
     await expect(handleRemove(deps(), "process", { name: "Listy" })).rejects.toThrow(
-      /does not contain a JSON object\./
+      /cannot verify it is a user preset \(JSON is not an object\)\./
     );
     expect(existsSync(join(processDir, "Listy.json"))).toBe(true);
   });

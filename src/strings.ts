@@ -590,7 +590,7 @@ export const strings = {
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
     importTargetNotObject: (path: string): string =>
-      `Target preset '${path}' does not contain a JSON object.`,
+      `Refusing to overwrite '${path}': cannot verify it is a user preset (JSON is not an object).`,
     importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
     // Source: src/versions.ts evaluateLoadability
     versionMissingOrUnparseable: (value: unknown): string =>
@@ -613,7 +613,8 @@ export const strings = {
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,
     removeUnparseable: (path: string): string =>
       `Refusing to remove '${path}': cannot verify it is a user preset (unparseable JSON).`,
-    removeNotObject: (path: string): string => `Preset '${path}' does not contain a JSON object.`,
+    removeNotObject: (path: string): string =>
+      `Refusing to remove '${path}': cannot verify it is a user preset (JSON is not an object).`,
     removeNotUser: (path: string): string => `Refusing to remove '${path}': its 'from' field is not "User".`,
     // Source: src/tools/resolve-from-file.ts handleResolveFromFile
     resolveFileNotFound: (path: string): string =>

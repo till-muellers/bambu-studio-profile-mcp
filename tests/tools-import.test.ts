@@ -305,7 +305,7 @@ describe("handleImport", () => {
     await writeFile(target, "[1, 2, 3]", "utf8");
     await expect(
       handleImport(deps(), "process", { vendor: "BBL", outputDir: outDir, name: "Listy", overwrite: true })
-    ).rejects.toThrow(/does not contain a JSON object\./);
+    ).rejects.toThrow(/cannot verify it is a user preset \(JSON is not an object\)\./);
     expect(await readFile(target, "utf8")).toBe("[1, 2, 3]");
   });
 

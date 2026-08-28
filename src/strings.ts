@@ -589,23 +589,32 @@ export const strings = {
     importTargetExists: (path: string): string => `Target preset '${path}' already exists. Pass overwrite: true to replace it.`,
     importTargetUnparseable: (path: string): string =>
       `Refusing to overwrite '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    importTargetNotObject: (path: string): string =>
+      `Refusing to overwrite '${path}': cannot verify it is a user preset (JSON is not an object).`,
     importTargetNotUser: (path: string): string => `Refusing to overwrite '${path}': its 'from' field is not "User".`,
     // Source: src/versions.ts evaluateLoadability
     versionMissingOrUnparseable: (value: unknown): string =>
       `carries no parseable version (${JSON.stringify(value)}); Bambu Studio skips such a preset silently.`,
     versionMajorAhead: (presetVersion: string, appVersion: string): string =>
       `version ${presetVersion} is a major version ahead of Bambu Studio ${appVersion}; Bambu Studio skips the preset.`,
-    // Source: src/tools/import.ts handleRemove
+    // Source: src/tools/diff.ts handleDiff
     diffSourceNotFound: (path: string): string => `Source profile '${path}' not found.`,
     diffSourceNotJson: (path: string): string => `Source profile '${path}' is not valid JSON.`,
+    diffSourceNotObject: (path: string): string =>
+      `Source profile '${path}' does not contain a JSON object.`,
     diffInstalledNotFound: (path: string): string =>
       `No preset installed at '${path}'. Install one with import_profile, or check the name with list_profiles.`,
     diffInstalledNotJson: (path: string): string => `Installed preset '${path}' is not valid JSON.`,
+    diffInstalledNotObject: (path: string): string =>
+      `Installed preset '${path}' does not contain a JSON object.`,
+    // Source: src/tools/import.ts handleRemove
     removeStraySidecar: (jsonPath: string, infoPath: string): string =>
       `Preset JSON '${jsonPath}' is missing but a stray sidecar '${infoPath}' exists; nothing was removed.`,
     removeNotFound: (path: string): string => `Preset '${path}' not found in the user store.`,
     removeUnparseable: (path: string): string =>
       `Refusing to remove '${path}': cannot verify it is a user preset (unparseable JSON).`,
+    removeNotObject: (path: string): string =>
+      `Refusing to remove '${path}': cannot verify it is a user preset (JSON is not an object).`,
     removeNotUser: (path: string): string => `Refusing to remove '${path}': its 'from' field is not "User".`,
     // Source: src/tools/resolve-from-file.ts handleResolveFromFile
     resolveFileNotFound: (path: string): string =>

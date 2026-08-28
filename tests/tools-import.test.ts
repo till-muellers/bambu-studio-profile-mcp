@@ -299,6 +299,16 @@ describe("handleImport", () => {
     expect(await readFile(target, "utf8")).toBe("{ not json");
   });
 
+  it("refuses to overwrite a target that is not a JSON object, leaving it in place", async () => {
+    await writeSource("Listy", { name: "Listy", inherits: "fdm_process_common", layer_height: "0.2" });
+    const target = join(userStore, "user", "u1", "process", "Listy.json");
+    await writeFile(target, "[1, 2, 3]", "utf8");
+    await expect(
+      handleImport(deps(), "process", { vendor: "BBL", outputDir: outDir, name: "Listy", overwrite: true })
+    ).rejects.toThrow(/cannot verify it is a user preset \(JSON is not an object\)\./);
+    expect(await readFile(target, "utf8")).toBe("[1, 2, 3]");
+  });
+
   it("fails when the source has no inherits field", async () => {
     await writeSource("Rootless", { name: "Rootless", layer_height: "0.2" });
     await expect(

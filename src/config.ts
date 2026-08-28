@@ -73,7 +73,7 @@ export async function detectDefaultPaths(): Promise<DetectedPaths> {
  * non-JSON trailer line (a "# MD5 checksum ..." comment), so the content is trimmed to the outermost
  * {...} span before parsing; a leading BOM is stripped as well.
  */
-export async function readAppSection(
+async function readAppSection(
   userDataDir: string
 ): Promise<Record<string, unknown> | undefined> {
   const confPath = join(userDataDir, "BambuStudio.conf");

@@ -1,12 +1,11 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { readFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 import { SchemaValidationError } from "../errors.js";
+import { readProfileFile, type ProfileFileMessages } from "../profile-file.js";
 import { strings } from "../strings.js";
 import { writeProfileFile } from "../profile-store.js";
-import type { WritableProfileKind, RawProfile, Violation } from "../types.js";
+import type { WritableProfileKind, Violation } from "../types.js";
 import { loadSchema, validateKvps } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 
@@ -20,6 +19,13 @@ export interface UpdateResult {
 }
 
 const RESERVED_KEYS = ["name", "inherits"] as const;
+
+const SOURCE_MESSAGES: ProfileFileMessages = {
+  notFound: strings.messages.sourceNotFound,
+  notReadable: strings.messages.sourceNotReadable,
+  notJson: strings.messages.sourceNotJson,
+  notObject: strings.messages.sourceNotObject,
+};
 
 export async function handleUpdate(
   deps: ToolDeps,
@@ -40,25 +46,7 @@ export async function handleUpdate(
   }
 
   const path = join(args.outputDir, `${args.name}.json`);
-  if (!existsSync(path)) {
-    throw new Error(strings.messages.sourceNotFound(path));
-  }
-  let raw: string;
-  try {
-    raw = await readFile(path, "utf8");
-  } catch {
-    throw new Error(strings.messages.sourceNotReadable(path));
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    throw new Error(strings.messages.sourceNotJson(path));
-  }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    throw new Error(strings.messages.sourceNotObject(path));
-  }
-  const body = parsed as RawProfile;
+  const body = await readProfileFile(path, SOURCE_MESSAGES);
 
   const violations: Violation[] = [];
 
@@ -83,7 +71,7 @@ export async function handleUpdate(
 
   const removeToCheck = remove.filter((key) => !reservedInRemove.includes(key as (typeof RESERVED_KEYS)[number]));
   for (const key of removeToCheck) {
-    if (!(key in body) || key === "name" || key === "inherits") {
+    if (!(key in body)) {
       violations.push({ key, reason: strings.violations.keyNotPresent });
     }
   }

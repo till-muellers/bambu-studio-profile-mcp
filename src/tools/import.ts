@@ -5,13 +5,20 @@ import { dirname, join } from "node:path";
 import { z } from "zod";
 import { readAppVersion } from "../config.js";
 import { SchemaValidationError } from "../errors.js";
+import {
+  readInheritingProfileFile,
+  readParsedProfile,
+  type InheritingProfileFileMessages,
+  type ProfileObjectMessages,
+} from "../profile-file.js";
 import { resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { WritableProfileKind, RawProfile } from "../types.js";
 import {
+  CONTENT_SKIP_KEYS,
   STUDIO_RESTART_NOTE,
-  SYNTHESIZED_METADATA_KEYS,
   formatInfoSidecar,
+  omitKeys,
   parseSettingId,
   userPresetPaths,
 } from "../user-presets.js";
@@ -34,6 +41,18 @@ export interface ImportResult {
   note: string;
 }
 
+const IMPORT_SOURCE_MESSAGES: InheritingProfileFileMessages = {
+  notFound: strings.messages.importSourceNotFound,
+  notJson: strings.messages.importSourceNotJson,
+  notObject: strings.messages.importSourceNotObject,
+  missingInherits: strings.messages.importSourceMissingInherits,
+};
+
+const IMPORT_TARGET_MESSAGES: ProfileObjectMessages = {
+  notJson: strings.messages.importTargetUnparseable,
+  notObject: strings.messages.importTargetNotObject,
+};
+
 export async function handleImport(
   deps: ToolDeps,
   kind: WritableProfileKind,
@@ -42,25 +61,9 @@ export async function handleImport(
   const cfg = await deps.config.require();
 
   const sourcePath = join(args.outputDir, `${args.name}.json`);
-  if (!existsSync(sourcePath)) {
-    throw new Error(strings.messages.importSourceNotFound(sourcePath));
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(sourcePath, "utf8"));
-  } catch {
-    throw new Error(strings.messages.importSourceNotJson(sourcePath));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.importSourceNotObject(sourcePath));
-  }
-  const source = parsed as RawProfile;
-  if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(strings.messages.importSourceMissingInherits(sourcePath));
-  }
+  const source = await readInheritingProfileFile(sourcePath, IMPORT_SOURCE_MESSAGES);
 
-  const skipped = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
-  const kvps = Object.fromEntries(Object.entries(source).filter(([key]) => !skipped.has(key)));
+  const kvps = omitKeys(source, CONTENT_SKIP_KEYS);
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));
   const violations = validateKvps(schema, kvps);
   if (violations.length > 0) throw new SchemaValidationError(violations);
@@ -74,13 +77,8 @@ export async function handleImport(
     if (!args.overwrite) {
       throw new Error(strings.messages.importTargetExists(jsonPath));
     }
-    let existing: unknown;
-    try {
-      existing = JSON.parse(await readFile(jsonPath, "utf8"));
-    } catch {
-      throw new Error(strings.messages.importTargetUnparseable(jsonPath));
-    }
-    if ((existing as RawProfile).from !== "User") {
+    const existing = await readParsedProfile(jsonPath, IMPORT_TARGET_MESSAGES);
+    if (existing.from !== "User") {
       throw new Error(strings.messages.importTargetNotUser(jsonPath));
     }
   }
@@ -141,6 +139,11 @@ export interface RemoveResult {
   note: string;
 }
 
+const REMOVE_MESSAGES: ProfileObjectMessages = {
+  notJson: strings.messages.removeUnparseable,
+  notObject: strings.messages.removeNotObject,
+};
+
 export async function handleRemove(
   deps: ToolDeps,
   kind: WritableProfileKind,
@@ -157,13 +160,8 @@ export async function handleRemove(
     throw new Error(strings.messages.removeNotFound(jsonPath));
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(jsonPath, "utf8"));
-  } catch {
-    throw new Error(strings.messages.removeUnparseable(jsonPath));
-  }
-  if ((parsed as RawProfile).from !== "User") {
+  const installed = await readParsedProfile(jsonPath, REMOVE_MESSAGES);
+  if (installed.from !== "User") {
     throw new Error(strings.messages.removeNotUser(jsonPath));
   }
 

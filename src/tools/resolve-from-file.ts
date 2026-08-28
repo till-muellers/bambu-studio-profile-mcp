@@ -1,18 +1,14 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
+import { PROFILE_FILE_MESSAGES, readInheritingProfileFile } from "../profile-file.js";
 import { loadChain, mergeChain } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { ReadableProfileKind, RawProfile, ResolvedProfile } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
+import { CONTENT_SKIP_KEYS, omitKeys } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { nilResolutionOptions } from "./nil-options.js";
 import { projectResolved } from "./project-keys.js";
-
-/** Identity plus synthesized metadata; never part of merged settings. */
-const SKIPPED_KEYS = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface ResolvedFileProfile extends ResolvedProfile {
   /** The file the overrides were read from. */
@@ -34,29 +30,12 @@ export async function handleResolveFromFile(
   const cfg = await deps.config.require();
   const path = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
 
-  if (!existsSync(path)) throw new Error(strings.messages.resolveFileNotFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(strings.messages.resolveFileNotJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.resolveFileNotObject(path));
-  }
-  const source = parsed as RawProfile;
-  if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(strings.messages.resolveFileMissingInherits(path));
-  }
+  const source = await readInheritingProfileFile(path, PROFILE_FILE_MESSAGES);
 
   const store = deps.storeFactory(cfg);
   const options = await nilResolutionOptions(deps, store, kind, args.vendor, args.machineName);
   const baseChain = await loadChain(store, kind, args.vendor, source.inherits);
-  const fileLayer: RawProfile = { name: args.name };
-  for (const [key, value] of Object.entries(source)) {
-    if (SKIPPED_KEYS.has(key)) continue;
-    fileLayer[key] = value;
-  }
+  const fileLayer: RawProfile = { name: args.name, ...omitKeys(source, CONTENT_SKIP_KEYS) };
 
   const result: ResolvedFileProfile = {
     vendor: args.vendor,

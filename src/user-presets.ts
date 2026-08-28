@@ -19,7 +19,7 @@ export function userPresetPaths(
 /**
  * Preset metadata import_profile synthesizes when installing into the user store. Source files
  * never author these: import regenerates them, and every tool reading a profile file treats them
- * as non-content. Identity keys (name, inherits) are tool-specific and stay at the call sites.
+ * as non-content.
  */
 export const SYNTHESIZED_METADATA_KEYS = [
   "from",
@@ -27,6 +27,32 @@ export const SYNTHESIZED_METADATA_KEYS = [
   "print_settings_id",
   "filament_settings_id",
 ] as const;
+
+/** Neither identity nor content: what a profile file states as its own settings excludes these. */
+export const CONTENT_SKIP_KEYS: ReadonlySet<string> = new Set<string>([
+  "name",
+  "inherits",
+  ...SYNTHESIZED_METADATA_KEYS,
+]);
+
+/** Identity and metadata only: 'inherits' stays in, since a changed base is a real difference. */
+export const COMPARISON_SKIP_KEYS: ReadonlySet<string> = new Set<string>([
+  "name",
+  ...SYNTHESIZED_METADATA_KEYS,
+]);
+
+/** The entries of `values` whose key is not in `skip`, in their original order. */
+export function omitKeys(
+  values: Record<string, unknown>,
+  skip: ReadonlySet<string>
+): Record<string, unknown> {
+  const kept: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if (skip.has(key)) continue;
+    kept[key] = value;
+  }
+  return kept;
+}
 
 /** Exact byte layout Bambu Studio's Preset::save_info writes on Windows: five fields, CRLF. */
 export function formatInfoSidecar(updatedTime: number): string {

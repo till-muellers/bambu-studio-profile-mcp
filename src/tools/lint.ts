@@ -1,19 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
+import { PROFILE_FILE_MESSAGES, readInheritingProfileFile } from "../profile-file.js";
 import { loadChain, mergeChain, NIL, resolveProfile } from "../resolver.js";
 import { strings } from "../strings.js";
 import type { ProfileSchema, RawProfile, WritableProfileKind } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
+import { CONTENT_SKIP_KEYS, omitKeys } from "../user-presets.js";
 import { loadSchema, validateKvps } from "../validator.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { nilResolutionOptions } from "./nil-options.js";
-
-/** Identity plus synthesized metadata. A lint of overrides lints neither the base nor the identity. */
-const SKIPPED_KEYS = new Set<string>(["name", "inherits", ...SYNTHESIZED_METADATA_KEYS]);
 
 /** The checks in the order findings are grouped, most structural consequence first. */
 const CHECKS = [
@@ -44,34 +40,6 @@ export interface LintResult {
   clean: boolean;
   findings: LintFinding[];
   skipped: LintSkipped[];
-}
-
-async function readOverrides(path: string): Promise<RawProfile & { inherits: string }> {
-  if (!existsSync(path)) throw new Error(strings.messages.resolveFileNotFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(strings.messages.resolveFileNotJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.resolveFileNotObject(path));
-  }
-  const source = parsed as RawProfile;
-  if (typeof source.inherits !== "string" || source.inherits === "") {
-    throw new Error(strings.messages.resolveFileMissingInherits(path));
-  }
-  return source as RawProfile & { inherits: string };
-}
-
-/** The file's own content keys: identity and synthesized metadata stay out of every check. */
-function overrideKeys(source: RawProfile): Record<string, unknown> {
-  const overrides: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(source)) {
-    if (SKIPPED_KEYS.has(key)) continue;
-    overrides[key] = value;
-  }
-  return overrides;
 }
 
 /** Every key the file states at the same value the chain already resolves to. */
@@ -182,8 +150,9 @@ export async function handleLint(
 ): Promise<LintResult> {
   const cfg = await deps.config.require();
   const path = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
-  const source = await readOverrides(path);
-  const overrides = overrideKeys(source);
+  const source = await readInheritingProfileFile(path, PROFILE_FILE_MESSAGES);
+  // The file's own content keys: identity and synthesized metadata stay out of every check.
+  const overrides = omitKeys(source, CONTENT_SKIP_KEYS);
 
   const store = deps.storeFactory(cfg);
   const schema = await loadSchema(join(deps.schemaDir, `${kind}.schema.json`));

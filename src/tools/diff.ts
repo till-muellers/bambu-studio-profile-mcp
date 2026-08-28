@@ -1,16 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
+import { readProfileFile, type ProfileFileMessages } from "../profile-file.js";
 import { strings } from "../strings.js";
-import type { WritableProfileKind, RawProfile } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS, userPresetPaths } from "../user-presets.js";
+import type { WritableProfileKind } from "../types.js";
+import { COMPARISON_SKIP_KEYS, omitKeys, userPresetPaths } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
-
-/** Identity plus synthesized metadata. 'inherits' is absent deliberately: a changed base is drift. */
-const SKIPPED_KEYS = new Set<string>(["name", ...SYNTHESIZED_METADATA_KEYS]);
 
 export interface DiffFileInfo {
   path: string;
@@ -29,23 +26,17 @@ export interface DiffResult {
   newer: "source" | "installed" | "same";
 }
 
-async function readProfile(
-  path: string,
-  notFound: (path: string) => string,
-  notJson: (path: string) => string
-): Promise<RawProfile> {
-  if (!existsSync(path)) throw new Error(notFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(notJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(notJson(path));
-  }
-  return parsed as RawProfile;
-}
+const SOURCE_MESSAGES: ProfileFileMessages = {
+  notFound: strings.messages.diffSourceNotFound,
+  notJson: strings.messages.diffSourceNotJson,
+  notObject: strings.messages.diffSourceNotObject,
+};
+
+const INSTALLED_MESSAGES: ProfileFileMessages = {
+  notFound: strings.messages.diffInstalledNotFound,
+  notJson: strings.messages.diffInstalledNotJson,
+  notObject: strings.messages.diffInstalledNotObject,
+};
 
 export async function handleDiff(
   deps: ToolDeps,
@@ -56,15 +47,10 @@ export async function handleDiff(
   const { jsonPath: installedPath } = userPresetPaths(cfg, kind, args.name);
   const sourcePath = join(args.outputDir, `${args.sourceName ?? args.name}.json`);
 
-  const source = await readProfile(
-    sourcePath,
-    strings.messages.diffSourceNotFound,
-    strings.messages.diffSourceNotJson
-  );
-  const installed = await readProfile(
-    installedPath,
-    strings.messages.diffInstalledNotFound,
-    strings.messages.diffInstalledNotJson
+  const source = omitKeys(await readProfileFile(sourcePath, SOURCE_MESSAGES), COMPARISON_SKIP_KEYS);
+  const installed = omitKeys(
+    await readProfileFile(installedPath, INSTALLED_MESSAGES),
+    COMPARISON_SKIP_KEYS
   );
 
   const changed: DiffResult["changed"] = [];
@@ -72,7 +58,6 @@ export async function handleDiff(
   const onlyInstalled: DiffResult["onlyInstalled"] = [];
   const keys = [...new Set([...Object.keys(source), ...Object.keys(installed)])].sort();
   for (const key of keys) {
-    if (SKIPPED_KEYS.has(key)) continue;
     const inSource = key in source;
     const inInstalled = key in installed;
     if (inSource && !inInstalled) onlyInSource.push({ key, value: source[key] });
@@ -83,12 +68,9 @@ export async function handleDiff(
   }
 
   const [sourceStat, installedStat] = await Promise.all([stat(sourcePath), stat(installedPath)]);
-  const newer =
-    sourceStat.mtimeMs > installedStat.mtimeMs
-      ? "source"
-      : sourceStat.mtimeMs < installedStat.mtimeMs
-        ? "installed"
-        : "same";
+  let newer: DiffResult["newer"] = "same";
+  if (sourceStat.mtimeMs > installedStat.mtimeMs) newer = "source";
+  else if (sourceStat.mtimeMs < installedStat.mtimeMs) newer = "installed";
 
   return {
     kind,

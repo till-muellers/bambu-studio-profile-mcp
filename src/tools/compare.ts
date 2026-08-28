@@ -1,19 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
 import { deepEqual } from "../compare-values.js";
 import { ProfileNotFoundError } from "../errors.js";
+import { PROFILE_FILE_MESSAGES, readProfileFile } from "../profile-file.js";
 import { strings } from "../strings.js";
-import type { ReadableProfileKind, RawProfile } from "../types.js";
-import { SYNTHESIZED_METADATA_KEYS } from "../user-presets.js";
+import type { ReadableProfileKind } from "../types.js";
+import { COMPARISON_SKIP_KEYS, omitKeys } from "../user-presets.js";
 import { toToolError, type ToolDeps } from "./deps.js";
 import { handleResolve } from "./resolve.js";
 import { handleResolveFromFile } from "./resolve-from-file.js";
-
-/** Identity plus synthesized metadata; 'inherits' stays in, since a different base is a difference. */
-const SKIPPED_KEYS = new Set<string>(["name", ...SYNTHESIZED_METADATA_KEYS]);
 
 export type CompareMode = "raw" | "resolved";
 
@@ -58,27 +54,9 @@ function isFileEndpoint(endpoint: CompareEndpoint): endpoint is { outputDir: str
   return "outputDir" in endpoint;
 }
 
+/** The keys a comparison covers: identity and synthesized metadata stay out. */
 function comparableKeys(values: Record<string, unknown>): Record<string, unknown> {
-  const kept: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(values)) {
-    if (SKIPPED_KEYS.has(key)) continue;
-    kept[key] = value;
-  }
-  return kept;
-}
-
-async function readProfileFile(path: string): Promise<RawProfile> {
-  if (!existsSync(path)) throw new Error(strings.messages.resolveFileNotFound(path));
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(await readFile(path, "utf8"));
-  } catch {
-    throw new Error(strings.messages.resolveFileNotJson(path));
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error(strings.messages.resolveFileNotObject(path));
-  }
-  return parsed as RawProfile;
+  return omitKeys(values, COMPARISON_SKIP_KEYS);
 }
 
 /** Reads one endpoint's declared keys, without walking its inherits chain. */
@@ -89,7 +67,7 @@ async function loadRaw(
 ): Promise<LoadedEndpoint> {
   if (isFileEndpoint(endpoint)) {
     const path = join(endpoint.outputDir, `${endpoint.name}.json`);
-    const profile = await readProfileFile(path);
+    const profile = await readProfileFile(path, PROFILE_FILE_MESSAGES);
     return { info: { label: endpoint.name, path }, values: comparableKeys(profile), nilKeys: [] };
   }
   const cfg = await deps.config.require();

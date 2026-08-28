@@ -4,7 +4,7 @@ import type { ResolvedProfile } from "../types.js";
  * Restrict a resolved settings map to the requested keys, preserving the requested order, and
  * name the requested keys the map lacks. Applied after resolution, so inheritance is unaffected.
  */
-export function projectKeys(
+function projectKeys(
   settings: Record<string, unknown>,
   keys: string[]
 ): { settings: Record<string, unknown>; missingKeys: string[] } {
